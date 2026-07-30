@@ -9,6 +9,8 @@ export const colors = {
   surface: '#101410',
   border: '#232a25',
   accent: '#c6ff3a',
+  // Accent, alpha-blended — tinted background for selected/active surfaces.
+  accentMuted: 'rgba(198, 255, 58, 0.1)',
   textPrimary: '#ffffff',
   textSecondary: '#8a9691',
   textTertiary: '#5e6a63',
