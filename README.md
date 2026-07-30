@@ -2,7 +2,7 @@
 
 App mobile de coaching fitness et transformation physique par IA — React Native + Expo Router + TypeScript.
 
-Cette base contient la **structure de navigation**, des **écrans vides** (titre + placeholder), et l'**écran questionnaire** entièrement fonctionnel (15 questions, state local). Pas d'appel API ni de base de données pour l'instant.
+Cette base contient la **structure de navigation**, des **écrans vides** (titre + placeholder), et un onboarding fonctionnel de bout en bout : **questionnaire** (15 questions), **analyse** (progression animée) et **plan** (résultat calculé depuis les réponses). Pas d'appel API ni de base de données pour l'instant.
 
 ## Lancer le projet
 
@@ -31,8 +31,8 @@ app/
     _layout.tsx             Stack d'onboarding, enveloppé dans OnboardingProvider
     welcome.tsx
     questionnaire.tsx        Écran complet : 15 questions, une par écran
-    analyse.tsx
-    plan.tsx
+    analyse.tsx               Cercle de progression animé (0→87%, ~4s) + checklist, redirige vers plan
+    plan.tsx                   Résultat calculé depuis OnboardingContext (objectif, écart de poids, axes)
     signup.tsx
     paywall.tsx
   (tabs)/
@@ -50,6 +50,8 @@ components/
     QuestionInput.tsx         Dispatcher par type de question (single / multiple / numeric)
     OptionCard.tsx             Carte de réponse (bordure + fond accent quand sélectionnée)
     NumericStepper.tsx         Sélecteur numérique (âge, taille, poids)
+    ProgressRing.tsx           Cercle de progression SVG animé (écran analyse)
+    AnalysisStepRow.tsx        Étape de checklist (gris → accent + coche) (écran analyse)
   ui/
     Button.tsx
     Card.tsx

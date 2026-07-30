@@ -187,3 +187,11 @@ export const QUESTIONS: Question[] = [
     ],
   },
 ];
+
+/** Looks up the French label for a given question/option id pair. */
+export function getOptionLabel(questionId: string, optionId: string | undefined): string | undefined {
+  if (!optionId) return undefined;
+  const question = QUESTIONS.find((q) => q.id === questionId);
+  if (!question || question.type === 'numeric') return undefined;
+  return question.options.find((o) => o.id === optionId)?.label;
+}
