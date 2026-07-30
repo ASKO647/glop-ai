@@ -2,7 +2,7 @@
 
 App mobile de coaching fitness et transformation physique par IA — React Native + Expo Router + TypeScript.
 
-Cette base ne contient que la **structure de navigation** et des **écrans vides** (titre + placeholder). Aucune logique métier, aucun appel API, aucune base de données pour l'instant.
+Cette base contient la **structure de navigation**, des **écrans vides** (titre + placeholder), et l'**écran questionnaire** entièrement fonctionnel (15 questions, state local). Pas d'appel API ni de base de données pour l'instant.
 
 ## Lancer le projet
 
@@ -28,12 +28,12 @@ app/
   _layout.tsx              Root layout : redirige vers l'onboarding si non connecté
                             (Stack.Protected sur `isAuthenticated`, actuellement figé à false)
   (onboarding)/
-    _layout.tsx             Stack d'onboarding
+    _layout.tsx             Stack d'onboarding, enveloppé dans OnboardingProvider
     welcome.tsx
-    signup.tsx
-    questionnaire.tsx
+    questionnaire.tsx        Écran complet : 15 questions, une par écran
     analyse.tsx
     plan.tsx
+    signup.tsx
     paywall.tsx
   (tabs)/
     _layout.tsx             Barre de tabs (fond #101410, icônes lucide-react-native, actif #c6ff3a)
@@ -46,6 +46,10 @@ app/
 components/
   ScreenPlaceholder.tsx      Écran placeholder générique (tabs)
   OnboardingStep.tsx         Écran placeholder générique (onboarding, avec bouton "Continuer")
+  onboarding/
+    QuestionInput.tsx         Dispatcher par type de question (single / multiple / numeric)
+    OptionCard.tsx             Carte de réponse (bordure + fond accent quand sélectionnée)
+    NumericStepper.tsx         Sélecteur numérique (âge, taille, poids)
   ui/
     Button.tsx
     Card.tsx
@@ -54,7 +58,17 @@ components/
 
 constants/
   theme.ts                   Couleurs, rayons, espacements, typographie — source unique de vérité
+  questionnaire.ts            Les 15 questions (id, type, options)
+
+context/
+  OnboardingContext.tsx       State React des réponses du questionnaire (pas de persistance)
 ```
+
+## Flow d'onboarding
+
+`welcome` → `questionnaire` (15 questions) → `analyse` → `plan` → `signup` → `paywall` → `(tabs)`
+
+Le bouton "J'ai déjà un compte" sur l'écran `welcome` va directement à `signup`, en court-circuitant le questionnaire.
 
 ## Design system (`constants/theme.ts`)
 
