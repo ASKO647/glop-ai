@@ -4,10 +4,12 @@ import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AnalysisStepRow from '../../components/onboarding/AnalysisStepRow';
 import ProgressRing from '../../components/onboarding/ProgressRing';
-import { colors, spacing, typography } from '../../constants/theme';
+import { colors, spacing } from '../../constants/theme';
 
 const TARGET_PROGRESS = 87;
 const DURATION = 4000;
+const RING_SIZE = 170;
+const RING_STROKE_WIDTH = 10;
 
 const STEPS = [
   'Analyse de ton profil',
@@ -48,15 +50,15 @@ export default function AnalyseScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
-      <View style={styles.header}>
-        <Text style={typography.title}>Analyse en cours</Text>
-        <Text style={[typography.body, { color: colors.textSecondary }]}>
-          On construit ton plan personnalisé.
-        </Text>
-      </View>
+      <Text style={styles.title}>Analyse en cours...</Text>
 
       <View style={styles.ringWrapper}>
-        <ProgressRing progress={progressAnim} displayValue={progress} />
+        <ProgressRing
+          progress={progressAnim}
+          displayValue={progress}
+          size={RING_SIZE}
+          strokeWidth={RING_STROKE_WIDTH}
+        />
       </View>
 
       <View style={styles.steps}>
@@ -74,15 +76,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: spacing.lg,
   },
-  header: {
+  title: {
     marginTop: spacing.lg,
-    gap: spacing.xs,
+    fontSize: 20,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    textAlign: 'center',
   },
   ringWrapper: {
     alignItems: 'center',
-    marginVertical: spacing['2xl'],
+    marginTop: spacing['2xl'],
+    marginBottom: spacing.xl,
   },
   steps: {
-    gap: spacing.md,
+    gap: 16,
   },
 });

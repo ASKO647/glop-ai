@@ -1,6 +1,7 @@
 import { Check } from 'lucide-react-native';
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, radii, spacing } from '../../constants/theme';
+import { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, View } from 'react-native';
+import { colors, radii } from '../../constants/theme';
 
 type AnalysisStepRowProps = {
   label: string;
@@ -8,12 +9,46 @@ type AnalysisStepRowProps = {
 };
 
 export default function AnalysisStepRow({ label, checked }: AnalysisStepRowProps) {
+  const progress = useRef(new Animated.Value(checked ? 1 : 0)).current;
+  const wasChecked = useRef(checked);
+
+  useEffect(() => {
+    if (checked !== wasChecked.current) {
+      wasChecked.current = checked;
+      Animated.timing(progress, {
+        toValue: checked ? 1 : 0,
+        duration: 320,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [checked, progress]);
+
+  const indicatorBackgroundColor = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['transparent', colors.accent],
+  });
+  const indicatorBorderColor = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.stepBorder, colors.accent],
+  });
+  const textColor = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.textTertiary, colors.stepTextDone],
+  });
+
   return (
     <View style={styles.row}>
-      <View style={[styles.indicator, checked && styles.indicatorChecked]}>
-        {checked && <Check color={colors.background} size={14} strokeWidth={3} />}
-      </View>
-      <Text style={[styles.label, checked && styles.labelChecked]}>{label}</Text>
+      <Animated.View
+        style={[
+          styles.indicator,
+          { backgroundColor: indicatorBackgroundColor, borderColor: indicatorBorderColor },
+        ]}
+      >
+        <Animated.View style={{ opacity: progress }}>
+          <Check color={colors.background} size={11} strokeWidth={3} />
+        </Animated.View>
+      </Animated.View>
+      <Animated.Text style={[styles.label, { color: textColor }]}>{label}</Animated.Text>
     </View>
   );
 }
@@ -22,27 +57,18 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: 10,
   },
   indicator: {
-    width: 22,
-    height: 22,
+    width: 18,
+    height: 18,
     borderRadius: radii.full,
     borderWidth: 1.5,
-    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  indicatorChecked: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
   label: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
-    color: colors.textTertiary,
-  },
-  labelChecked: {
-    color: colors.accent,
   },
 });
