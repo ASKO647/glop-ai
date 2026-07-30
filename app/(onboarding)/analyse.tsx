@@ -52,19 +52,21 @@ export default function AnalyseScreen() {
     <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
       <Text style={styles.title}>Analyse en cours...</Text>
 
-      <View style={styles.ringWrapper}>
-        <ProgressRing
-          progress={progressAnim}
-          displayValue={progress}
-          size={RING_SIZE}
-          strokeWidth={RING_STROKE_WIDTH}
-        />
-      </View>
+      <View style={styles.centerBlock}>
+        <View style={styles.ringWrapper}>
+          <ProgressRing
+            progress={progressAnim}
+            displayValue={progress}
+            size={RING_SIZE}
+            strokeWidth={RING_STROKE_WIDTH}
+          />
+        </View>
 
-      <View style={styles.steps}>
-        {STEPS.map((label, index) => (
-          <AnalysisStepRow key={label} label={label} checked={index < checkedCount} />
-        ))}
+        <View style={styles.steps}>
+          {STEPS.map((label, index) => (
+            <AnalysisStepRow key={label} label={label} checked={index < checkedCount} />
+          ))}
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -83,9 +85,12 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     textAlign: 'center',
   },
+  centerBlock: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   ringWrapper: {
     alignItems: 'center',
-    marginTop: spacing['2xl'],
     marginBottom: spacing.xl,
   },
   steps: {

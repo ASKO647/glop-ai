@@ -19,6 +19,49 @@ const FALLBACK_CURRENT_WEIGHT = 70;
 const FALLBACK_TARGET_WEIGHT = 65;
 const FALLBACK_DURATION_DAYS = 90;
 
+// Every phrase below is a forward-looking promise, never a readout of the raw answer.
+const WORKOUT_PROGRAM_BY_FREQUENCY: Record<string, string> = {
+  '1_2': 'Programme efficace en 1 à 2 séances par semaine',
+  '3_4': 'Programme structuré sur 3 à 4 séances par semaine',
+  '5_6': 'Programme intensif sur 5 à 6 séances par semaine',
+  daily: 'Routine quotidienne pour progresser sans relâche',
+};
+const FALLBACK_WORKOUT_PROGRAM = 'Programme structuré adapté à ton rythme';
+
+const TRAINING_LOCATION_SUFFIX: Record<string, string> = {
+  gym: ', en salle',
+  home: ', à la maison',
+  both: ', entre salle et maison',
+};
+
+const RESTRICTION_ADJECTIVE: Record<string, string> = {
+  vegetarian: 'végétarien',
+  vegan: 'végan',
+  gluten_free: 'sans gluten',
+  lactose_free: 'sans lactose',
+};
+
+const SLEEP_PROMISE_BY_ANSWER: Record<string, string> = {
+  under_5: 'Routine pour gagner 2h de récupération chaque nuit',
+  '5_6': 'Routine pour gagner 1h de récupération chaque nuit',
+  '7_8': 'Routine pour consolider ton rythme de sommeil actuel',
+  over_8: 'Routine pour optimiser la qualité de ton sommeil',
+};
+const FALLBACK_SLEEP_PROMISE = 'Routine de sommeil optimisée pour ta récupération';
+
+function getDisciplinePromise(blockerId: string | undefined, durationDays: number): string {
+  switch (blockerId) {
+    case 'time':
+      return `Routine express pour avancer même avec un planning chargé, sur ${durationDays} jours`;
+    case 'direction':
+      return `Feuille de route claire, étape par étape, sur ${durationDays} jours`;
+    case 'consistency':
+      return `Suivi quotidien pour rester régulier sur ${durationDays} jours`;
+    default:
+      return `Missions quotidiennes pour tenir sur ${durationDays} jours`;
+  }
+}
+
 function asString(value: AnswerValue | undefined): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
@@ -47,36 +90,31 @@ export default function PlanScreen() {
   const weightLabel = weightDiff === 0 ? 'Poids stable' : `${weightDiff > 0 ? '-' : '+'}${Math.abs(weightDiff)} kg`;
   const durationLabel = `${weightLabel} en ${durationDays} jours`;
 
-  const workoutsLabel = getOptionLabel('workouts_per_week', asString(answers.workouts_per_week)) ?? '3-4';
-  const locationLabel = getOptionLabel('training_location', asString(answers.training_location)) ?? 'Les deux';
-  const dietLabel = getOptionLabel('diet_quality', asString(answers.diet_quality)) ?? 'Correcte';
+  const trainingDescription =
+    (WORKOUT_PROGRAM_BY_FREQUENCY[asString(answers.workouts_per_week) ?? ''] ?? FALLBACK_WORKOUT_PROGRAM) +
+    (TRAINING_LOCATION_SUFFIX[asString(answers.training_location) ?? ''] ?? '') +
+    '.';
+
   const restrictionIds = Array.isArray(answers.dietary_restrictions) ? answers.dietary_restrictions : [];
-  const restrictionLabels = restrictionIds
+  const restrictionAdjectives = restrictionIds
     .filter((id) => id !== 'none')
-    .map((id) => getOptionLabel('dietary_restrictions', id))
-    .filter((label): label is string => Boolean(label));
-  const sleepLabel = getOptionLabel('sleep_hours', asString(answers.sleep_hours)) ?? '7-8';
-  const commitmentLabel = getOptionLabel('commitment_level', asString(answers.commitment_level)) ?? 'Je suis motivé';
-  const blockerLabel = getOptionLabel('blocker', asString(answers.blocker)) ?? 'le manque de régularité';
+    .map((id) => RESTRICTION_ADJECTIVE[id])
+    .filter((adjective): adjective is string => Boolean(adjective));
+  const nutritionDescription =
+    restrictionAdjectives.length > 0
+      ? `Plan ${restrictionAdjectives.join(' et ')} structuré, adapté à ton objectif.`
+      : 'Plan alimentaire structuré, adapté à ton objectif.';
+
+  const sleepDescription =
+    (SLEEP_PROMISE_BY_ANSWER[asString(answers.sleep_hours) ?? ''] ?? FALLBACK_SLEEP_PROMISE) + '.';
+
+  const disciplineDescription = getDisciplinePromise(asString(answers.blocker), durationDays) + '.';
 
   const objectives = [
-    {
-      title: 'Entraînement',
-      description: `${workoutsLabel} séances / semaine · ${locationLabel}`,
-    },
-    {
-      title: 'Nutrition',
-      description:
-        restrictionLabels.length > 0 ? `${dietLabel} · ${restrictionLabels.join(', ')}` : dietLabel,
-    },
-    {
-      title: 'Sommeil',
-      description: `${sleepLabel} heures / nuit`,
-    },
-    {
-      title: 'Discipline',
-      description: `${commitmentLabel} · Priorité : ${blockerLabel}`,
-    },
+    { title: 'Entraînement', description: trainingDescription },
+    { title: 'Nutrition', description: nutritionDescription },
+    { title: 'Sommeil', description: sleepDescription },
+    { title: 'Discipline', description: disciplineDescription },
   ];
 
   return (
