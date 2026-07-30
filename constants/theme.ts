@@ -14,6 +14,12 @@ export const colors = {
   textPrimary: '#ffffff',
   textSecondary: '#8a9691',
   textTertiary: '#5e6a63',
+  // Unchecked step indicator border (analyse screen).
+  stepBorder: '#3a423c',
+  // Checked step label text (analyse screen) — brighter than textSecondary, short of pure white.
+  stepTextDone: '#d5ddd8',
+  // Small uppercase section labels (e.g. "OBJECTIFS PRINCIPAUX" on the plan screen).
+  labelMuted: '#7c8781',
 } as const;
 
 export const radii = {

@@ -1,10 +1,11 @@
 import { Link } from 'expo-router';
+import { Check, Target } from 'lucide-react-native';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import { getOptionLabel } from '../../constants/questionnaire';
-import { colors, spacing, typography } from '../../constants/theme';
+import { colors, radii, spacing } from '../../constants/theme';
 import { useOnboarding, type AnswerValue } from '../../context/OnboardingContext';
 
 // Estimated weekly weight change (kg) per chosen pace — used only to derive a display duration.
@@ -44,6 +45,7 @@ export default function PlanScreen() {
       : clamp(Math.round((Math.abs(weightDiff) / weeklyRate) * 7), 30, 365);
 
   const weightLabel = weightDiff === 0 ? 'Poids stable' : `${weightDiff > 0 ? '-' : '+'}${Math.abs(weightDiff)} kg`;
+  const durationLabel = `${weightLabel} en ${durationDays} jours`;
 
   const workoutsLabel = getOptionLabel('workouts_per_week', asString(answers.workouts_per_week)) ?? '3-4';
   const locationLabel = getOptionLabel('training_location', asString(answers.training_location)) ?? 'Les deux';
@@ -57,7 +59,7 @@ export default function PlanScreen() {
   const commitmentLabel = getOptionLabel('commitment_level', asString(answers.commitment_level)) ?? 'Je suis motivé';
   const blockerLabel = getOptionLabel('blocker', asString(answers.blocker)) ?? 'le manque de régularité';
 
-  const axes = [
+  const objectives = [
     {
       title: 'Entraînement',
       description: `${workoutsLabel} séances / semaine · ${locationLabel}`,
@@ -80,29 +82,40 @@ export default function PlanScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.header}>
-        <Text style={typography.title}>Ton plan est prêt</Text>
-        <Text style={[typography.body, { color: colors.textSecondary }]}>{goalLabel}</Text>
+        <Text style={styles.title}>Ton plan est prêt 🎉</Text>
+        <Text style={styles.subtitle}>Ta transformation commence maintenant.</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Card style={styles.heroCard}>
-          <Text style={styles.heroValue}>{weightLabel}</Text>
-          <Text style={styles.heroCaption}>en {durationDays} jours</Text>
+          <View style={styles.heroIcon}>
+            <Target color={colors.background} size={18} />
+          </View>
+          <View style={styles.heroTextGroup}>
+            <Text style={styles.heroGoal}>{goalLabel}</Text>
+            <Text style={styles.heroDuration}>{durationLabel}</Text>
+          </View>
         </Card>
 
-        <View style={styles.axes}>
-          {axes.map((axis) => (
-            <Card key={axis.title} style={styles.axisCard}>
-              <Text style={styles.axisTitle}>{axis.title}</Text>
-              <Text style={styles.axisDescription}>{axis.description}</Text>
-            </Card>
-          ))}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Objectifs principaux</Text>
+          <View style={styles.objectiveList}>
+            {objectives.map((objective) => (
+              <View key={objective.title} style={styles.objectiveRow}>
+                <Check color={colors.accent} size={14} strokeWidth={3} />
+                <Text style={styles.objectiveText}>
+                  <Text style={styles.objectiveTitle}>{objective.title} : </Text>
+                  {objective.description}
+                </Text>
+              </View>
+            ))}
+          </View>
         </View>
       </ScrollView>
 
       <View style={styles.footer}>
         <Link href="/signup" asChild>
-          <Button label="Voir mon plan" variant="primary" />
+          <Button label="Voir mon plan" variant="primary" style={styles.ctaButton} />
         </Link>
       </View>
     </SafeAreaView>
@@ -119,39 +132,77 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     gap: spacing.xs,
   },
+  title: {
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+    color: colors.textPrimary,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
   scrollContent: {
-    gap: spacing.md,
+    gap: spacing.lg,
     paddingVertical: spacing.lg,
   },
   heroCard: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.xl,
+    gap: spacing.md,
   },
-  heroValue: {
-    fontSize: 44,
-    fontWeight: '800',
-    letterSpacing: -1,
-    color: colors.accent,
+  heroIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.sm,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  heroCaption: {
-    marginTop: spacing.xs,
-    ...typography.caption,
+  heroTextGroup: {
+    flex: 1,
+    gap: 4,
   },
-  axes: {
-    gap: spacing.sm,
-  },
-  axisCard: {
-    gap: spacing.xs,
-  },
-  axisTitle: {
+  heroGoal: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '600',
     color: colors.textPrimary,
   },
-  axisDescription: {
-    ...typography.caption,
+  heroDuration: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  section: {
+    gap: spacing.md,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: colors.labelMuted,
+  },
+  objectiveList: {
+    gap: 14,
+  },
+  objectiveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  objectiveText: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.textPrimary,
+  },
+  objectiveTitle: {
+    fontWeight: '700',
   },
   footer: {
     paddingVertical: spacing.lg,
+  },
+  ctaButton: {
+    height: 52,
+    borderRadius: radii.lg,
   },
 });
