@@ -5,7 +5,7 @@ import OnboardingStep from '../../components/OnboardingStep';
 export default function PaywallScreen() {
   return (
     <OnboardingStep
-      step="Étape 5 / 5"
+      step="Étape 4 / 4"
       title="Débloquer GlowUp AI"
       description="Offres d'abonnement à venir."
       nextHref="/"

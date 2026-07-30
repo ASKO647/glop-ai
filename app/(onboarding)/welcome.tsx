@@ -16,7 +16,7 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={styles.actions}>
-        <Link href="/signup" asChild>
+        <Link href="/questionnaire" asChild>
           <Button label="Commencer" variant="primary" />
         </Link>
         <Link href="/signup" asChild>
