@@ -1,19 +1,23 @@
-import Anthropic from '@anthropic-ai/sdk';
 import type { Profile } from '../context/ProfileContext';
 
+// No Anthropic SDK here on purpose: the SDK is a Node package (it pulls in
+// `node:fs` at import time), and React Native has no Node standard library —
+// bundling it breaks the app. Call the REST API directly with `fetch`
+// instead. Follow this same pattern for every future Anthropic call in this
+// app (e.g. the meal scanner) — never import `@anthropic-ai/sdk` here.
+const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-4-6';
 const MAX_TOKENS = 1000;
-
-const apiKey = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY;
-
-// Client-side key by design (EXPO_PUBLIC_*) — this app has no backend yet.
-const client = apiKey ? new Anthropic({ apiKey, dangerouslyAllowBrowser: true }) : null;
 
 export type ChatRole = 'user' | 'assistant';
 
 export type ChatMessage = {
   role: ChatRole;
   content: string;
+};
+
+type AnthropicMessageResponse = {
+  content: { type: string; text?: string }[];
 };
 
 function buildSystemPrompt(profile: Profile | null): string {
@@ -41,23 +45,49 @@ function buildSystemPrompt(profile: Profile | null): string {
 }
 
 export async function sendMessage(history: ChatMessage[], profile: Profile | null): Promise<string> {
-  if (!client) {
+  const apiKey = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY;
+  if (!apiKey) {
     throw new Error(
       "Clé API Anthropic manquante. Ajoute EXPO_PUBLIC_ANTHROPIC_API_KEY dans ton fichier .env."
     );
   }
 
-  const response = await client.messages.create({
-    model: MODEL,
-    max_tokens: MAX_TOKENS,
-    system: buildSystemPrompt(profile),
-    messages: history.map((message) => ({ role: message.role, content: message.content })),
-  });
+  let response: Response;
+  try {
+    response = await fetch(ANTHROPIC_API_URL, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
+        system: buildSystemPrompt(profile),
+        messages: history.map((message) => ({ role: message.role, content: message.content })),
+      }),
+    });
+  } catch {
+    throw new Error('Impossible de contacter le coach. Vérifie ta connexion internet et réessaie.');
+  }
 
-  const textBlock = response.content.find((block) => block.type === 'text');
-  if (!textBlock || textBlock.type !== 'text') {
+  if (!response.ok) {
+    throw new Error(`Le coach n'a pas pu répondre (erreur ${response.status}). Réessaie dans un instant.`);
+  }
+
+  let data: AnthropicMessageResponse;
+  try {
+    data = (await response.json()) as AnthropicMessageResponse;
+  } catch {
+    throw new Error('Réponse du coach illisible. Réessaie dans un instant.');
+  }
+
+  const text = data.content?.[0]?.text;
+  if (!text) {
     throw new Error('Le coach n’a pas renvoyé de réponse.');
   }
 
-  return textBlock.text;
+  return text;
 }
