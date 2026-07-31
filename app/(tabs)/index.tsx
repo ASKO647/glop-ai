@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { Camera } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from '../../components/ui/Button';
 import CalorieCard from '../../components/dashboard/CalorieCard';
 import CategoryChip from '../../components/dashboard/CategoryChip';
@@ -72,133 +73,131 @@ export default function DashboardScreen() {
 
   if (profileLoading) {
     return (
-      <View style={styles.loadingScreen}>
+      <SafeAreaView style={styles.loadingScreen} edges={['top', 'left', 'right']}>
         <ActivityIndicator color={colors.accent} size="large" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!profile) {
     return (
-      <View style={styles.loadingScreen}>
+      <SafeAreaView style={styles.loadingScreen} edges={['top', 'left', 'right']}>
         <Text style={styles.emptyTitle}>Profil introuvable</Text>
         <Text style={styles.emptyText}>
           Impossible de charger ton profil pour le moment. Réessaie dans un instant.
         </Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <DashboardHeader
-        initial={initial}
-        greeting={greeting}
-        programDay={programDay}
-        programLength={PROGRAM_LENGTH_DAYS}
-        streak={streak}
-      />
+    <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <DashboardHeader
+          initial={initial}
+          greeting={greeting}
+          programDay={programDay}
+          programLength={PROGRAM_LENGTH_DAYS}
+          streak={streak}
+        />
 
-      <WeekStrip completionByDate={completionByDate} />
+        <WeekStrip completionByDate={completionByDate} />
 
-      <CalorieCard
-        caloriesRemaining={caloriesRemaining}
-        percent={percent}
-        proteines={{ current: totals.proteines, target: macroTargets.proteines }}
-        glucides={{ current: totals.glucides, target: macroTargets.glucides }}
-        lipides={{ current: totals.lipides, target: macroTargets.lipides }}
-      />
+        <CalorieCard
+          caloriesRemaining={caloriesRemaining}
+          percent={percent}
+          proteines={{ current: totals.proteines, target: macroTargets.proteines }}
+          glucides={{ current: totals.glucides, target: macroTargets.glucides }}
+          lipides={{ current: totals.lipides, target: macroTargets.lipides }}
+        />
 
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Missions du jour</Text>
-          <Text style={styles.sectionCounter}>
-            {completedMissions}/{missions.length}
-          </Text>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Missions du jour</Text>
+            <Text style={styles.sectionCounter}>
+              {completedMissions}/{missions.length}
+            </Text>
+          </View>
+          <View style={styles.missionsList}>
+            {missionsLoading ? (
+              <ActivityIndicator color={colors.accent} />
+            ) : (
+              missions.map((mission) => (
+                <MissionCard
+                  key={mission.id}
+                  missionKey={mission.mission_key}
+                  label={mission.label}
+                  current={mission.current}
+                  target={mission.target}
+                  completed={mission.completed}
+                  onPress={() => incrementMission(mission)}
+                />
+              ))
+            )}
+          </View>
         </View>
-        <View style={styles.missionsList}>
-          {missionsLoading ? (
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Repas d'aujourd'hui</Text>
+            <Pressable accessibilityRole="button" onPress={() => router.push('/meals')} hitSlop={8}>
+              {({ pressed }) => (
+                <Text style={[styles.link, pressed && styles.linkPressed]}>Voir tout</Text>
+              )}
+            </Pressable>
+          </View>
+
+          {mealsLoading ? (
             <ActivityIndicator color={colors.accent} />
+          ) : meals.length === 0 ? (
+            <View style={styles.emptyMeals}>
+              <Camera color={colors.textTertiary} size={28} />
+              <Text style={styles.emptyMealsTitle}>Scanne ton premier repas</Text>
+              <Button label="Scanner" onPress={() => router.push('/scanner')} style={styles.emptyMealsButton} />
+            </View>
           ) : (
-            missions.map((mission) => (
-              <MissionCard
-                key={mission.id}
-                missionKey={mission.mission_key}
-                label={mission.label}
-                current={mission.current}
-                target={mission.target}
-                completed={mission.completed}
-                onPress={() => incrementMission(mission)}
-              />
-            ))
+            <View style={styles.mealsList}>
+              {meals.map((meal) => (
+                <MealRow
+                  key={meal.id}
+                  name={meal.name}
+                  kcal={meal.kcal}
+                  time={new Date(meal.created_at).toLocaleTimeString('fr-FR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                />
+              ))}
+            </View>
           )}
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Repas d'aujourd'hui</Text>
-          <Pressable accessibilityRole="button" onPress={() => router.push('/meals')} hitSlop={8}>
-            {({ pressed }) => (
-              <Text style={[styles.link, pressed && styles.linkPressed]}>Voir tout</Text>
-            )}
-          </Pressable>
+        <View style={styles.section}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+            {WORKOUT_CATEGORIES.map((c) => (
+              <CategoryChip key={c.id} label={c.label} active={category === c.id} onPress={() => setCategory(c.id)} />
+            ))}
+          </ScrollView>
         </View>
 
-        {mealsLoading ? (
-          <ActivityIndicator color={colors.accent} />
-        ) : meals.length === 0 ? (
-          <View style={styles.emptyMeals}>
-            <Camera color={colors.textTertiary} size={28} />
-            <Text style={styles.emptyMealsTitle}>Scanne ton premier repas</Text>
-            <Button label="Scanner" onPress={() => router.push('/scanner')} style={styles.emptyMealsButton} />
-          </View>
-        ) : (
-          <View style={styles.mealsList}>
-            {meals.map((meal) => (
-              <MealRow
-                key={meal.id}
-                name={meal.name}
-                kcal={meal.kcal}
-                time={new Date(meal.created_at).toLocaleTimeString('fr-FR', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              />
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Séances recommandées</Text>
+          <View style={styles.sessionsList}>
+            {recommendedSessions.map((session) => (
+              <WorkoutCard key={session.id} session={session} />
             ))}
           </View>
-        )}
-      </View>
-
-      <View style={styles.section}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
-          {WORKOUT_CATEGORIES.map((c) => (
-            <CategoryChip key={c.id} label={c.label} active={category === c.id} onPress={() => setCategory(c.id)} />
-          ))}
-        </ScrollView>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Séances recommandées</Text>
-        <View style={styles.sessionsList}>
-          {recommendedSessions.map((session) => (
-            <WorkoutCard key={session.id} session={session} />
-          ))}
         </View>
-      </View>
 
-      <View style={styles.statsRow}>
-        <StatCard label="Poids actuel" value={poidsActuel != null ? `${poidsActuel} kg` : '-'} />
-        <StatCard label="Objectif" value={poidsObjectif != null ? `${poidsObjectif} kg` : '-'} />
-        <StatCard label="Écart restant" value={ecart != null ? `${ecart} kg` : '-'} />
-      </View>
+        <View style={styles.statsRow}>
+          <StatCard label="Poids actuel" value={poidsActuel != null ? `${poidsActuel} kg` : '-'} />
+          <StatCard label="Objectif" value={poidsObjectif != null ? `${poidsObjectif} kg` : '-'} />
+          <StatCard label="Écart restant" value={ecart != null ? `${ecart} kg` : '-'} />
+        </View>
 
-      <TipCard text={tip} />
-    </ScrollView>
+        <TipCard text={tip} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -206,6 +205,9 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  scroll: {
+    flex: 1,
   },
   content: {
     paddingHorizontal: 20,
