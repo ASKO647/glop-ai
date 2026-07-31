@@ -2,7 +2,7 @@
 
 App mobile de coaching fitness et transformation physique par IA — React Native + Expo Router + TypeScript.
 
-Cette base contient la **structure de navigation**, des **écrans vides** (titre + placeholder), et un onboarding fonctionnel de bout en bout : **questionnaire** (15 questions), **analyse** (progression animée) et **plan** (résultat calculé depuis les réponses). Pas d'appel API ni de base de données pour l'instant.
+Cette base contient la **structure de navigation**, des **écrans vides** (titre + placeholder), et un onboarding fonctionnel de bout en bout : **questionnaire** (15 questions), **analyse** (progression animée), **plan** (résultat calculé depuis les réponses) et **paywall** (2 plans sélectionnables). Pas d'appel API, de base de données, ni de paiement réel pour l'instant.
 
 ## Lancer le projet
 
@@ -34,7 +34,7 @@ app/
     analyse.tsx               Cercle de progression animé (0→87%, ~4s) + checklist, redirige vers plan
     plan.tsx                   Résultat calculé depuis OnboardingContext (objectif, écart de poids, axes)
     signup.tsx
-    paywall.tsx
+    paywall.tsx               2 cartes de plan sélectionnables (annuel / mensuel), aucun paiement déclenché
   (tabs)/
     _layout.tsx             Barre de tabs (fond #101410, icônes lucide-react-native, actif #c6ff3a)
     index.tsx                Dashboard
@@ -52,6 +52,9 @@ components/
     NumericStepper.tsx         Sélecteur numérique (âge, taille, poids)
     ProgressRing.tsx           Cercle de progression SVG animé (écran analyse)
     AnalysisStepRow.tsx        Étape de checklist (gris → accent + coche) (écran analyse)
+    BenefitRow.tsx              Ligne de bénéfice avec pastille + coche (écran paywall)
+    PlanCard.tsx                Carte de plan sélectionnable (écran paywall)
+    RadioDot.tsx                 Bouton radio (vide / rempli) (écran paywall)
   ui/
     Button.tsx
     Card.tsx
