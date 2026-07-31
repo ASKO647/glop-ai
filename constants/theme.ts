@@ -9,13 +9,15 @@ export const colors = {
   surface: '#101410',
   border: '#232a25',
   accent: '#c6ff3a',
-  // Accent, alpha-blended — tinted background for selected/active surfaces.
+  // Accent, alpha-blended — tinted background for selected pills/badges (10% alpha).
   accentMuted: 'rgba(198, 255, 58, 0.1)',
+  // Accent, alpha-blended — tinted background for selected cards (6% alpha, more subtle).
+  accentSurface: 'rgba(198, 255, 58, 0.06)',
   textPrimary: '#ffffff',
   textSecondary: '#8a9691',
   textTertiary: '#5e6a63',
-  // Unchecked step indicator border (analyse screen).
-  stepBorder: '#3a423c',
+  // Border for unselected/neutral small controls (step indicators, radio buttons).
+  borderMuted: '#3a423c',
   // Checked step label text (analyse screen) — brighter than textSecondary, short of pure white.
   stepTextDone: '#d5ddd8',
   // Small uppercase section labels (e.g. "OBJECTIFS PRINCIPAUX" on the plan screen).

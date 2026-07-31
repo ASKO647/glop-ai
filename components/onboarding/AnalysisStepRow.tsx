@@ -29,7 +29,7 @@ export default function AnalysisStepRow({ label, checked }: AnalysisStepRowProps
   });
   const indicatorBorderColor = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [colors.stepBorder, colors.accent],
+    outputRange: [colors.borderMuted, colors.accent],
   });
   const textColor = progress.interpolate({
     inputRange: [0, 1],
