@@ -1,17 +1,9 @@
-import { StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import type { AnswerValue } from '../../context/OnboardingContext';
 import type { Question, QuestionOption } from '../../constants/questionnaire';
 import { spacing } from '../../constants/theme';
 import NumericStepper from './NumericStepper';
 import OptionCard from './OptionCard';
-
-// Thumbnails for the "objectif principal" question only — every other question is text-only.
-const GOAL_THUMBNAILS: Record<string, ImageSourcePropType> = {
-  weight_loss: require('../../assets/images/goal-weightloss.jpg'),
-  muscle_gain: require('../../assets/images/goal-muscle.jpg'),
-  glow_up: require('../../assets/images/goal-glowup.jpg'),
-  discipline: require('../../assets/images/goal-discipline.jpg'),
-};
 
 type QuestionInputProps = {
   question: Question;
@@ -59,7 +51,6 @@ export default function QuestionInput({ question, value, onChange }: QuestionInp
           label={option.label}
           selected={selectedId === option.id}
           onPress={() => onChange(option.id)}
-          thumbnail={question.id === 'goal' ? GOAL_THUMBNAILS[option.id] : undefined}
         />
       ))}
     </View>

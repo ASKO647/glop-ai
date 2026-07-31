@@ -1,5 +1,6 @@
 import type { Session, User } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { showAlert } from '../lib/alert';
 import { supabase } from '../lib/supabase';
 
 type AuthResult = { error: string | null };
@@ -15,6 +16,10 @@ type AuthContextValue = {
   signUp: (email: string, password: string) => Promise<SignUpResult>;
   signIn: (email: string, password: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
+  /** Stubbed until the development build ships native Sign in with Apple support. */
+  signInWithApple: () => void;
+  /** Stubbed until the development build ships native Google Sign-In support. */
+  signInWithGoogle: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -122,6 +127,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const signInWithApple = () => {
+    showAlert('Bientôt disponible', "La connexion avec Apple arrivera avec le build de développement.");
+  };
+
+  const signInWithGoogle = () => {
+    showAlert('Bientôt disponible', "La connexion avec Google arrivera avec le build de développement.");
+  };
+
   // Once a session exists, keep loading until we know its subscription state too —
   // this is what lets the root layout avoid flashing (tabs) before the paywall gate applies.
   const loading = authLoading || (!!session && isSubscribed === null);
@@ -135,6 +148,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signUp,
     signIn,
     signOut,
+    signInWithApple,
+    signInWithGoogle,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
