@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { todayISODate } from '../constants/dashboard';
 import { supabase } from '../lib/supabase';
 
 export type Meal = {
@@ -16,7 +15,8 @@ export type MealTotals = { kcal: number; proteines: number; glucides: number; li
 
 const EMPTY_TOTALS: MealTotals = { kcal: 0, proteines: 0, glucides: 0, lipides: 0 };
 
-export function useTodayMeals(userId: string | undefined) {
+/** Meals (and their totals) for `date` — 0 across the board when nothing was scanned that day. */
+export function useMeals(userId: string | undefined, date: string) {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -27,14 +27,17 @@ export function useTodayMeals(userId: string | undefined) {
       return;
     }
     let cancelled = false;
+    // Clear the previous date's meals immediately so a date switch never
+    // shows stale totals while the new date's rows are still in flight.
+    setMeals([]);
+    setLoading(true);
 
     const load = async () => {
-      setLoading(true);
       const { data } = await supabase
         .from('meals')
         .select('id, name, kcal, proteines, glucides, lipides, created_at')
         .eq('user_id', userId)
-        .eq('date', todayISODate())
+        .eq('date', date)
         .order('created_at', { ascending: false });
 
       if (!cancelled) {
@@ -46,7 +49,7 @@ export function useTodayMeals(userId: string | undefined) {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, date]);
 
   const totals: MealTotals = meals.reduce(
     (acc, meal) => ({

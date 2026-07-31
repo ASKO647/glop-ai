@@ -228,7 +228,11 @@ components/
   OnboardingStep.tsx         Écran placeholder générique (onboarding, avec bouton "Continuer")
   dashboard/
     DashboardHeader.tsx        Avatar + salutation (→ profil), pastille streak (→ profil), cloche (→ notifications)
-    WeekStrip.tsx                7 cercles L-D, 4 états (aujourd'hui / passé complété / passé manqué / futur)
+    WeekStrip.tsx                7 cercles L-D, tapables (aujourd'hui + passé) pour changer la date
+                              consultée ; états : sélectionné / aujourd'hui (non sélectionné) / passé
+                              complété / passé manqué / futur (non tapable, opacité réduite)
+    PastDateBanner.tsx             "Tu consultes le [date]" + lien "Revenir à aujourd'hui", affiché
+                              uniquement quand `selectedDate` ≠ aujourd'hui
     CalorieCard.tsx               Carte héro calories restantes + CalorieRing + 3 MacroBar + CTA "Continuer"
     CalorieRing.tsx                 Anneau de progression SVG (react-native-svg)
     MacroBar.tsx                    Barre fine par macro (Protéines/Glucides/Lipides)
@@ -286,9 +290,14 @@ context/
                               (utilisé par le dashboard et la barre de tabs)
 
 hooks/
-  useDailyMissions.ts          Charge/crée les missions du jour, historique 30 jours (pour la
-                              semaine + le streak), incrémente une mission et l'écrit en base
-  useTodayMeals.ts               Charge les repas du jour + totaux (kcal/macros) pour la carte calories
+  useDailyMissions.ts          Charge les missions de la date consultée (`date` en paramètre) — ne
+                              crée les 4 missions par défaut que si `date` est aujourd'hui et
+                              qu'aucune ligne n'existe encore ; l'historique 30 jours (semaine +
+                              streak) reste toujours ancré sur aujourd'hui, indépendamment de
+                              `date` ; `incrementMission` est un no-op si `date` n'est pas aujourd'hui
+  useMeals.ts                    Charge les repas de la date consultée (`date` en paramètre) +
+                              leurs totaux (kcal/macros) — tout à 0 si `meals` est vide pour cette
+                              date, aucune donnée de démonstration
   useCoachMessages.ts             Charge les 50 derniers messages, persiste chaque échange dans
                               `messages`, appelle `lib/coach.ts` et ajoute une bulle système
                               (non persistée) si l'appel échoue
@@ -343,7 +352,8 @@ Tous les éléments cliquables du dashboard sont des `Pressable` avec un retour 
 | Avatar / salutation, pastille streak | `profil` |
 | Cloche | `notifications` |
 | CTA "Continuer" (carte calories) | `scanner` |
-| Carte mission | incrémente en place (pas de navigation) |
+| Carte mission | incrémente en place (pas de navigation) — désactivée en consultation passée |
+| Jour du bandeau de semaine (aujourd'hui ou passé) | change la date consultée (pas de navigation) |
 | "Voir tout" / carte repas | `meals` |
 | Bouton "Scanner" (état vide repas) | `scanner` |
 | Carte séance recommandée | `workout/[id]` |
@@ -353,6 +363,17 @@ Tous les éléments cliquables du dashboard sont des `Pressable` avec un retour 
 `workout/[id].tsx` et `notifications.tsx` sont enregistrés comme écrans racine (`app/_layout.tsx`, dans le même `Stack.Protected` que `(tabs)`) plutôt que dans le groupe `(tabs)` : ce sont des écrans "poussés" par-dessus les tabs, pas des onglets. `meals.tsx` est lui un `Tabs.Screen` avec `href: null` — il vit dans `(tabs)` (chemin `/meals`) mais n'apparaît pas comme 6ᵉ icône dans la barre.
 
 Le bouton "Commencer la séance" (`workout/[id].tsx`) affiche pour l'instant une alerte "Bientôt disponible" (même pattern que `signInWithApple`/`signInWithGoogle`) — le suivi de séance en direct n'est pas encore implémenté.
+
+### Consulter un jour passé
+
+`(tabs)/index.tsx` garde la date consultée dans un state écran (`selectedDate`, initialisé à aujourd'hui) qu'il transmet à `useDailyMissions` et `useMeals`. Taper un jour du bandeau de semaine :
+
+- **aujourd'hui ou un jour passé** → change `selectedDate` ; missions, repas, calories et macros se rechargent pour cette date (aucune requête ne mélange les dates : `useMeals` vide son état `meals` dès que `date` change, avant même que la nouvelle requête réponde, pour ne jamais afficher les totaux de l'ancienne date pendant le chargement)
+- **un jour futur** → non tapable (`Pressable disabled`), opacité réduite
+
+Quand `selectedDate` diffère d'aujourd'hui, une bannière discrète ("Tu consultes le [date]" + lien "Revenir à aujourd'hui", `PastDateBanner.tsx`) apparaît sous le bandeau de semaine, et les cartes mission passent en lecture seule (`MissionCard`'s prop `disabled`) — `incrementMission` refuse aussi silencieusement toute mutation si `date` n'est pas aujourd'hui, en garde-fou côté hook. `useDailyMissions` ne crée les 4 missions par défaut que pour aujourd'hui : consulter un jour passé où l'app n'a jamais été ouverte affiche "Aucune mission enregistrée ce jour-là" plutôt que d'insérer rétroactivement des lignes.
+
+Le calcul du streak et les 4 états du bandeau de semaine (complété/manqué/futur/aujourd'hui) restent toujours calculés par rapport à la vraie date du jour, indépendamment de `selectedDate` — seuls les totaux calories/macros et la liste de missions/repas affichés suivent la date consultée.
 
 ## Coach IA
 

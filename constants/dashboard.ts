@@ -58,6 +58,12 @@ export function isoDaysAgo(days: number): string {
   return toISODate(date);
 }
 
+/** "mardi 28 juillet" — used mid-sentence (e.g. "Tu consultes le ..."), so not capitalized. */
+export function formatDisplayDate(iso: string): string {
+  const date = new Date(`${iso}T00:00:00`);
+  return date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
 function getDayOfYear(date: Date): number {
   const start = new Date(date.getFullYear(), 0, 0);
   const diff = date.getTime() - start.getTime();

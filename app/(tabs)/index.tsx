@@ -9,6 +9,7 @@ import CategoryChip from '../../components/dashboard/CategoryChip';
 import DashboardHeader from '../../components/dashboard/DashboardHeader';
 import MealRow from '../../components/dashboard/MealRow';
 import MissionCard from '../../components/dashboard/MissionCard';
+import PastDateBanner from '../../components/dashboard/PastDateBanner';
 import StatCard from '../../components/dashboard/StatCard';
 import TipCard from '../../components/dashboard/TipCard';
 import WeekStrip from '../../components/dashboard/WeekStrip';
@@ -19,6 +20,7 @@ import {
   computeCalorieTarget,
   computeMacroTargets,
   computeStreak,
+  formatDisplayDate,
   getDisplayName,
   getProgramDay,
   getTipOfTheDay,
@@ -30,7 +32,7 @@ import { colors, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/ProfileContext';
 import { useDailyMissions } from '../../hooks/useDailyMissions';
-import { useTodayMeals } from '../../hooks/useTodayMeals';
+import { useMeals } from '../../hooks/useMeals';
 
 const RECOMMENDED_COUNT = 3;
 
@@ -38,12 +40,15 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
+  const [selectedDate, setSelectedDate] = useState(todayISODate());
+  const isViewingPast = selectedDate !== todayISODate();
   const { missions, completionByDate, loading: missionsLoading, incrementMission } = useDailyMissions(
     user?.id,
     profile,
-    profileLoading
+    profileLoading,
+    selectedDate
   );
-  const { meals, totals, loading: mealsLoading } = useTodayMeals(user?.id);
+  const { meals, totals, loading: mealsLoading } = useMeals(user?.id, selectedDate);
   const [category, setCategory] = useState<WorkoutCategoryId>('all');
 
   const displayName = getDisplayName(profile?.email ?? user?.email ?? null);
@@ -101,7 +106,18 @@ export default function DashboardScreen() {
           streak={streak}
         />
 
-        <WeekStrip completionByDate={completionByDate} />
+        <WeekStrip
+          completionByDate={completionByDate}
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+        />
+
+        {isViewingPast && (
+          <PastDateBanner
+            label={formatDisplayDate(selectedDate)}
+            onReset={() => setSelectedDate(todayISODate())}
+          />
+        )}
 
         <CalorieCard
           caloriesRemaining={caloriesRemaining}
@@ -121,6 +137,8 @@ export default function DashboardScreen() {
           <View style={styles.missionsList}>
             {missionsLoading ? (
               <ActivityIndicator color={colors.accent} />
+            ) : missions.length === 0 ? (
+              <Text style={styles.emptyMealsTitle}>Aucune mission enregistrée ce jour-là</Text>
             ) : (
               missions.map((mission) => (
                 <MissionCard
@@ -130,6 +148,7 @@ export default function DashboardScreen() {
                   current={mission.current}
                   target={mission.target}
                   completed={mission.completed}
+                  disabled={isViewingPast}
                   onPress={() => incrementMission(mission)}
                 />
               ))

@@ -18,6 +18,8 @@ type MissionCardProps = {
   target: number;
   completed: boolean;
   onPress: () => void;
+  /** Read-only mode (e.g. viewing a past day) — blocks taps without implying "completed". */
+  disabled?: boolean;
 };
 
 export default function MissionCard({
@@ -27,20 +29,22 @@ export default function MissionCard({
   target,
   completed,
   onPress,
+  disabled = false,
 }: MissionCardProps) {
   const Icon = MISSION_ICON[missionKey];
   const progress = target > 0 ? current / target : 0;
+  const isInteractive = !completed && !disabled;
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ disabled: completed }}
+      accessibilityState={{ disabled: !isInteractive }}
       onPress={onPress}
-      disabled={completed}
+      disabled={!isInteractive}
       style={({ pressed }) => [
         styles.card,
         completed && styles.cardCompleted,
-        pressed && !completed && styles.pressed,
+        pressed && isInteractive && styles.pressed,
       ]}
     >
       <View style={[styles.iconBox, completed && styles.iconBoxCompleted]}>
