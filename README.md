@@ -126,7 +126,46 @@ Cette base contient la **structure de navigation**, des **écrans vides** (titre
 
    `daily_missions` a une ligne par jour et par mission (`date` + `mission_key`) — le dashboard en insère 4 par défaut (eau, pas, séance, skincare) dès qu'aucune ligne n'existe encore pour la date du jour, donc les missions se "réinitialisent" naturellement chaque jour sans job planifié. `meals` alimente à la fois le récapitulatif calorique du dashboard (repas du jour) et l'historique complet (`meals.tsx`, groupé par `date`).
 
-4. Installe les dépendances et lance le serveur web :
+4. Crée la table `messages` (historique du coach IA) et ajoute ta clé Anthropic :
+
+   ```sql
+   create table messages (
+     id uuid primary key default gen_random_uuid(),
+     user_id uuid not null references auth.users(id) on delete cascade,
+     role text not null check (role in ('user', 'assistant')),
+     content text not null,
+     created_at timestamptz not null default now()
+   );
+
+   alter table messages enable row level security;
+
+   create policy "Users can insert their own messages"
+     on messages for insert
+     with check (auth.uid() = user_id);
+
+   create policy "Users can read their own messages"
+     on messages for select
+     using (auth.uid() = user_id);
+
+   create policy "Users can update their own messages"
+     on messages for update
+     using (auth.uid() = user_id)
+     with check (auth.uid() = user_id);
+
+   create policy "Users can delete their own messages"
+     on messages for delete
+     using (auth.uid() = user_id);
+   ```
+
+   Ajoute ensuite ta clé API Anthropic (console.anthropic.com) à `.env` :
+
+   ```bash
+   EXPO_PUBLIC_ANTHROPIC_API_KEY=sk-ant-...
+   ```
+
+   **Attention** : cette clé est embarquée côté client (préfixe `EXPO_PUBLIC_`), donc visible dans le bundle — acceptable pour ce prototype sans backend, mais à déplacer derrière une Edge Function avant toute mise en production.
+
+5. Installe les dépendances et lance le serveur web :
 
    ```bash
    npm install
@@ -143,7 +182,7 @@ npm run ios    # simulateur iOS (macOS uniquement)
 npm run android
 ```
 
-Sans `.env` valide, l'app refuse de démarrer (`lib/supabase.ts` lève une erreur explicite plutôt que de tourner avec un client mal configuré).
+Sans `.env` valide (Supabase), l'app refuse de démarrer (`lib/supabase.ts` lève une erreur explicite plutôt que de tourner avec un client mal configuré). `EXPO_PUBLIC_ANTHROPIC_API_KEY` est différent : son absence ne bloque pas le démarrage, seul l'onglet Coach affiche une bulle d'erreur au premier message envoyé.
 
 ## Structure du projet
 
@@ -172,7 +211,9 @@ app/
                               recommandées (→ workout/[id]), stats rapides (→ progression), astuce
     meals.tsx                 Historique complet des repas, groupé par jour avec total kcal
                               (onglet caché — `href: null`, atteint via "Voir tout"/carte repas)
-    coach.tsx
+    coach.tsx                  Conversation avec le coach IA (Anthropic) — historique persisté
+                              (50 derniers messages), suggestions en pilules au premier lancement,
+                              bulle système en cas d'erreur réseau
     scanner.tsx
     progression.tsx
     profil.tsx                 Email, statut d'abonnement, déconnexion, suppression de compte
@@ -197,6 +238,11 @@ components/
     WorkoutCard.tsx                  Carte séance recommandée (→ workout/[id])
     StatCard.tsx                      Carte stat rapide (poids actuel / objectif / écart) (→ progression)
     TipCard.tsx                        Astuce du jour, non tapable
+  coach/
+    MessageBubble.tsx             Bulle coach (gauche, #101410) / utilisateur (droite, #c6ff3a) / système (erreur)
+    TypingIndicator.tsx             3 points animés (Animated.loop déphasé) pendant la réponse
+    ChatInput.tsx                     Champ arrondi + bouton d'envoi rond, désactivé si vide
+    SuggestionChip.tsx                 Pilule de suggestion (état vide)
   onboarding/
     QuestionInput.tsx         Dispatcher par type de question (single / multiple / numeric)
     OptionCard.tsx             Carte de réponse (bordure + fond accent quand sélectionnée)
@@ -243,6 +289,9 @@ hooks/
   useDailyMissions.ts          Charge/crée les missions du jour, historique 30 jours (pour la
                               semaine + le streak), incrémente une mission et l'écrit en base
   useTodayMeals.ts               Charge les repas du jour + totaux (kcal/macros) pour la carte calories
+  useCoachMessages.ts             Charge les 50 derniers messages, persiste chaque échange dans
+                              `messages`, appelle `lib/coach.ts` et ajoute une bulle système
+                              (non persistée) si l'appel échoue
 
 lib/
   supabase.ts                 Client Supabase (AsyncStorage, autoRefreshToken, persistSession)
@@ -250,6 +299,11 @@ lib/
   alert.ts                        showAlert / showConfirm — contournement du no-op de
                               `Alert.alert()` sur react-native-web (fallback window.alert/confirm)
   color.ts                        hexToRgba() partagé (évite la duplication entre composants)
+  coach.ts                        sendMessage(history, profile) — appelle l'API Anthropic
+                              (`claude-sonnet-4-6`, max_tokens 1000) via `@anthropic-ai/sdk` avec
+                              `dangerouslyAllowBrowser: true` (app 100% client, pas de backend).
+                              Le prompt système injecte objectif / poids actuel / poids cible /
+                              niveau d'activité / restrictions alimentaires du profil
 ```
 
 ## Flow d'onboarding
@@ -300,6 +354,18 @@ Tous les éléments cliquables du dashboard sont des `Pressable` avec un retour 
 
 Le bouton "Commencer la séance" (`workout/[id].tsx`) affiche pour l'instant une alerte "Bientôt disponible" (même pattern que `signInWithApple`/`signInWithGoogle`) — le suivi de séance en direct n'est pas encore implémenté.
 
+## Coach IA
+
+`(tabs)/coach.tsx` affiche une conversation avec le coach IA "GlowUp" (`claude-sonnet-4-6` via `lib/coach.ts`). Au montage, il charge les 50 derniers messages de l'utilisateur depuis `messages` (Supabase) ; chaque message envoyé et chaque réponse sont persistés dans la foulée.
+
+Le prompt système (construit dans `buildSystemPrompt`, `lib/coach.ts`) fixe la personnalité (tutoiement, français, 2-4 phrases courtes, ton motivant mais direct) et injecte les données de profil disponibles : objectif, poids actuel, poids cible, niveau d'activité, restrictions alimentaires. Les champs absents du profil sont simplement omis du prompt plutôt que d'y figurer vides.
+
+**Clé API côté client, en connaissance de cause.** L'app n'a pas de backend, donc `EXPO_PUBLIC_ANTHROPIC_API_KEY` est lue directement dans le bundle et le client `@anthropic-ai/sdk` est instancié avec `dangerouslyAllowBrowser: true`. La clé est donc visible par quiconque inspecte le bundle web/mobile — acceptable pour ce prototype, mais à remplacer par un proxy serveur (Edge Function Supabase, par exemple) avant toute mise en production.
+
+Si `sendMessage` échoue (réseau, clé manquante, erreur API), le message d'erreur en français n'est pas jeté comme une exception silencieuse : il est ajouté à la conversation comme une bulle "système" (fond neutre, texte `colors.danger`), visible dans le fil, mais **non persistée** en base — un rechargement de l'historique la fait disparaître, contrairement aux vrais tours de conversation.
+
+Au premier lancement (aucun message en base), l'écran affiche 3 suggestions en pilules qui envoient directement le message correspondant au tap plutôt que de pré-remplir le champ de saisie.
+
 ## Visuels
 
 `app.json` référence `./assets/icon.png`, `./assets/splash-icon.png` (splash, `resizeMode: "contain"`, fond `#0a0d0c`) et `./assets/adaptive-icon.png` (icône adaptative Android, même fond).
@@ -322,7 +388,8 @@ Toutes les couleurs sont importées depuis `constants/theme.ts` — aucune coule
 
 ## Prochaines étapes
 
-- Brancher les écrans restants (coach, scanner, progression) sur de vraies données — les photos `exercise-*`/`meal-*` sont déjà dans `assets/images/` pour ça.
+- Brancher les écrans restants (scanner, progression) sur de vraies données — les photos `exercise-*`/`meal-*` sont déjà dans `assets/images/` pour ça.
+- Déplacer l'appel Anthropic du coach derrière un backend (Edge Function) pour ne plus exposer `EXPO_PUBLIC_ANTHROPIC_API_KEY` côté client.
 - Remplacer le CTA du paywall par un vrai flux d'achat (RevenueCat).
 - Implémenter Sign in with Apple / Google Sign-In (development build requis).
 - Ajouter une Edge Function pour la suppression complète du compte Supabase Auth.
