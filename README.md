@@ -59,7 +59,74 @@ Cette base contient la **structure de navigation**, des **écrans vides** (titre
 
    `is_subscribed` gates the paywall (see below) — without the update policy, the paywall's CTA can't flip it and the RLS update silently fails. The delete policy backs the "Supprimer mon compte" button on `profil.tsx`.
 
-3. Installe les dépendances et lance le serveur web :
+3. Crée les tables `daily_missions` et `meals` (dashboard) :
+
+   ```sql
+   create table daily_missions (
+     id uuid primary key default gen_random_uuid(),
+     user_id uuid not null references auth.users(id) on delete cascade,
+     date date not null,
+     mission_key text not null,
+     label text not null,
+     target numeric not null,
+     current numeric not null default 0,
+     completed boolean not null default false
+   );
+
+   alter table daily_missions enable row level security;
+
+   create policy "Users can insert their own missions"
+     on daily_missions for insert
+     with check (auth.uid() = user_id);
+
+   create policy "Users can read their own missions"
+     on daily_missions for select
+     using (auth.uid() = user_id);
+
+   create policy "Users can update their own missions"
+     on daily_missions for update
+     using (auth.uid() = user_id)
+     with check (auth.uid() = user_id);
+
+   create policy "Users can delete their own missions"
+     on daily_missions for delete
+     using (auth.uid() = user_id);
+
+   create table meals (
+     id uuid primary key default gen_random_uuid(),
+     user_id uuid not null references auth.users(id) on delete cascade,
+     date date not null,
+     name text not null,
+     kcal int not null,
+     proteines int not null default 0,
+     glucides int not null default 0,
+     lipides int not null default 0,
+     created_at timestamptz not null default now()
+   );
+
+   alter table meals enable row level security;
+
+   create policy "Users can insert their own meals"
+     on meals for insert
+     with check (auth.uid() = user_id);
+
+   create policy "Users can read their own meals"
+     on meals for select
+     using (auth.uid() = user_id);
+
+   create policy "Users can update their own meals"
+     on meals for update
+     using (auth.uid() = user_id)
+     with check (auth.uid() = user_id);
+
+   create policy "Users can delete their own meals"
+     on meals for delete
+     using (auth.uid() = user_id);
+   ```
+
+   `daily_missions` a une ligne par jour et par mission (`date` + `mission_key`) — le dashboard en insère 4 par défaut (eau, pas, séance, skincare) dès qu'aucune ligne n'existe encore pour la date du jour, donc les missions se "réinitialisent" naturellement chaque jour sans job planifié. `meals` alimente à la fois le récapitulatif calorique du dashboard (repas du jour) et l'historique complet (`meals.tsx`, groupé par `date`).
+
+4. Installe les dépendances et lance le serveur web :
 
    ```bash
    npm install
@@ -97,17 +164,39 @@ app/
     paywall.tsx               2 cartes de plan sélectionnables, CTA passe is_subscribed à true,
                               croix de fermeture déconnecte (pas d'accès gratuit à l'app)
   (tabs)/
-    _layout.tsx             Barre de tabs (fond #101410, icônes lucide-react-native, actif #c6ff3a)
-    index.tsx                Dashboard
+    _layout.tsx             Barre de tabs flottante (pilule #101410, icônes seules, icône active
+                              dans un cercle plein #c6ff3a de 44px) — enveloppé dans ProfileProvider
+    index.tsx                Dashboard : header (avatar → profil, cloche → notifications), semaine,
+                              carte calories (+ CTA "Continuer" → scanner), missions du jour, repas
+                              du jour (ou état vide → scanner), catégories de séances, séances
+                              recommandées (→ workout/[id]), stats rapides (→ progression), astuce
+    meals.tsx                 Historique complet des repas, groupé par jour avec total kcal
+                              (onglet caché — `href: null`, atteint via "Voir tout"/carte repas)
     coach.tsx
     scanner.tsx
     progression.tsx
     profil.tsx                 Email, statut d'abonnement, déconnexion, suppression de compte
                               (voir caveat plus bas), liens Conditions/Confidentialité
+  workout/
+    [id].tsx                  Détail d'une séance (titre, muscles, durée, kcal, liste d'exercices
+                              séries/reps, CTA "Commencer la séance") — écran racine (hors tabs)
+  notifications.tsx           Liste des notifications, état vide propre — écran racine (hors tabs)
 
 components/
   ScreenPlaceholder.tsx      Écran placeholder générique (tabs)
   OnboardingStep.tsx         Écran placeholder générique (onboarding, avec bouton "Continuer")
+  dashboard/
+    DashboardHeader.tsx        Avatar + salutation (→ profil), pastille streak (→ profil), cloche (→ notifications)
+    WeekStrip.tsx                7 cercles L-D, 4 états (aujourd'hui / passé complété / passé manqué / futur)
+    CalorieCard.tsx               Carte héro calories restantes + CalorieRing + 3 MacroBar + CTA "Continuer"
+    CalorieRing.tsx                 Anneau de progression SVG (react-native-svg)
+    MacroBar.tsx                    Barre fine par macro (Protéines/Glucides/Lipides)
+    MissionCard.tsx                Carte mission tapable (incrémente en place), état complété distinct
+    MealRow.tsx                     Ligne de repas (→ meals)
+    CategoryChip.tsx                Filtre catégorie de séance (scroll horizontal)
+    WorkoutCard.tsx                  Carte séance recommandée (→ workout/[id])
+    StatCard.tsx                      Carte stat rapide (poids actuel / objectif / écart) (→ progression)
+    TipCard.tsx                        Astuce du jour, non tapable
   onboarding/
     QuestionInput.tsx         Dispatcher par type de question (single / multiple / numeric)
     OptionCard.tsx             Carte de réponse (bordure + fond accent quand sélectionnée)
@@ -134,16 +223,33 @@ components/
 constants/
   theme.ts                   Couleurs, rayons, espacements, typographie — source unique de vérité
   questionnaire.ts            Les 15 questions (id, type, options)
+  dashboard.ts                 Logique/données pures du dashboard : nom d'affichage (dérivé de
+                              l'email, pas de champ prénom en base), jour du programme (90j),
+                              missions par défaut (cibles adaptées à `frequence_entrainement` et
+                              `objectif`), cibles calories/macros (Mifflin-St Jeor + multiplicateur
+                              d'activité + ajustement objectif/vitesse), catégories et séances de
+                              sport (données statiques), calcul de série (streak), semaine courante,
+                              astuce du jour
 
 context/
   OnboardingContext.tsx       State React des réponses du questionnaire (pas de persistance)
   AuthContext.tsx              session / user / loading / isSubscribed + signUp / signIn /
                               signOut / signInWithApple / signInWithGoogle (stubs, alerte
                               "Bientôt disponible") / refreshSubscription (Supabase)
+  ProfileContext.tsx            Ligne `profiles` de l'utilisateur courant + refreshProfile()
+                              (utilisé par le dashboard et la barre de tabs)
+
+hooks/
+  useDailyMissions.ts          Charge/crée les missions du jour, historique 30 jours (pour la
+                              semaine + le streak), incrémente une mission et l'écrit en base
+  useTodayMeals.ts               Charge les repas du jour + totaux (kcal/macros) pour la carte calories
 
 lib/
   supabase.ts                 Client Supabase (AsyncStorage, autoRefreshToken, persistSession)
   authErrors.ts                 Traduit les erreurs Supabase en français, par champ de formulaire
+  alert.ts                        showAlert / showConfirm — contournement du no-op de
+                              `Alert.alert()` sur react-native-web (fallback window.alert/confirm)
+  color.ts                        hexToRgba() partagé (évite la duplication entre composants)
 ```
 
 ## Flow d'onboarding
@@ -167,6 +273,32 @@ Au démarrage, `AuthContext` ne fait pas confiance à la session mise en cache l
 `signInWithApple` et `signInWithGoogle` (`AuthContext`) sont des stubs qui affichent juste une alerte "Bientôt disponible" — l'implémentation native (Sign in with Apple / Google Sign-In) nécessite un development build, pas Expo Go.
 
 Le bouton "Supprimer mon compte" (`profil.tsx`) supprime la ligne `profiles` de l'utilisateur puis le déconnecte, mais **ne supprime pas le compte Supabase Auth lui-même** — ça nécessite une Edge Function avec la clé `service_role`, qui n'existe pas encore (`// TODO` dans `profil.tsx`). Le compte auth existera donc toujours après "suppression".
+
+## Dashboard & navigation
+
+Le dashboard (`(tabs)/index.tsx`) affiche un écran de chargement tant que `ProfileContext` charge la ligne `profiles`, puis un état vide propre si aucun profil n'est trouvé (pas de crash, pas d'écran blanc).
+
+Comme `profiles` n'a pas de champ prénom, la salutation ("Salut, X") dérive un nom depuis la partie locale de l'email (`getDisplayName` dans `constants/dashboard.ts`) — à remplacer si un vrai champ nom est ajouté un jour.
+
+Aucune table de streak dédiée : le streak et les 7 cercles de la semaine sont tous les deux dérivés du même historique `daily_missions` sur 30 jours (un jour compte comme "complété" si toutes les missions de ce jour-là le sont).
+
+Tous les éléments cliquables du dashboard sont des `Pressable` avec un retour visuel (opacité 0.7) et mènent à un écran existant :
+
+| Élément | Destination |
+|---|---|
+| Avatar / salutation, pastille streak | `profil` |
+| Cloche | `notifications` |
+| CTA "Continuer" (carte calories) | `scanner` |
+| Carte mission | incrémente en place (pas de navigation) |
+| "Voir tout" / carte repas | `meals` |
+| Bouton "Scanner" (état vide repas) | `scanner` |
+| Carte séance recommandée | `workout/[id]` |
+| Carte stat (poids actuel / objectif / écart) | `progression` |
+| Carte astuce du jour | non cliquable |
+
+`workout/[id].tsx` et `notifications.tsx` sont enregistrés comme écrans racine (`app/_layout.tsx`, dans le même `Stack.Protected` que `(tabs)`) plutôt que dans le groupe `(tabs)` : ce sont des écrans "poussés" par-dessus les tabs, pas des onglets. `meals.tsx` est lui un `Tabs.Screen` avec `href: null` — il vit dans `(tabs)` (chemin `/meals`) mais n'apparaît pas comme 6ᵉ icône dans la barre.
+
+Le bouton "Commencer la séance" (`workout/[id].tsx`) affiche pour l'instant une alerte "Bientôt disponible" (même pattern que `signInWithApple`/`signInWithGoogle`) — le suivi de séance en direct n'est pas encore implémenté.
 
 ## Visuels
 
