@@ -33,6 +33,7 @@ Cette base contient la **structure de navigation**, des **écrans vides** (titre
      blocage text,
      restrictions text[],
      engagement text,
+     is_subscribed boolean not null default false,
      created_at timestamptz default now()
    );
 
@@ -45,7 +46,14 @@ Cette base contient la **structure de navigation**, des **écrans vides** (titre
    create policy "Users can read their own profile"
      on profiles for select
      using (auth.uid() = id);
+
+   create policy "Users can update their own profile"
+     on profiles for update
+     using (auth.uid() = id)
+     with check (auth.uid() = id);
    ```
+
+   `is_subscribed` gates the paywall (see below) — without the update policy, the paywall's CTA can't flip it and the RLS update silently fails.
 
 3. Installe les dépendances et lance le serveur web :
 
@@ -71,16 +79,18 @@ Sans `.env` valide, l'app refuse de démarrer (`lib/supabase.ts` lève une erreu
 ```
 app/
   _layout.tsx              Root layout : AuthProvider + écran de chargement, puis redirige
-                            vers (tabs) si une session existe, sinon vers (onboarding)
+                            selon session + isSubscribed (voir "Flow d'onboarding")
   (onboarding)/
-    _layout.tsx             Stack d'onboarding, enveloppé dans OnboardingProvider
+    _layout.tsx             Stack d'onboarding, enveloppé dans OnboardingProvider — s'ouvre sur
+                            `paywall` (session sans abonnement) ou `welcome` sinon
     welcome.tsx
     questionnaire.tsx        Écran complet : 15 questions, une par écran
     analyse.tsx               Cercle de progression animé (0→87%, ~4s) + checklist, redirige vers plan
     plan.tsx                   Résultat calculé depuis OnboardingContext (objectif, écart de poids, axes)
-    signup.tsx                 Formulaire réel (Supabase signUp + insert profiles), redirige vers paywall
-    login.tsx                   Formulaire réel (Supabase signIn), redirige vers (tabs)
-    paywall.tsx               2 cartes de plan sélectionnables (annuel / mensuel), aucun paiement déclenché
+    signup.tsx                 Formulaire réel (Supabase signUp + insert profiles)
+    login.tsx                   Formulaire réel (Supabase signIn)
+    paywall.tsx               2 cartes de plan sélectionnables, CTA passe is_subscribed à true,
+                              croix de fermeture déconnecte (pas d'accès gratuit à l'app)
   (tabs)/
     _layout.tsx             Barre de tabs (fond #101410, icônes lucide-react-native, actif #c6ff3a)
     index.tsx                Dashboard
@@ -114,7 +124,8 @@ constants/
 
 context/
   OnboardingContext.tsx       State React des réponses du questionnaire (pas de persistance)
-  AuthContext.tsx              session / user / loading + signUp / signIn / signOut (Supabase)
+  AuthContext.tsx              session / user / loading / isSubscribed + signUp / signIn /
+                              signOut / refreshSubscription (Supabase)
 
 lib/
   supabase.ts                 Client Supabase (AsyncStorage, autoRefreshToken, persistSession)
@@ -127,7 +138,15 @@ lib/
 
 Le bouton "J'ai déjà un compte" sur l'écran `welcome` va directement à `login`, en court-circuitant le questionnaire. Depuis `signup`, le lien "J'ai déjà un compte" mène aussi à `login`.
 
-**Note** : `signup` redirige toujours vers `paywall`, mais si ton projet Supabase a la confirmation d'email désactivée, `signUp` renvoie une session active immédiatement — le root layout basculera alors direct sur `(tabs)` et l'utilisateur pourrait ne jamais voir le paywall. Si tu veux garantir le passage par le paywall avant l'accès à l'app, il faudra un vrai flag d'abonnement (hors scope ici).
+Ni `signup.tsx` ni `login.tsx` ne naviguent explicitement après une authentification réussie — `app/_layout.tsx` réagit à la session (et à `isSubscribed` une fois chargé) et route lui-même vers `(tabs)` ou `(onboarding)`. Ça évite toute course entre une navigation manuelle et la redirection automatique.
+
+**Règle de redirection** (`app/_layout.tsx`), écran de chargement affiché tant que l'un de ces états n'est pas connu :
+
+- pas de session → `(onboarding)`, ouvert sur `welcome`
+- session mais pas abonné (`is_subscribed` faux) → `(onboarding)`, ouvert directement sur `paywall`
+- session et abonné → `(tabs)`
+
+Le paywall est donc infranchissable sans mettre `is_subscribed` à `true` : sa croix de fermeture déconnecte l'utilisateur au lieu de le laisser accéder à l'app. Le CTA du paywall pose actuellement `is_subscribed = true` directement en base (`// TODO: remplacer par RevenueCat` dans `paywall.tsx`) — à remplacer par un vrai flux d'achat.
 
 ## Design system (`constants/theme.ts`)
 

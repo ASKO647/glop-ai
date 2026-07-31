@@ -1,4 +1,4 @@
-import { Link, useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,7 +14,6 @@ import { supabase } from '../../lib/supabase';
 const MIN_PASSWORD_LENGTH = 6;
 
 export default function SignupScreen() {
-  const router = useRouter();
   const { signUp } = useAuth();
   const { answers } = useOnboarding();
 
@@ -85,7 +84,8 @@ export default function SignupScreen() {
     }
 
     setSubmitting(false);
-    router.replace('/paywall');
+    // No explicit navigation here: app/_layout.tsx reacts to the new session (and its
+    // subscription status) and routes to (onboarding)/paywall on its own.
   };
 
   return (
