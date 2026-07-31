@@ -24,6 +24,8 @@ export const colors = {
   labelMuted: '#7c8781',
   // Form validation / auth error state.
   danger: '#ff6161',
+  // Pure white — required background for the "Continuer avec Apple" button per Apple's HIG.
+  white: '#ffffff',
 } as const;
 
 export const radii = {

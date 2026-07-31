@@ -1,16 +1,17 @@
-import { StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
-import { colors } from '../../constants/theme';
-import AppImage from '../ui/AppImage';
+import { Check } from 'lucide-react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { colors, radii } from '../../constants/theme';
 
 type BenefitRowProps = {
   label: string;
-  thumbnail: ImageSourcePropType;
 };
 
-export default function BenefitRow({ label, thumbnail }: BenefitRowProps) {
+export default function BenefitRow({ label }: BenefitRowProps) {
   return (
     <View style={styles.row}>
-      <AppImage source={thumbnail} style={styles.thumbnail} overlay={0.35} />
+      <View style={styles.pastille}>
+        <Check color={colors.background} size={10} strokeWidth={3} />
+      </View>
       <Text style={styles.label}>{label}</Text>
     </View>
   );
@@ -22,10 +23,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  thumbnail: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
+  pastille: {
+    width: 16,
+    height: 16,
+    borderRadius: radii.full,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   label: {
     flexShrink: 1,

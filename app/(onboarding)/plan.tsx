@@ -2,7 +2,6 @@ import { Link } from 'expo-router';
 import { Check, Target } from 'lucide-react-native';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AppImage from '../../components/ui/AppImage';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import { getOptionLabel } from '../../constants/questionnaire';
@@ -116,12 +115,6 @@ export default function PlanScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
-      <AppImage
-        source={require('../../assets/images/plan-hero.jpg')}
-        style={styles.heroBanner}
-        overlay={0.45}
-      />
-
       <View style={styles.header}>
         <Text style={styles.title}>Ton plan est prêt 🎉</Text>
         <Text style={styles.subtitle}>Ta transformation commence maintenant.</Text>
@@ -168,11 +161,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     paddingHorizontal: spacing.lg,
-  },
-  heroBanner: {
-    height: 180,
-    borderRadius: radii.lg,
-    marginTop: spacing.lg,
   },
   header: {
     marginTop: spacing.lg,

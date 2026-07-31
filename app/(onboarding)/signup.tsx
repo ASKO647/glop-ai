@@ -1,7 +1,10 @@
 import { Link } from 'expo-router';
+import { Apple } from 'lucide-react-native';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import GoogleIcon from '../../components/onboarding/GoogleIcon';
+import SocialButton from '../../components/onboarding/SocialButton';
 import Button from '../../components/ui/Button';
 import TextField from '../../components/ui/TextField';
 import { getOptionLabel } from '../../constants/questionnaire';
@@ -14,7 +17,7 @@ import { supabase } from '../../lib/supabase';
 const MIN_PASSWORD_LENGTH = 6;
 
 export default function SignupScreen() {
-  const { signUp } = useAuth();
+  const { signUp, signInWithApple, signInWithGoogle } = useAuth();
   const { answers } = useOnboarding();
 
   const [email, setEmail] = useState('');
@@ -101,31 +104,54 @@ export default function SignupScreen() {
           </Text>
         </View>
 
-        <View style={styles.form}>
-          <TextField
-            label="Email"
-            value={email}
-            onChangeText={setEmail}
-            error={emailError}
-            placeholder="toi@exemple.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            textContentType="emailAddress"
-            autoComplete="email"
-          />
-          <TextField
-            label="Mot de passe"
-            value={password}
-            onChangeText={setPassword}
-            error={passwordError}
-            placeholder="6 caractères minimum"
-            secureTextEntry
-            autoCapitalize="none"
-            textContentType="newPassword"
-            autoComplete="password-new"
-          />
-          {formError ? <Text style={styles.formError}>{formError}</Text> : null}
+        <View style={styles.middle}>
+          <View style={styles.socialButtons}>
+            <SocialButton
+              label="Continuer avec Apple"
+              icon={<Apple color={colors.background} size={18} fill={colors.background} />}
+              variant="white"
+              onPress={signInWithApple}
+            />
+            <SocialButton
+              label="Continuer avec Google"
+              icon={<GoogleIcon size={18} />}
+              variant="outline"
+              onPress={signInWithGoogle}
+            />
+          </View>
+
+          <View style={styles.separatorRow}>
+            <View style={styles.separatorLine} />
+            <Text style={styles.separatorText}>ou</Text>
+            <View style={styles.separatorLine} />
+          </View>
+
+          <View style={styles.form}>
+            <TextField
+              label="Email"
+              value={email}
+              onChangeText={setEmail}
+              error={emailError}
+              placeholder="toi@exemple.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="emailAddress"
+              autoComplete="email"
+            />
+            <TextField
+              label="Mot de passe"
+              value={password}
+              onChangeText={setPassword}
+              error={passwordError}
+              placeholder="6 caractères minimum"
+              secureTextEntry
+              autoCapitalize="none"
+              textContentType="newPassword"
+              autoComplete="password-new"
+            />
+            {formError ? <Text style={styles.formError}>{formError}</Text> : null}
+          </View>
         </View>
 
         <View style={styles.footer}>
@@ -161,8 +187,28 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     gap: spacing.xs,
   },
+  middle: {
+    gap: spacing.lg,
+  },
+  socialButtons: {
+    gap: spacing.sm,
+  },
+  separatorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  separatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  separatorText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textTertiary,
+  },
   form: {
-    marginTop: spacing.xl,
     gap: spacing.md,
   },
   formError: {

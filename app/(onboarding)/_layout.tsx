@@ -25,6 +25,7 @@ export default function OnboardingLayout() {
         <Stack.Screen name="plan" />
         <Stack.Screen name="signup" />
         <Stack.Screen name="login" />
+        <Stack.Screen name="forgot-password" />
         <Stack.Screen name="paywall" />
       </Stack>
     </OnboardingProvider>

@@ -51,9 +51,13 @@ Cette base contient la **structure de navigation**, des **écrans vides** (titre
      on profiles for update
      using (auth.uid() = id)
      with check (auth.uid() = id);
+
+   create policy "Users can delete their own profile"
+     on profiles for delete
+     using (auth.uid() = id);
    ```
 
-   `is_subscribed` gates the paywall (see below) — without the update policy, the paywall's CTA can't flip it and the RLS update silently fails.
+   `is_subscribed` gates the paywall (see below) — without the update policy, the paywall's CTA can't flip it and the RLS update silently fails. The delete policy backs the "Supprimer mon compte" button on `profil.tsx`.
 
 3. Installe les dépendances et lance le serveur web :
 
@@ -87,8 +91,9 @@ app/
     questionnaire.tsx        Écran complet : 15 questions, une par écran
     analyse.tsx               Cercle de progression animé (0→87%, ~4s) + checklist, redirige vers plan
     plan.tsx                   Résultat calculé depuis OnboardingContext (objectif, écart de poids, axes)
-    signup.tsx                 Formulaire réel (Supabase signUp + insert profiles)
-    login.tsx                   Formulaire réel (Supabase signIn)
+    signup.tsx                 Apple / Google (stubs) + email/mot de passe (Supabase signUp + insert profiles)
+    login.tsx                   Idem signup, + lien "Mot de passe oublié ?"
+    forgot-password.tsx         Fonctionnel : supabase.auth.resetPasswordForEmail()
     paywall.tsx               2 cartes de plan sélectionnables, CTA passe is_subscribed à true,
                               croix de fermeture déconnecte (pas d'accès gratuit à l'app)
   (tabs)/
@@ -97,27 +102,31 @@ app/
     coach.tsx
     scanner.tsx
     progression.tsx
-    profil.tsx                 Email du compte + bouton "Se déconnecter" (renvoie vers welcome)
+    profil.tsx                 Email, statut d'abonnement, déconnexion, suppression de compte
+                              (voir caveat plus bas), liens Conditions/Confidentialité
 
 components/
   ScreenPlaceholder.tsx      Écran placeholder générique (tabs)
   OnboardingStep.tsx         Écran placeholder générique (onboarding, avec bouton "Continuer")
   onboarding/
     QuestionInput.tsx         Dispatcher par type de question (single / multiple / numeric)
-    OptionCard.tsx             Carte de réponse (bordure + fond accent quand sélectionnée),
-                              vignette 56px optionnelle (utilisée pour la question "objectif")
+    OptionCard.tsx             Carte de réponse (bordure + fond accent quand sélectionnée)
     NumericStepper.tsx         Sélecteur numérique (âge, taille, poids)
     ProgressRing.tsx           Cercle de progression SVG animé (écran analyse)
     AnalysisStepRow.tsx        Étape de checklist (gris → accent + coche) (écran analyse)
-    BenefitRow.tsx              Ligne de bénéfice avec vignette 44px (écran paywall)
+    BenefitRow.tsx              Ligne de bénéfice, pastille verte + coche (écran paywall)
     PlanCard.tsx                Carte de plan sélectionnable (écran paywall)
     RadioDot.tsx                 Bouton radio (vide / rempli) (écran paywall)
+    SocialButton.tsx             Bouton Apple (fond blanc) / Google (fond surface, bordure)
+    GoogleIcon.tsx                Logo "G" multicolore (react-native-svg)
   ui/
     AppImage.tsx                Image avec fond #101410 pendant le chargement / en cas d'échec,
-                              et voile noir optionnel (`overlay`, 0 à 1) pour les photos claires
-    Button.tsx
+                              et voile noir optionnel (`overlay`, 0 à 1) — pas utilisé actuellement,
+                              gardé pour un usage futur
+    Button.tsx                  variants: primary / secondary / ghost / danger
     Card.tsx
-    Logo.tsx                     Marque + wordmark GLOWUP/AI, variant `full` ou `mark`
+    Logo.tsx                     Texte "GLOWUP AI" (GLOWUP blanc, AI accent) — pas utilisé
+                              actuellement, gardé pour un usage futur
     ProgressBar.tsx
     TextField.tsx               Champ de formulaire avec label + message d'erreur
     index.ts
@@ -129,7 +138,8 @@ constants/
 context/
   OnboardingContext.tsx       State React des réponses du questionnaire (pas de persistance)
   AuthContext.tsx              session / user / loading / isSubscribed + signUp / signIn /
-                              signOut / refreshSubscription (Supabase)
+                              signOut / signInWithApple / signInWithGoogle (stubs, alerte
+                              "Bientôt disponible") / refreshSubscription (Supabase)
 
 lib/
   supabase.ts                 Client Supabase (AsyncStorage, autoRefreshToken, persistSession)
@@ -154,21 +164,15 @@ Le paywall est donc infranchissable sans mettre `is_subscribed` à `true` : sa c
 
 Au démarrage, `AuthContext` ne fait pas confiance à la session mise en cache localement (AsyncStorage) : elle est revalidée par un appel serveur (`supabase.auth.getUser()`). Si ce compte a été supprimé côté Supabase — ou si le jeton n'est plus valide pour toute autre raison — l'app déconnecte l'utilisateur et vide le cache local au lieu de le laisser passer. De même, `isSubscribed` n'est jamais laissé indéterminé : une ligne `profiles` manquante ou une erreur réseau sur cette requête donnent toutes les deux `false`, jamais `true` ni un état incertain.
 
+`signInWithApple` et `signInWithGoogle` (`AuthContext`) sont des stubs qui affichent juste une alerte "Bientôt disponible" — l'implémentation native (Sign in with Apple / Google Sign-In) nécessite un development build, pas Expo Go.
+
+Le bouton "Supprimer mon compte" (`profil.tsx`) supprime la ligne `profiles` de l'utilisateur puis le déconnecte, mais **ne supprime pas le compte Supabase Auth lui-même** — ça nécessite une Edge Function avec la clé `service_role`, qui n'existe pas encore (`// TODO` dans `profil.tsx`). Le compte auth existera donc toujours après "suppression".
+
 ## Visuels
 
 `app.json` référence `./assets/icon.png`, `./assets/splash-icon.png` (splash, `resizeMode: "contain"`, fond `#0a0d0c`) et `./assets/adaptive-icon.png` (icône adaptative Android, même fond).
 
-Les écrans (`welcome`, `plan`, la question "objectif" du questionnaire, `paywall`) chargent des photos depuis `assets/images/` :
-
-| Fichier | Utilisé par |
-|---|---|
-| `logo-mark.png` | `Logo.tsx` |
-| `welcome-bg.jpg` | `welcome.tsx` (fond plein écran) |
-| `plan-hero.jpg` | `plan.tsx` (bandeau) |
-| `goal-weightloss.jpg`, `goal-muscle.jpg`, `goal-glowup.jpg`, `goal-discipline.jpg` | question "objectif principal" |
-| `benefit-coach.jpg`, `benefit-scanner.jpg`, `benefit-workout.jpg`, `benefit-progress.jpg` | `paywall.tsx` |
-
-`assets/images/` contient aussi quelques photos pas encore branchées dans le code (`exercise-*.jpg`, `meal-*.jpg`) — réservées pour des écrans futurs.
+Aucun écran de navigation n'affiche plus de photo pour l'instant — `welcome`, `plan`, `questionnaire` et `paywall` sont tous en fond uni `colors.background` (paywall a ses pastilles vertes). `components/ui/AppImage.tsx` et `components/ui/Logo.tsx` restent dans le code, prêts à être réutilisés, mais rien ne les importe actuellement. Les photos elles-mêmes sont toujours dans `assets/images/` (`welcome-bg.jpg`, `plan-hero.jpg`, `logo-mark.png`, `goal-*.jpg`, `benefit-*.jpg`, `exercise-*.jpg`, `meal-*.jpg`), inutilisées pour le moment.
 
 ## Design system (`constants/theme.ts`)
 
@@ -188,3 +192,6 @@ Toutes les couleurs sont importées depuis `constants/theme.ts` — aucune coule
 
 - Brancher les écrans restants (coach, scanner, progression) sur de vraies données — les photos `exercise-*`/`meal-*` sont déjà dans `assets/images/` pour ça.
 - Remplacer le CTA du paywall par un vrai flux d'achat (RevenueCat).
+- Implémenter Sign in with Apple / Google Sign-In (development build requis).
+- Ajouter une Edge Function pour la suppression complète du compte Supabase Auth.
+- Décider si/où réutiliser `AppImage.tsx` et `Logo.tsx`.

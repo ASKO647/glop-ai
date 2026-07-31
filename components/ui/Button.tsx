@@ -1,7 +1,7 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, type PressableProps } from 'react-native';
 import { colors, radii, spacing, typography } from '../../constants/theme';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
 type ButtonProps = PressableProps & {
   label: string;
@@ -35,7 +35,7 @@ export default function Button({
       {...rest}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? colors.background : colors.accent} />
+        <ActivityIndicator color={labelVariantStyles[variant].color} />
       ) : (
         <Text style={[styles.label, labelVariantStyles[variant]]}>{label}</Text>
       )}
@@ -76,6 +76,9 @@ const variantStyles = StyleSheet.create({
   ghost: {
     backgroundColor: 'transparent',
   },
+  danger: {
+    backgroundColor: 'transparent',
+  },
 });
 
 const labelVariantStyles = StyleSheet.create({
@@ -87,5 +90,8 @@ const labelVariantStyles = StyleSheet.create({
   },
   ghost: {
     color: colors.accent,
+  },
+  danger: {
+    color: colors.danger,
   },
 });
