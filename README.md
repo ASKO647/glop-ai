@@ -97,7 +97,7 @@ app/
     coach.tsx
     scanner.tsx
     progression.tsx
-    profil.tsx
+    profil.tsx                 Email du compte + bouton "Se déconnecter" (renvoie vers welcome)
 
 components/
   ScreenPlaceholder.tsx      Écran placeholder générique (tabs)
@@ -147,6 +147,8 @@ Ni `signup.tsx` ni `login.tsx` ne naviguent explicitement après une authentific
 - session et abonné → `(tabs)`
 
 Le paywall est donc infranchissable sans mettre `is_subscribed` à `true` : sa croix de fermeture déconnecte l'utilisateur au lieu de le laisser accéder à l'app. Le CTA du paywall pose actuellement `is_subscribed = true` directement en base (`// TODO: remplacer par RevenueCat` dans `paywall.tsx`) — à remplacer par un vrai flux d'achat.
+
+Au démarrage, `AuthContext` ne fait pas confiance à la session mise en cache localement (AsyncStorage) : elle est revalidée par un appel serveur (`supabase.auth.getUser()`). Si ce compte a été supprimé côté Supabase — ou si le jeton n'est plus valide pour toute autre raison — l'app déconnecte l'utilisateur et vide le cache local au lieu de le laisser passer. De même, `isSubscribed` n'est jamais laissé indéterminé : une ligne `profiles` manquante ou une erreur réseau sur cette requête donnent toutes les deux `false`, jamais `true` ni un état incertain.
 
 ## Design system (`constants/theme.ts`)
 

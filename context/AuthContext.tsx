@@ -25,27 +25,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isSubscribed, setIsSubscribed] = useState<boolean | null>(null);
 
   const loadSubscription = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('is_subscribed')
-      .eq('id', userId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_subscribed')
+        .eq('id', userId)
+        .single();
 
-    // No readable profile row (missing insert, RLS, network hiccup, ...) — default to
-    // unsubscribed, the same safe default the `is_subscribed` column itself has.
-    setIsSubscribed(error ? false : Boolean(data?.is_subscribed));
+      // No readable profile row (missing insert, RLS, no matching row, ...) or a query
+      // error — default to unsubscribed. Never leave this true or unresolved just
+      // because the profile lookup failed.
+      setIsSubscribed(!error && data ? Boolean(data.is_subscribed) : false);
+    } catch {
+      // Network-level failure (the request itself never completed) — same safe
+      // default: refuse access rather than leaving isSubscribed indeterminate.
+      setIsSubscribed(false);
+    }
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setAuthLoading(false);
-      if (data.session?.user) {
-        loadSubscription(data.session.user.id);
-      } else {
-        setIsSubscribed(null);
+    let cancelled = false;
+
+    const bootstrap = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const localSession = sessionData.session;
+
+      if (!localSession) {
+        if (!cancelled) {
+          setSession(null);
+          setIsSubscribed(null);
+          setAuthLoading(false);
+        }
+        return;
       }
-    });
+
+      // getSession() only reads the local cache. Validate it against the server so a
+      // token left behind after the user was deleted (or otherwise revoked) doesn't
+      // grant access — if this fails or comes back empty, sign out and wipe the cache.
+      try {
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError || !userData.user) {
+          throw userError ?? new Error('No user returned from getUser()');
+        }
+        if (!cancelled) {
+          setSession(localSession);
+          setAuthLoading(false);
+          await loadSubscription(localSession.user.id);
+        }
+      } catch {
+        await supabase.auth.signOut();
+        if (!cancelled) {
+          setSession(null);
+          setIsSubscribed(null);
+          setAuthLoading(false);
+        }
+      }
+    };
+
+    bootstrap();
 
     const {
       data: { subscription },
@@ -59,7 +96,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const refreshSubscription = async () => {
