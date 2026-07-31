@@ -7,7 +7,7 @@ import { colors } from '../constants/theme';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 
 function RootNavigator() {
-  const { session, loading } = useAuth();
+  const { session, isSubscribed, loading } = useAuth();
 
   if (loading) {
     return (
@@ -17,6 +17,10 @@ function RootNavigator() {
     );
   }
 
+  // No session → onboarding (starts at welcome). Session but not subscribed → onboarding,
+  // (onboarding)/_layout.tsx opens straight to paywall in that case. Session + subscribed → tabs.
+  const showTabs = !!session && !!isSubscribed;
+
   return (
     <Stack
       screenOptions={{
@@ -24,10 +28,10 @@ function RootNavigator() {
         contentStyle: { backgroundColor: colors.background },
       }}
     >
-      <Stack.Protected guard={!session}>
+      <Stack.Protected guard={!showTabs}>
         <Stack.Screen name="(onboarding)" />
       </Stack.Protected>
-      <Stack.Protected guard={!!session}>
+      <Stack.Protected guard={showTabs}>
         <Stack.Screen name="(tabs)" />
       </Stack.Protected>
     </Stack>

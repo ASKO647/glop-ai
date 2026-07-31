@@ -7,6 +7,8 @@ import BenefitRow from '../../components/onboarding/BenefitRow';
 import PlanCard from '../../components/onboarding/PlanCard';
 import Button from '../../components/ui/Button';
 import { colors, radii, spacing } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 const BENEFITS = [
   'Coach IA illimité, chat & vocal',
@@ -17,19 +19,48 @@ const BENEFITS = [
 
 type PlanId = 'annual' | 'monthly';
 
-// Note: navigating past this step currently loops back here — `isAuthenticated`
-// in app/_layout.tsx is hardcoded to false until real auth/subscription logic exists.
-// The CTA below does not trigger any payment yet.
 export default function PaywallScreen() {
   const router = useRouter();
+  const { user, signOut, refreshSubscription } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<PlanId>('annual');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | undefined>();
+
+  // Closing without subscribing must not grant access to the app — sign the user
+  // out and send them back to the very start of onboarding.
+  const handleClose = async () => {
+    await signOut();
+    router.replace('/welcome');
+  };
+
+  const handleSubscribe = async () => {
+    if (!user) return;
+    setError(undefined);
+    setSubmitting(true);
+
+    // TODO: remplacer par RevenueCat
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ is_subscribed: true })
+      .eq('id', user.id);
+
+    if (updateError) {
+      setError('Une erreur est survenue. Réessaie.');
+      setSubmitting(false);
+      return;
+    }
+
+    await refreshSubscription();
+    setSubmitting(false);
+    router.replace('/');
+  };
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Fermer"
-        onPress={() => router.back()}
+        onPress={handleClose}
         hitSlop={12}
         style={styles.closeButton}
       >
@@ -72,11 +103,13 @@ export default function PaywallScreen() {
       </View>
 
       <View style={styles.footer}>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
         <Button
           label="Commencer mon essai gratuit"
           variant="primary"
           style={styles.ctaButton}
-          onPress={() => router.push('/')}
+          loading={submitting}
+          onPress={handleSubscribe}
         />
         <View style={styles.linksRow}>
           <Text style={styles.link}>Restaurer</Text>
@@ -134,6 +167,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
     gap: spacing.sm,
+  },
+  error: {
+    fontSize: 12,
+    textAlign: 'center',
+    color: colors.danger,
   },
   ctaButton: {
     height: 52,

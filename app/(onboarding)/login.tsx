@@ -1,4 +1,4 @@
-import { Link, useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,7 +9,6 @@ import { useAuth } from '../../context/AuthContext';
 import { mapAuthError } from '../../lib/authErrors';
 
 export default function LoginScreen() {
-  const router = useRouter();
   const { signIn } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -47,7 +46,8 @@ export default function LoginScreen() {
       return;
     }
 
-    router.replace('/');
+    // No explicit navigation here: app/_layout.tsx reacts to the new session (and its
+    // subscription status) and routes to (tabs) or (onboarding)/paywall on its own.
   };
 
   return (
