@@ -104,16 +104,20 @@ components/
   OnboardingStep.tsx         Écran placeholder générique (onboarding, avec bouton "Continuer")
   onboarding/
     QuestionInput.tsx         Dispatcher par type de question (single / multiple / numeric)
-    OptionCard.tsx             Carte de réponse (bordure + fond accent quand sélectionnée)
+    OptionCard.tsx             Carte de réponse (bordure + fond accent quand sélectionnée),
+                              vignette 56px optionnelle (utilisée pour la question "objectif")
     NumericStepper.tsx         Sélecteur numérique (âge, taille, poids)
     ProgressRing.tsx           Cercle de progression SVG animé (écran analyse)
     AnalysisStepRow.tsx        Étape de checklist (gris → accent + coche) (écran analyse)
-    BenefitRow.tsx              Ligne de bénéfice avec pastille + coche (écran paywall)
+    BenefitRow.tsx              Ligne de bénéfice avec vignette 44px (écran paywall)
     PlanCard.tsx                Carte de plan sélectionnable (écran paywall)
     RadioDot.tsx                 Bouton radio (vide / rempli) (écran paywall)
   ui/
+    AppImage.tsx                Image avec fond #101410 pendant le chargement / en cas d'échec,
+                              et voile noir optionnel (`overlay`, 0 à 1) pour les photos claires
     Button.tsx
     Card.tsx
+    Logo.tsx                     Marque + wordmark GLOWUP/AI, variant `full` ou `mark`
     ProgressBar.tsx
     TextField.tsx               Champ de formulaire avec label + message d'erreur
     index.ts
@@ -150,6 +154,22 @@ Le paywall est donc infranchissable sans mettre `is_subscribed` à `true` : sa c
 
 Au démarrage, `AuthContext` ne fait pas confiance à la session mise en cache localement (AsyncStorage) : elle est revalidée par un appel serveur (`supabase.auth.getUser()`). Si ce compte a été supprimé côté Supabase — ou si le jeton n'est plus valide pour toute autre raison — l'app déconnecte l'utilisateur et vide le cache local au lieu de le laisser passer. De même, `isSubscribed` n'est jamais laissé indéterminé : une ligne `profiles` manquante ou une erreur réseau sur cette requête donnent toutes les deux `false`, jamais `true` ni un état incertain.
 
+## Visuels
+
+`app.json` référence `./assets/icon.png`, `./assets/splash-icon.png` (splash, `resizeMode: "contain"`, fond `#0a0d0c`) et `./assets/adaptive-icon.png` (icône adaptative Android, même fond).
+
+Les écrans (`welcome`, `plan`, la question "objectif" du questionnaire, `paywall`) chargent des photos depuis `assets/images/` :
+
+| Fichier | Utilisé par |
+|---|---|
+| `logo-mark.png` | `Logo.tsx` |
+| `welcome-bg.jpg` | `welcome.tsx` (fond plein écran) |
+| `plan-hero.jpg` | `plan.tsx` (bandeau) |
+| `goal-weightloss.jpg`, `goal-muscle.jpg`, `goal-glowup.jpg`, `goal-discipline.jpg` | question "objectif principal" |
+| `benefit-coach.jpg`, `benefit-scanner.jpg`, `benefit-workout.jpg`, `benefit-progress.jpg` | `paywall.tsx` |
+
+`assets/images/` contient aussi quelques photos pas encore branchées dans le code (`exercise-*.jpg`, `meal-*.jpg`) — réservées pour des écrans futurs.
+
 ## Design system (`constants/theme.ts`)
 
 | Rôle | Valeur |
@@ -166,5 +186,5 @@ Toutes les couleurs sont importées depuis `constants/theme.ts` — aucune coule
 
 ## Prochaines étapes
 
-- Brancher les écrans restants (coach, scanner, progression, profil) sur de vraies données.
-- Ajouter un flag d'abonnement si le paywall doit bloquer l'accès à `(tabs)` même après une session active.
+- Brancher les écrans restants (coach, scanner, progression) sur de vraies données — les photos `exercise-*`/`meal-*` sont déjà dans `assets/images/` pour ça.
+- Remplacer le CTA du paywall par un vrai flux d'achat (RevenueCat).
