@@ -309,10 +309,10 @@ lib/
                               `Alert.alert()` sur react-native-web (fallback window.alert/confirm)
   color.ts                        hexToRgba() partagé (évite la duplication entre composants)
   coach.ts                        sendMessage(history, profile) — appelle l'API Anthropic
-                              (`claude-sonnet-4-6`, max_tokens 1000) via `@anthropic-ai/sdk` avec
-                              `dangerouslyAllowBrowser: true` (app 100% client, pas de backend).
-                              Le prompt système injecte objectif / poids actuel / poids cible /
-                              niveau d'activité / restrictions alimentaires du profil
+                              (`claude-sonnet-4-6`, max_tokens 1000) en `fetch` direct sur
+                              `https://api.anthropic.com/v1/messages`, **sans SDK** (voir caveat
+                              ci-dessous). Le prompt système injecte objectif / poids actuel /
+                              poids cible / niveau d'activité / restrictions alimentaires du profil
 ```
 
 ## Flow d'onboarding
@@ -381,7 +381,9 @@ Le calcul du streak et les 4 états du bandeau de semaine (complété/manqué/fu
 
 Le prompt système (construit dans `buildSystemPrompt`, `lib/coach.ts`) fixe la personnalité (tutoiement, français, 2-4 phrases courtes, ton motivant mais direct) et injecte les données de profil disponibles : objectif, poids actuel, poids cible, niveau d'activité, restrictions alimentaires. Les champs absents du profil sont simplement omis du prompt plutôt que d'y figurer vides.
 
-**Clé API côté client, en connaissance de cause.** L'app n'a pas de backend, donc `EXPO_PUBLIC_ANTHROPIC_API_KEY` est lue directement dans le bundle et le client `@anthropic-ai/sdk` est instancié avec `dangerouslyAllowBrowser: true`. La clé est donc visible par quiconque inspecte le bundle web/mobile — acceptable pour ce prototype, mais à remplacer par un proxy serveur (Edge Function Supabase, par exemple) avant toute mise en production.
+**Pas de SDK Anthropic dans ce projet — jamais.** `@anthropic-ai/sdk` est un package Node : il importe `node:fs` au chargement, et React Native n'a pas la bibliothèque standard de Node, donc `npx expo export` / le bundle iOS-Android cassent dès qu'il est importé (même indirectement). `lib/coach.ts` appelle l'API Anthropic en `fetch` brut sur `https://api.anthropic.com/v1/messages`, avec les headers `content-type`, `x-api-key`, `anthropic-version: 2023-06-01` et `anthropic-dangerous-direct-browser-access: true` (l'équivalent fetch de `dangerouslyAllowBrowser`). **Tout futur appel à l'API Anthropic dans cette app (le scanner de repas, par exemple) doit suivre exactement ce même pattern `fetch` — n'installe jamais `@anthropic-ai/sdk` ou un équivalent basé sur Node.**
+
+**Clé API côté client, en connaissance de cause.** L'app n'a pas de backend, donc `EXPO_PUBLIC_ANTHROPIC_API_KEY` est lue directement dans le bundle et envoyée en clair dans l'en-tête `x-api-key` de chaque requête. La clé est donc visible par quiconque inspecte le bundle web/mobile — acceptable pour ce prototype, mais à remplacer par un proxy serveur (Edge Function Supabase, par exemple) avant toute mise en production.
 
 Si `sendMessage` échoue (réseau, clé manquante, erreur API), le message d'erreur en français n'est pas jeté comme une exception silencieuse : il est ajouté à la conversation comme une bulle "système" (fond neutre, texte `colors.danger`), visible dans le fil, mais **non persistée** en base — un rechargement de l'historique la fait disparaître, contrairement aux vrais tours de conversation.
 
