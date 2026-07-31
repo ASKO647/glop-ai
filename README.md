@@ -168,7 +168,7 @@ Les écrans (`welcome`, `plan`, la question "objectif" du questionnaire, `paywal
 | `goal-weightloss.jpg`, `goal-muscle.jpg`, `goal-glowup.jpg`, `goal-discipline.jpg` | question "objectif principal" |
 | `benefit-coach.jpg`, `benefit-scanner.jpg`, `benefit-workout.jpg`, `benefit-progress.jpg` | `paywall.tsx` |
 
-**⚠️ Ces fichiers n'existaient pas dans le dépôt** — ils ont été générés comme placeholders unis (mêmes noms, mêmes formats attendus par le code) uniquement pour que l'app compile et pour vérifier le rendu (overlay, coins arrondis, dégradé). `assets/adaptive-icon.png` est un placeholder du même genre. **À remplacer par les vrais visuels avant toute mise en prod** — il suffit d'écraser les fichiers en gardant les mêmes noms, aucun changement de code n'est nécessaire.
+`assets/images/` contient aussi quelques photos pas encore branchées dans le code (`exercise-*.jpg`, `meal-*.jpg`) — réservées pour des écrans futurs.
 
 ## Design system (`constants/theme.ts`)
 
@@ -186,6 +186,5 @@ Toutes les couleurs sont importées depuis `constants/theme.ts` — aucune coule
 
 ## Prochaines étapes
 
-- Remplacer les visuels placeholder (voir "Visuels" ci-dessus) par les vrais assets.
-- Brancher les écrans restants (coach, scanner, progression) sur de vraies données.
+- Brancher les écrans restants (coach, scanner, progression) sur de vraies données — les photos `exercise-*`/`meal-*` sont déjà dans `assets/images/` pour ça.
 - Remplacer le CTA du paywall par un vrai flux d'achat (RevenueCat).
