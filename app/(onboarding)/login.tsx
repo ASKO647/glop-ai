@@ -4,19 +4,13 @@ import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } fro
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from '../../components/ui/Button';
 import TextField from '../../components/ui/TextField';
-import { getOptionLabel } from '../../constants/questionnaire';
 import { colors, spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
-import { asString, useOnboarding } from '../../context/OnboardingContext';
 import { mapAuthError } from '../../lib/authErrors';
-import { supabase } from '../../lib/supabase';
 
-const MIN_PASSWORD_LENGTH = 6;
-
-export default function SignupScreen() {
+export default function LoginScreen() {
   const router = useRouter();
-  const { signUp } = useAuth();
-  const { answers } = useOnboarding();
+  const { signIn } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,7 +19,7 @@ export default function SignupScreen() {
   const [formError, setFormError] = useState<string | undefined>();
   const [submitting, setSubmitting] = useState(false);
 
-  const isDisabled = !email.trim() || password.length < MIN_PASSWORD_LENGTH;
+  const isDisabled = !email.trim() || !password;
 
   const handleSubmit = async () => {
     setEmailError(undefined);
@@ -36,56 +30,24 @@ export default function SignupScreen() {
       setEmailError("L'email est requis.");
       return;
     }
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      setPasswordError(`Le mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caractères.`);
+    if (!password) {
+      setPasswordError('Le mot de passe est requis.');
       return;
     }
 
     setSubmitting(true);
-    const { error, userId } = await signUp(email.trim(), password);
+    const { error } = await signIn(email.trim(), password);
+    setSubmitting(false);
 
-    if (error || !userId) {
+    if (error) {
       const mapped = mapAuthError(error);
       if (mapped.field === 'email') setEmailError(mapped.message);
       else if (mapped.field === 'password') setPasswordError(mapped.message);
       else setFormError(mapped.message);
-      setSubmitting(false);
       return;
     }
 
-    const restrictionIds = Array.isArray(answers.dietary_restrictions) ? answers.dietary_restrictions : [];
-    const restrictions = restrictionIds
-      .map((id) => getOptionLabel('dietary_restrictions', id))
-      .filter((label): label is string => Boolean(label));
-
-    const { error: profileError } = await supabase.from('profiles').insert({
-      id: userId,
-      email: email.trim(),
-      objectif: getOptionLabel('goal', asString(answers.goal)) ?? null,
-      sexe: getOptionLabel('gender', asString(answers.gender)) ?? null,
-      age: typeof answers.age === 'number' ? answers.age : null,
-      taille: typeof answers.height === 'number' ? answers.height : null,
-      poids_actuel: typeof answers.current_weight === 'number' ? answers.current_weight : null,
-      poids_objectif: typeof answers.target_weight === 'number' ? answers.target_weight : null,
-      vitesse: getOptionLabel('pace', asString(answers.pace)) ?? null,
-      niveau_activite: getOptionLabel('activity_level', asString(answers.activity_level)) ?? null,
-      frequence_entrainement: getOptionLabel('workouts_per_week', asString(answers.workouts_per_week)) ?? null,
-      lieu_entrainement: getOptionLabel('training_location', asString(answers.training_location)) ?? null,
-      alimentation: getOptionLabel('diet_quality', asString(answers.diet_quality)) ?? null,
-      sommeil: getOptionLabel('sleep_hours', asString(answers.sleep_hours)) ?? null,
-      blocage: getOptionLabel('blocker', asString(answers.blocker)) ?? null,
-      restrictions,
-      engagement: getOptionLabel('commitment_level', asString(answers.commitment_level)) ?? null,
-    });
-
-    if (profileError) {
-      // The account itself was created successfully — a failed profile insert
-      // shouldn't trap the user on this screen with no way to retry.
-      console.warn('Profile insert failed:', profileError.message);
-    }
-
-    setSubmitting(false);
-    router.replace('/paywall');
+    router.replace('/');
   };
 
   return (
@@ -95,9 +57,9 @@ export default function SignupScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.header}>
-          <Text style={typography.title}>Créer un compte</Text>
+          <Text style={typography.title}>Content de te revoir</Text>
           <Text style={[typography.body, { color: colors.textSecondary }]}>
-            Sauvegarde ton plan et débloque ton coach IA.
+            Connecte-toi pour retrouver ton plan.
           </Text>
         </View>
 
@@ -119,26 +81,26 @@ export default function SignupScreen() {
             value={password}
             onChangeText={setPassword}
             error={passwordError}
-            placeholder="6 caractères minimum"
+            placeholder="Ton mot de passe"
             secureTextEntry
             autoCapitalize="none"
-            textContentType="newPassword"
-            autoComplete="password-new"
+            textContentType="password"
+            autoComplete="password"
           />
           {formError ? <Text style={styles.formError}>{formError}</Text> : null}
         </View>
 
         <View style={styles.footer}>
           <Button
-            label="Créer mon compte"
+            label="Se connecter"
             variant="primary"
             disabled={isDisabled}
             loading={submitting}
             onPress={handleSubmit}
           />
-          <Link href="/login" asChild>
-            <Pressable style={styles.loginLink}>
-              <Text style={styles.loginLinkText}>J'ai déjà un compte</Text>
+          <Link href="/signup" asChild>
+            <Pressable style={styles.signupLink}>
+              <Text style={styles.signupLinkText}>Pas encore de compte ? Créer un compte</Text>
             </Pressable>
           </Link>
         </View>
@@ -173,11 +135,11 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.lg,
   },
-  loginLink: {
+  signupLink: {
     alignItems: 'center',
     paddingVertical: spacing.xs,
   },
-  loginLinkText: {
+  signupLinkText: {
     fontSize: 13,
     fontWeight: '600',
     color: colors.accent,

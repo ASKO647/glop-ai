@@ -22,6 +22,8 @@ export const colors = {
   stepTextDone: '#d5ddd8',
   // Small uppercase section labels (e.g. "OBJECTIFS PRINCIPAUX" on the plan screen).
   labelMuted: '#7c8781',
+  // Form validation / auth error state.
+  danger: '#ff6161',
 } as const;
 
 export const radii = {

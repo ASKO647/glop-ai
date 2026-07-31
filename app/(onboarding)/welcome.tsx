@@ -19,7 +19,7 @@ export default function WelcomeScreen() {
         <Link href="/questionnaire" asChild>
           <Button label="Commencer" variant="primary" />
         </Link>
-        <Link href="/signup" asChild>
+        <Link href="/login" asChild>
           <Button label="J'ai déjà un compte" variant="ghost" />
         </Link>
       </View>
