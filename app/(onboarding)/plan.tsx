@@ -6,7 +6,7 @@ import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import { getOptionLabel } from '../../constants/questionnaire';
 import { colors, radii, spacing } from '../../constants/theme';
-import { useOnboarding, type AnswerValue } from '../../context/OnboardingContext';
+import { asString, useOnboarding } from '../../context/OnboardingContext';
 
 // Estimated weekly weight change (kg) per chosen pace — used only to derive a display duration.
 const WEEKLY_RATE_BY_PACE: Record<string, number> = {
@@ -60,10 +60,6 @@ function getDisciplinePromise(blockerId: string | undefined, durationDays: numbe
     default:
       return `Missions quotidiennes pour tenir sur ${durationDays} jours`;
   }
-}
-
-function asString(value: AnswerValue | undefined): string | undefined {
-  return typeof value === 'string' ? value : undefined;
 }
 
 function clamp(value: number, min: number, max: number): number {

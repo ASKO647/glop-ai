@@ -30,3 +30,7 @@ export function useOnboarding() {
   }
   return context;
 }
+
+export function asString(value: AnswerValue | undefined): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
