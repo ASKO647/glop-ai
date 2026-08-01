@@ -207,10 +207,12 @@ app/
   (tabs)/
     _layout.tsx             Barre de tabs flottante (pilule #101410, icônes seules, icône active
                               dans un cercle plein #c6ff3a de 44px)
-    index.tsx                Dashboard : header (avatar → profil, cloche → notifications), semaine,
-                              carte calories (+ CTA "Continuer" → scanner), missions du jour, repas
-                              du jour (ou état vide → scanner), catégories de séances, séances
-                              recommandées (→ workout/[id]), stats rapides (→ progression), astuce
+    index.tsx                Dashboard : logo "GLOWUP AI" en tête, header (avatar → profil, cloche →
+                              notifications), semaine, carte calories (+ CTA "Continuer" → scanner),
+                              missions du jour, repas du jour (ou état vide → scanner), catégories de
+                              séances, séances recommandées (→ workout/[id]), stats rapides (→
+                              progression), astuce — poids/repas rechargés via `useFocusEffect` à
+                              chaque retour sur l'onglet
     meals.tsx                 Historique complet des repas, groupé par jour avec total kcal
                               (onglet caché — `href: null`, atteint via "Voir tout"/carte repas)
     coach.tsx                  Conversation avec le coach IA (Anthropic) — historique persisté
@@ -226,7 +228,13 @@ app/
                               à propos, mes données, zone de danger) — voir "Écran Profil"
   workout/
     [id].tsx                  Détail d'une séance (titre, muscles, durée, kcal, liste d'exercices
-                              séries/reps, CTA "Commencer la séance") — écran racine (hors tabs)
+                              séries/reps, CTA "Commencer la séance" → workout/session/[id]) — écran
+                              racine (hors tabs)
+    session/
+      [id].tsx                 Suivi de séance en direct : exercice courant, "Série X sur Y", objectif
+                              de reps, minuteur de repos (60s ±15s), barre de progression globale,
+                              navigation Précédent/Suivant, CTA "Terminer" sur le dernier exercice
+                              (marque la mission "workout" du jour comme accomplie)
   notifications.tsx           Liste des notifications, état vide propre — écran racine (hors tabs)
   legal/
     terms.tsx                  Conditions d'utilisation — texte placeholder
@@ -273,8 +281,8 @@ components/
                               gardé pour un usage futur
     Button.tsx                  variants: primary / secondary / ghost / danger
     Card.tsx
-    Logo.tsx                     Texte "GLOWUP AI" (GLOWUP blanc, AI accent) — pas utilisé
-                              actuellement, gardé pour un usage futur
+    Logo.tsx                     Texte "GLOWUP AI" (GLOWUP blanc, AI accent) — affiché en tête du
+                              dashboard (`(tabs)/index.tsx`)
     ProgressBar.tsx
     TextField.tsx               Champ de formulaire avec label + message d'erreur
     NumberStepperModal.tsx       Stepper numérique sans clavier (±step, appui long pour défiler,
@@ -389,9 +397,13 @@ Tous les éléments cliquables du dashboard sont des `Pressable` avec un retour 
 | Carte stat (poids actuel / objectif / écart) | `progression` |
 | Carte astuce du jour | non cliquable |
 
-`workout/[id].tsx` et `notifications.tsx` sont enregistrés comme écrans racine (`app/_layout.tsx`, dans le même `Stack.Protected` que `(tabs)`) plutôt que dans le groupe `(tabs)` : ce sont des écrans "poussés" par-dessus les tabs, pas des onglets. `meals.tsx` est lui un `Tabs.Screen` avec `href: null` — il vit dans `(tabs)` (chemin `/meals`) mais n'apparaît pas comme 6ᵉ icône dans la barre.
+`workout/[id].tsx`, `workout/session/[id].tsx` et `notifications.tsx` sont enregistrés comme écrans racine (`app/_layout.tsx`, dans le même `Stack.Protected` que `(tabs)`) plutôt que dans le groupe `(tabs)` : ce sont des écrans "poussés" par-dessus les tabs, pas des onglets. `meals.tsx` est lui un `Tabs.Screen` avec `href: null` — il vit dans `(tabs)` (chemin `/meals`) mais n'apparaît pas comme 6ᵉ icône dans la barre.
 
-Le bouton "Commencer la séance" (`workout/[id].tsx`) affiche pour l'instant une alerte "Bientôt disponible" (même pattern que `signInWithApple`/`signInWithGoogle`) — le suivi de séance en direct n'est pas encore implémenté.
+Le poids affiché dans "Poids actuel"/"Écart restant" (dashboard) vient de la dernière ligne de `weight_logs` (via `useWeightLogs`), pas de `profiles.poids_actuel` — même logique que `progression.tsx` (`logs[logs.length - 1].poids`, avec repli sur `profiles.poids_actuel` tant qu'aucune pesée n'existe). `profiles.poids_actuel` reste la valeur de référence au moment de l'onboarding, mais n'est jamais mis à jour ensuite : s'y fier directement sur le dashboard le rendrait périmé dès la première pesée dans Progression. Le dashboard recharge `weight_logs` et `meals` via `useFocusEffect` (`expo-router`) à chaque fois que l'onglet reprend le focus, pour que les repas scannés ou la pesée du jour, enregistrés depuis un autre écran, apparaissent sans reload manuel.
+
+### Suivi de séance en direct
+
+Le bouton "Commencer la séance" (`workout/[id].tsx`) pousse vers `workout/session/[id].tsx`, qui fait défiler les exercices de la séance un par un : nom de l'exercice, "Série X sur Y", objectif de reps (parsé depuis le champ `reps`, qui est une chaîne — `"15"` devient "15 répétitions", `"40s"` reste tel quel), et une barre de progression globale (séries complétées / total sur toute la séance). Un bouton "Série terminée" avance le compteur de séries et, si ce n'était pas la dernière série de l'exercice, démarre un minuteur de repos (60s par défaut, boutons ±15s, "Passer le repos" pour l'écourter) avant de passer à la série suivante. "Précédent"/"Suivant" navigue librement entre exercices ; sur le dernier exercice, "Suivant" devient "Terminer" et marque la mission du jour `workout` comme accomplie (`useDailyMissions`'s `incrementMission`) avant de renvoyer au dashboard (`router.replace('/')`). Cet écran est un state local pur : rien n'est persisté série par série, seule la complétion finale de la mission l'est.
 
 ### Consulter un jour passé
 
@@ -476,7 +488,7 @@ Le graphique (`components/progression/WeightChart.tsx`) est tracé à la main av
 
 **Régularité, expliquée.** La grille affiche désormais une légende (`Toutes les missions` / `Partiellement` / `Aucune`), un texte d'intro, un compteur "X / 30 jours actifs", et un appui long sur un carré affiche une info-bulle avec la date et le détail (`hooks/useMissionStreak.ts` expose maintenant `countsByDate` en plus de `statusByDate` pour ça). Cette grille réutilise `daily_missions` (déjà utilisée par le dashboard) via `hooks/useMissionStreak.ts` — une lecture seule sur 30 jours, volontairement séparée de `useDailyMissions` qui, lui, insère les missions par défaut du jour : la page Progression ne doit jamais créer de lignes en arrière-plan simplement parce qu'on l'a consultée.
 
-**Photos de progression.** `hooks/useProgressPhotos.ts` gère la table `progress_photos` et le bucket Storage privé `progress-photos`. Chaque photo est compressée avec `expo-image-manipulator` (largeur max 1024px, JPEG qualité 0.6 — même API contextuelle que `lib/foodScanner.ts`, mais sans `base64` puisque c'est l'URI locale qui sert à l'upload) puis envoyée vers `{user_id}/{date}.jpg` avec `upsert: true` : une deuxième photo le même jour écrase la précédente plutôt que d'empiler des doublons, aussi bien côté Storage que côté ligne `progress_photos` (upsert manuel : update si une ligne existe déjà pour la date du jour, insert sinon). Le bucket étant privé, l'affichage passe systématiquement par `createSignedUrl` (URLs valables 1h, régénérées à chaque chargement de la liste).
+**Photos de progression.** `hooks/useProgressPhotos.ts` gère la table `progress_photos` et le bucket Storage privé `progress-photos`. Chaque photo est compressée avec `expo-image-manipulator` (largeur max 1024px, JPEG qualité 0.6 — même API contextuelle que `lib/foodScanner.ts`, mais sans `base64` puisque c'est l'URI locale qui sert à l'upload) puis envoyée vers `{user_id}/{date}.jpg` avec `upsert: true` : une deuxième photo le même jour écrase la précédente plutôt que d'empiler des doublons, aussi bien côté Storage que côté ligne `progress_photos` (upsert manuel : update si une ligne existe déjà pour la date du jour, insert sinon). Le bucket étant privé, l'affichage passe systématiquement par `createSignedUrl` (URLs valables 24h, régénérées à chaque chargement de la liste). L'upload (`storage.upload`), la génération d'URL signée (`createSignedUrl`) et le chargement de l'image côté `<Image onError>` (`components/progression/PhotosCard.tsx`) journalisent chacun leur erreur avec `console.error` plutôt que d'échouer silencieusement — un cadre resté noir dans Progression se diagnostique donc directement depuis la console.
 
 Affichage : une seule photo s'affiche seule ; à partir de deux, un comparateur affiche la plus ancienne à gauche ("Avant", fixe) et une photo sélectionnable à droite ("Après", la plus récente par défaut), avec l'écart de poids entre les deux dates en dessous. Une bande de vignettes sous le comparateur permet de changer la photo "Après" (tap) ou de supprimer n'importe quelle photo (appui long + confirmation, y compris sur les photos "Avant"/"Après" elles-mêmes). La suppression retire l'objet du bucket puis la ligne en base ; un échec de suppression côté Storage (objet déjà absent, par exemple) n'empêche pas de retirer la ligne, pour ne jamais laisser une photo supprimée réapparaître dans l'app.
 
@@ -627,7 +639,7 @@ alter table profiles add column parraine_par uuid references auth.users(id);
 
 `app.json` référence `./assets/icon.png`, `./assets/splash-icon.png` (splash, `resizeMode: "contain"`, fond `#0a0d0c`) et `./assets/adaptive-icon.png` (icône adaptative Android, même fond).
 
-Aucun écran de navigation n'affiche plus de photo pour l'instant — `welcome`, `plan`, `questionnaire` et `paywall` sont tous en fond uni `colors.background` (paywall a ses pastilles vertes). `components/ui/AppImage.tsx` et `components/ui/Logo.tsx` restent dans le code, prêts à être réutilisés, mais rien ne les importe actuellement. Les photos elles-mêmes sont toujours dans `assets/images/` (`welcome-bg.jpg`, `plan-hero.jpg`, `logo-mark.png`, `goal-*.jpg`, `benefit-*.jpg`, `exercise-*.jpg`, `meal-*.jpg`), inutilisées pour le moment.
+Aucun écran de navigation n'affiche plus de photo pour l'instant — `welcome`, `plan`, `questionnaire` et `paywall` sont tous en fond uni `colors.background` (paywall a ses pastilles vertes). `components/ui/Logo.tsx` est affiché en tête du dashboard (`(tabs)/index.tsx`) ; `components/ui/AppImage.tsx` reste dans le code, prêt à être réutilisé, mais rien ne l'importe actuellement. Les photos elles-mêmes sont toujours dans `assets/images/` (`welcome-bg.jpg`, `plan-hero.jpg`, `logo-mark.png`, `goal-*.jpg`, `benefit-*.jpg`, `exercise-*.jpg`, `meal-*.jpg`), inutilisées pour le moment.
 
 ## Design system (`constants/theme.ts`)
 
@@ -652,4 +664,4 @@ Toutes les couleurs sont importées depuis `constants/theme.ts` — aucune coule
 - Ajouter une Edge Function pour la suppression complète du compte Supabase Auth.
 - Brancher `expo-notifications` sur les préférences de `profil.tsx` (switch + rappels matin/soir) — pour l'instant elles s'enregistrent sans déclencher aucune notification.
 - Brancher RevenueCat pour que "Formule" et "Prochain renouvellement" (`components/profil/SubscriptionCard.tsx`) affichent de vraies données plutôt que des valeurs provisoires.
-- Décider si/où réutiliser `AppImage.tsx` et `Logo.tsx`.
+- Décider si/où réutiliser `AppImage.tsx`.

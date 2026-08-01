@@ -38,6 +38,7 @@ function RootNavigator() {
         <Stack.Protected guard={showTabs}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="workout/[id]" />
+          <Stack.Screen name="workout/session/[id]" />
           <Stack.Screen name="notifications" />
           <Stack.Screen name="legal/terms" />
           <Stack.Screen name="legal/privacy" />

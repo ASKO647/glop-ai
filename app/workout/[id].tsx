@@ -5,7 +5,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from '../../components/ui/Button';
 import { WORKOUT_SESSIONS } from '../../constants/dashboard';
 import { colors, radii, spacing, typography } from '../../constants/theme';
-import { showAlert } from '../../lib/alert';
 
 export default function WorkoutDetailScreen() {
   const router = useRouter();
@@ -62,10 +61,7 @@ export default function WorkoutDetailScreen() {
             </View>
           </View>
 
-          <Button
-            label="Commencer la séance"
-            onPress={() => showAlert('Bientôt disponible', 'Le suivi de séance en direct arrive prochainement.')}
-          />
+          <Button label="Commencer la séance" onPress={() => router.push(`/workout/session/${session.id}`)} />
         </ScrollView>
       )}
     </SafeAreaView>
