@@ -2,6 +2,7 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { useCallback, useEffect, useState } from 'react';
 import { todayISODate } from '../constants/dashboard';
 import { supabase } from '../lib/supabase';
+import { uploadBase64Image } from '../lib/storageUpload';
 
 const BUCKET = 'progress-photos';
 const MAX_WIDTH = 1024;
@@ -76,28 +77,31 @@ export function useProgressPhotos(userId: string | undefined) {
   }, [load]);
 
   /** Compresses, uploads to `{user_id}/{date}.jpg` (overwriting today's photo if one exists) and upserts the row. */
-  const addPhoto = async (uri: string, originalWidth: number, poidsToday: number | null): Promise<boolean> => {
-    if (!userId) return false;
+  const addPhoto = async (
+    uri: string,
+    originalWidth: number,
+    poidsToday: number | null
+  ): Promise<{ ok: boolean; error?: string }> => {
+    if (!userId) return { ok: false };
     setUploading(true);
 
     try {
       const targetWidth = originalWidth > 0 ? Math.min(originalWidth, MAX_WIDTH) : MAX_WIDTH;
       const context = ImageManipulator.manipulate(uri).resize({ width: targetWidth });
       const rendered = await context.renderAsync();
-      const result = await rendered.saveAsync({ compress: COMPRESS_QUALITY, format: SaveFormat.JPEG });
+      const result = await rendered.saveAsync({ compress: COMPRESS_QUALITY, format: SaveFormat.JPEG, base64: true });
+
+      if (!result.base64) {
+        console.error('Image compression did not return base64 data for the progress photo.');
+        return { ok: false, error: "Impossible de préparer cette image. Réessaie." };
+      }
 
       const today = todayISODate();
       const storagePath = `${userId}/${today}.jpg`;
 
-      const response = await fetch(result.uri);
-      const blob = await response.blob();
-
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from(BUCKET)
-        .upload(storagePath, blob, { contentType: 'image/jpeg', upsert: true });
-      if (uploadError || !uploadData?.path) {
-        console.error('Failed to upload progress photo to storage:', uploadError);
-        return false;
+      const uploadResult = await uploadBase64Image(BUCKET, storagePath, result.base64, 'image/jpeg');
+      if (!uploadResult.ok) {
+        return { ok: false, error: uploadResult.error };
       }
 
       const existing = photos.find((photo) => photo.date === today);
@@ -108,7 +112,7 @@ export function useProgressPhotos(userId: string | undefined) {
           .eq('id', existing.id);
         if (error) {
           console.error('Failed to update progress photo row:', error);
-          return false;
+          return { ok: false, error: "L'enregistrement de la photo a échoué. Réessaie." };
         }
       } else {
         const { error } = await supabase
@@ -116,15 +120,15 @@ export function useProgressPhotos(userId: string | undefined) {
           .insert({ user_id: userId, date: today, storage_path: storagePath, poids: poidsToday });
         if (error) {
           console.error('Failed to insert progress photo row:', error);
-          return false;
+          return { ok: false, error: "L'enregistrement de la photo a échoué. Réessaie." };
         }
       }
 
       await load();
-      return true;
+      return { ok: true };
     } catch (err) {
       console.error('Failed to add progress photo:', err);
-      return false;
+      return { ok: false, error: "Impossible d'enregistrer cette photo. Réessaie." };
     } finally {
       setUploading(false);
     }

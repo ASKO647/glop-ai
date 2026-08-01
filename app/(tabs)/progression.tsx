@@ -73,9 +73,9 @@ export default function ProgressionScreen() {
     if (result.canceled || result.assets.length === 0) return;
 
     const asset = result.assets[0];
-    const ok = await addPhoto(asset.uri, asset.width, currentWeight);
-    if (!ok) {
-      showAlert('Erreur', "Impossible d'enregistrer cette photo. Réessaie.");
+    const outcome = await addPhoto(asset.uri, asset.width, currentWeight);
+    if (!outcome.ok) {
+      showAlert('Erreur', outcome.error ?? "Impossible d'enregistrer cette photo. Réessaie.");
     }
   };
 
