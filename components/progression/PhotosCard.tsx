@@ -74,7 +74,14 @@ export default function PhotosCard({ photos, loading, uploading, onDelete }: Pho
           onLongPress={() => confirmDelete(photo)}
           style={styles.singlePhotoWrap}
         >
-          {photo.signedUrl && <Image source={{ uri: photo.signedUrl }} style={styles.singlePhoto} resizeMode="cover" />}
+          {photo.signedUrl && (
+            <Image
+              source={{ uri: photo.signedUrl }}
+              style={styles.singlePhoto}
+              resizeMode="cover"
+              onError={(e) => console.error(`Failed to load progress photo (${photo.signedUrl}):`, e.nativeEvent.error)}
+            />
+          )}
         </Pressable>
         <PhotoMeta label="Aujourd'hui" photo={photo} />
       </View>
@@ -95,7 +102,14 @@ export default function PhotosCard({ photos, loading, uploading, onDelete }: Pho
             onLongPress={() => confirmDelete(before)}
             style={styles.comparatorPhotoWrap}
           >
-            {before.signedUrl && <Image source={{ uri: before.signedUrl }} style={styles.comparatorPhoto} resizeMode="cover" />}
+            {before.signedUrl && (
+              <Image
+                source={{ uri: before.signedUrl }}
+                style={styles.comparatorPhoto}
+                resizeMode="cover"
+                onError={(e) => console.error(`Failed to load "avant" photo (${before.signedUrl}):`, e.nativeEvent.error)}
+              />
+            )}
             <View style={styles.badge}>
               <Text style={styles.badgeText}>Avant</Text>
             </View>
@@ -110,7 +124,14 @@ export default function PhotosCard({ photos, loading, uploading, onDelete }: Pho
             onLongPress={() => confirmDelete(after)}
             style={styles.comparatorPhotoWrap}
           >
-            {after.signedUrl && <Image source={{ uri: after.signedUrl }} style={styles.comparatorPhoto} resizeMode="cover" />}
+            {after.signedUrl && (
+              <Image
+                source={{ uri: after.signedUrl }}
+                style={styles.comparatorPhoto}
+                resizeMode="cover"
+                onError={(e) => console.error(`Failed to load "après" photo (${after.signedUrl}):`, e.nativeEvent.error)}
+              />
+            )}
             <View style={styles.badge}>
               <Text style={styles.badgeText}>Après</Text>
             </View>
@@ -133,7 +154,14 @@ export default function PhotosCard({ photos, loading, uploading, onDelete }: Pho
             onLongPress={() => confirmDelete(photo)}
             style={[styles.thumbWrap, photo.id === afterId && styles.thumbWrapActive]}
           >
-            {photo.signedUrl && <Image source={{ uri: photo.signedUrl }} style={styles.thumb} resizeMode="cover" />}
+            {photo.signedUrl && (
+              <Image
+                source={{ uri: photo.signedUrl }}
+                style={styles.thumb}
+                resizeMode="cover"
+                onError={(e) => console.error(`Failed to load thumbnail (${photo.signedUrl}):`, e.nativeEvent.error)}
+              />
+            )}
           </Pressable>
         ))}
       </ScrollView>

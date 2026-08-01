@@ -1,9 +1,10 @@
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Camera } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from '../../components/ui/Button';
+import Logo from '../../components/ui/Logo';
 import CalorieCard from '../../components/dashboard/CalorieCard';
 import CategoryChip from '../../components/dashboard/CategoryChip';
 import DashboardHeader from '../../components/dashboard/DashboardHeader';
@@ -33,6 +34,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/ProfileContext';
 import { useDailyMissions } from '../../hooks/useDailyMissions';
 import { useMeals } from '../../hooks/useMeals';
+import { useWeightLogs } from '../../hooks/useWeightLogs';
 
 const RECOMMENDED_COUNT = 3;
 
@@ -48,8 +50,16 @@ export default function DashboardScreen() {
     profileLoading,
     selectedDate
   );
-  const { meals, totals, loading: mealsLoading } = useMeals(user?.id, selectedDate);
+  const { meals, totals, loading: mealsLoading, refetch: refetchMeals } = useMeals(user?.id, selectedDate);
+  const { logs: weightLogs, refetch: refetchWeightLogs } = useWeightLogs(user?.id);
   const [category, setCategory] = useState<WorkoutCategoryId>('all');
+
+  useFocusEffect(
+    useCallback(() => {
+      refetchWeightLogs();
+      refetchMeals();
+    }, [refetchWeightLogs, refetchMeals])
+  );
 
   const displayName = getDisplayName(profile?.email ?? user?.email ?? null);
   const initial = (displayName ?? '?').charAt(0).toUpperCase();
@@ -72,7 +82,7 @@ export default function DashboardScreen() {
 
   const tip = getTipOfTheDay(profile?.objectif ?? null);
 
-  const poidsActuel = profile?.poids_actuel;
+  const poidsActuel = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].poids : profile?.poids_actuel ?? null;
   const poidsObjectif = profile?.poids_objectif;
   const ecart = poidsActuel != null && poidsObjectif != null ? Math.abs(poidsActuel - poidsObjectif) : null;
 
@@ -98,6 +108,10 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.logoWrapper}>
+          <Logo />
+        </View>
+
         <DashboardHeader
           initial={initial}
           greeting={greeting}
@@ -251,6 +265,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  logoWrapper: {
+    alignSelf: 'flex-start',
+    // content's gap is 24; pull it down to the requested 12px below the logo.
+    marginBottom: -12,
   },
   section: {
     gap: spacing.sm,

@@ -12,7 +12,7 @@ export default function Logo() {
 
 const styles = StyleSheet.create({
   wordmark: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
     letterSpacing: 0.5,
   },

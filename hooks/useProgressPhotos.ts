@@ -6,7 +6,8 @@ import { supabase } from '../lib/supabase';
 const BUCKET = 'progress-photos';
 const MAX_WIDTH = 1024;
 const COMPRESS_QUALITY = 0.6;
-const SIGNED_URL_TTL_SECONDS = 3600;
+// 24h — long enough that a screen left mounted in the background doesn't need to re-sign.
+const SIGNED_URL_TTL_SECONDS = 86400;
 
 export type ProgressPhoto = {
   id: string;
@@ -28,7 +29,12 @@ type ProgressPhotoRow = {
 async function signPhotos(rows: ProgressPhotoRow[]): Promise<ProgressPhoto[]> {
   return Promise.all(
     rows.map(async (row) => {
-      const { data } = await supabase.storage.from(BUCKET).createSignedUrl(row.storage_path, SIGNED_URL_TTL_SECONDS);
+      const { data, error } = await supabase.storage
+        .from(BUCKET)
+        .createSignedUrl(row.storage_path, SIGNED_URL_TTL_SECONDS);
+      if (error) {
+        console.error(`Failed to sign progress photo URL for ${row.storage_path}:`, error);
+      }
       return {
         id: row.id,
         date: row.date,
@@ -86,10 +92,13 @@ export function useProgressPhotos(userId: string | undefined) {
       const response = await fetch(result.uri);
       const blob = await response.blob();
 
-      const { error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from(BUCKET)
         .upload(storagePath, blob, { contentType: 'image/jpeg', upsert: true });
-      if (uploadError) return false;
+      if (uploadError || !uploadData?.path) {
+        console.error('Failed to upload progress photo to storage:', uploadError);
+        return false;
+      }
 
       const existing = photos.find((photo) => photo.date === today);
       if (existing) {
@@ -97,17 +106,24 @@ export function useProgressPhotos(userId: string | undefined) {
           .from('progress_photos')
           .update({ storage_path: storagePath, poids: poidsToday })
           .eq('id', existing.id);
-        if (error) return false;
+        if (error) {
+          console.error('Failed to update progress photo row:', error);
+          return false;
+        }
       } else {
         const { error } = await supabase
           .from('progress_photos')
           .insert({ user_id: userId, date: today, storage_path: storagePath, poids: poidsToday });
-        if (error) return false;
+        if (error) {
+          console.error('Failed to insert progress photo row:', error);
+          return false;
+        }
       }
 
       await load();
       return true;
-    } catch {
+    } catch (err) {
+      console.error('Failed to add progress photo:', err);
       return false;
     } finally {
       setUploading(false);
