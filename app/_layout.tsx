@@ -24,7 +24,7 @@ function RootNavigator() {
 
   return (
     // Wraps the whole navigator (not just (tabs)) so screens declared as siblings —
-    // settings, legal/* — can also read the profile via useProfile().
+    // legal/* — can also read the profile via useProfile().
     <ProfileProvider>
       <Stack
         screenOptions={{
@@ -39,7 +39,6 @@ function RootNavigator() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="workout/[id]" />
           <Stack.Screen name="notifications" />
-          <Stack.Screen name="settings" />
           <Stack.Screen name="legal/terms" />
           <Stack.Screen name="legal/privacy" />
         </Stack.Protected>
