@@ -121,11 +121,11 @@ export default function ProfilScreen() {
     if (result.canceled || result.assets.length === 0) return;
 
     const asset = result.assets[0];
-    const ok = await uploadAvatar(asset.uri, asset.width);
-    if (ok) {
+    const outcome = await uploadAvatar(asset.uri, asset.width);
+    if (outcome.ok) {
       await refreshProfile();
     } else {
-      showAlert('Erreur', "Impossible d'enregistrer ta photo de profil. Réessaie.");
+      showAlert('Erreur', outcome.error ?? "Impossible d'enregistrer ta photo de profil. Réessaie.");
     }
   };
 
