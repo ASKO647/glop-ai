@@ -214,8 +214,10 @@ app/
     coach.tsx                  Conversation avec le coach IA (Anthropic) — historique persisté
                               (50 derniers messages), suggestions en pilules au premier lancement,
                               bulle système en cas d'erreur réseau
-    scanner.tsx
-    progression.tsx
+    scanner.tsx                Scan photo d'un repas (Anthropic vision) — aperçu, analyse, carte
+                              résultat (kcal/macros/aliments), enregistrement dans `meals`
+    progression.tsx            Poids (carte + modale + courbe SVG), 4 stats, régularité 30 jours
+                              (`daily_missions`), emplacement photos (non implémenté)
     profil.tsx                 Email, statut d'abonnement, déconnexion, suppression de compte
                               (voir caveat plus bas), liens Conditions/Confidentialité
   workout/
@@ -402,6 +404,45 @@ Au premier lancement (aucun message en base), l'écran affiche 3 suggestions en 
 
 "Enregistrer ce repas" insère une ligne dans `meals` avec `date: todayISODate()`, affiche une confirmation puis redirige vers le dashboard (`router.replace('/')`).
 
+## Écran Progression
+
+`(tabs)/progression.tsx` empile six sections en défilement vertical : carte de poids actuel, modale de saisie, graphique d'évolution, grille de 4 statistiques, série de régularité (30 jours) et un emplacement pour les photos de progression (non implémenté — carte vide seulement).
+
+Le poids "actuel" est la dernière ligne de `weight_logs` (repli sur `profile.poids_actuel` s'il n'y a encore aucune pesée) ; le poids "de départ" est `profile.poids_actuel` tel que renseigné à l'onboarding, qui ne change plus ensuite — c'est ce qui rend l'écart "depuis le départ" et le pourcentage de progression stables même si l'utilisateur modifie sa pesée du jour. `hooks/useWeightLogs.ts` (sur le modèle de `useDailyMissions`) lit jusqu'à 90 jours d'historique et expose `saveTodayWeight`, qui met à jour la ligne du jour si elle existe déjà plutôt que d'en créer une seconde. La table attendue :
+
+```sql
+create table weight_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  date date not null,
+  poids numeric not null,
+  created_at timestamptz not null default now()
+);
+
+alter table weight_logs enable row level security;
+
+create policy "Users can insert their own weight logs"
+  on weight_logs for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can read their own weight logs"
+  on weight_logs for select
+  using (auth.uid() = user_id);
+
+create policy "Users can update their own weight logs"
+  on weight_logs for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Users can delete their own weight logs"
+  on weight_logs for delete
+  using (auth.uid() = user_id);
+```
+
+Le graphique (`components/progression/WeightChart.tsx`) est tracé à la main avec `react-native-svg` (même bibliothèque que `CalorieRing` sur le dashboard) plutôt qu'avec une lib de charts : ligne + points + dégradé sous la courbe + ligne pointillée au niveau de l'objectif, avec un domaine vertical qui s'étend toujours pour inclure l'objectif même s'il est loin des mesures récentes. En dessous de deux mesures sur la période sélectionnée, l'écran affiche un état vide plutôt qu'un graphique vide ou une erreur.
+
+La grille de régularité réutilise `daily_missions` (déjà utilisée par le dashboard) via `hooks/useMissionStreak.ts` — une lecture seule sur 30 jours, volontairement séparée de `useDailyMissions` qui, lui, insère les missions par défaut du jour : la page Progression ne doit jamais créer de lignes en arrière-plan simplement parce qu'on l'a consultée.
+
 ## Visuels
 
 `app.json` référence `./assets/icon.png`, `./assets/splash-icon.png` (splash, `resizeMode: "contain"`, fond `#0a0d0c`) et `./assets/adaptive-icon.png` (icône adaptative Android, même fond).
@@ -424,7 +465,7 @@ Toutes les couleurs sont importées depuis `constants/theme.ts` — aucune coule
 
 ## Prochaines étapes
 
-- Brancher l'écran restant (progression) sur de vraies données — les photos `exercise-*`/`meal-*` sont déjà dans `assets/images/` pour ça.
+- Implémenter l'ajout de photos de progression (`components/progression/PhotosCard.tsx` n'a qu'un état vide pour l'instant).
 - Déplacer les appels Anthropic (coach, scanner) derrière un backend (Edge Function) pour ne plus exposer `EXPO_PUBLIC_ANTHROPIC_API_KEY` côté client.
 - Remplacer le CTA du paywall par un vrai flux d'achat (RevenueCat).
 - Implémenter Sign in with Apple / Google Sign-In (development build requis).
