@@ -320,8 +320,10 @@ lib/
   alert.ts                        showAlert / showConfirm — contournement du no-op de
                               `Alert.alert()` sur react-native-web (fallback window.alert/confirm)
   color.ts                        hexToRgba() partagé (évite la duplication entre composants)
+  anthropic.ts                    URL, modèle (`claude-sonnet-4-5-20250929`), en-têtes et mapping
+                              d'erreurs (401/402/429/400) partagés par coach.ts et foodScanner.ts
   coach.ts                        sendMessage(history, profile) — appelle l'API Anthropic
-                              (`claude-sonnet-4-6`, max_tokens 1000) en `fetch` direct sur
+                              (max_tokens 1000) en `fetch` direct sur
                               `https://api.anthropic.com/v1/messages`, **sans SDK** (voir caveat
                               ci-dessous). Le prompt système injecte objectif / poids actuel /
                               poids cible / niveau d'activité / restrictions alimentaires du profil
@@ -389,7 +391,9 @@ Le calcul du streak et les 4 états du bandeau de semaine (complété/manqué/fu
 
 ## Coach IA
 
-`(tabs)/coach.tsx` affiche une conversation avec le coach IA "GlowUp" (`claude-sonnet-4-6` via `lib/coach.ts`). Au montage, il charge les 50 derniers messages de l'utilisateur depuis `messages` (Supabase) ; chaque message envoyé et chaque réponse sont persistés dans la foulée.
+`(tabs)/coach.tsx` affiche une conversation avec le coach IA "GlowUp" (`claude-sonnet-4-5-20250929` via `lib/coach.ts`). Au montage, il charge les 50 derniers messages de l'utilisateur depuis `messages` (Supabase) ; chaque message envoyé et chaque réponse sont persistés dans la foulée.
+
+`lib/coach.ts` garantit une alternance stricte `user`/`assistant` avant d'envoyer la requête (`mergeConsecutiveRoles`) — nécessaire car une réponse échouée laisse un tour "user" sans réponse, et le message suivant de l'utilisateur redevient alors un second tour "user" consécutif du point de vue de l'API. `hooks/useCoachMessages.ts` retire aussi les bulles d'erreur locales (role `system`, jamais persistées) de l'historique envoyé à l'API plutôt que de les traiter comme des messages `user` — les deux étaient nécessaires : la bulle d'erreur passée en tant que "user" créait exactement ce problème d'alternance, en plus de polluer le contexte envoyé au modèle avec du texte d'erreur.
 
 Le prompt système (construit dans `buildSystemPrompt`, `lib/coach.ts`) fixe la personnalité (tutoiement, français, 2-4 phrases courtes, ton motivant mais direct) et injecte les données de profil disponibles : objectif, poids actuel, poids cible, niveau d'activité, restrictions alimentaires. Les champs absents du profil sont simplement omis du prompt plutôt que d'y figurer vides.
 
@@ -397,13 +401,13 @@ Le prompt système (construit dans `buildSystemPrompt`, `lib/coach.ts`) fixe la 
 
 **Clé API côté client, en connaissance de cause.** L'app n'a pas de backend, donc `EXPO_PUBLIC_ANTHROPIC_API_KEY` est lue directement dans le bundle et envoyée en clair dans l'en-tête `x-api-key` de chaque requête. La clé est donc visible par quiconque inspecte le bundle web/mobile — acceptable pour ce prototype, mais à remplacer par un proxy serveur (Edge Function Supabase, par exemple) avant toute mise en production.
 
-Si `sendMessage` échoue (réseau, clé manquante, erreur API), le message d'erreur en français n'est pas jeté comme une exception silencieuse : il est ajouté à la conversation comme une bulle "système" (fond neutre, texte `colors.danger`), visible dans le fil, mais **non persistée** en base — un rechargement de l'historique la fait disparaître, contrairement aux vrais tours de conversation.
+Si `sendMessage` échoue (réseau, clé manquante, erreur API), le message d'erreur en français n'est pas jeté comme une exception silencieuse : il est ajouté à la conversation comme une bulle "système" (fond neutre, texte `colors.danger`), visible dans le fil, mais **non persistée** en base — un rechargement de l'historique la fait disparaître, contrairement aux vrais tours de conversation. Ce message distingue 401 (clé invalide), 402 (crédit insuffisant), 429 (trop de requêtes) et 400 (requête invalide) plutôt que d'afficher un texte générique — `lib/anthropic.ts` construit ce message et journalise systématiquement le corps complet de la réponse en erreur avec `console.error` avant de le renvoyer : le message d'erreur d'Anthropic dit précisément quel champ ou quelle règle a été violée, un simple code de statut ne le dit pas.
 
 Au premier lancement (aucun message en base), l'écran affiche 3 suggestions en pilules qui envoient directement le message correspondant au tap plutôt que de pré-remplir le champ de saisie.
 
 ## Scanner de repas
 
-`(tabs)/scanner.tsx` analyse une photo de repas avec `claude-sonnet-4-6` (vision) et enregistre le résultat dans `meals`. Quatre états s'enchaînent sur un seul écran : état initial (icône + les deux boutons "Prendre une photo" / "Choisir dans la galerie"), aperçu de la photo pendant l'analyse (indicateur + "Analyse en cours..."), carte de résultat (plat, kcal, barres de macros, liste d'aliments identifiés) et état d'erreur (message en français + "Réessayer"). "Recommencer" réinitialise l'écran depuis n'importe quel état.
+`(tabs)/scanner.tsx` analyse une photo de repas avec `claude-sonnet-4-5-20250929` (vision) et enregistre le résultat dans `meals`. Quatre états s'enchaînent sur un seul écran : état initial (icône + les deux boutons "Prendre une photo" / "Choisir dans la galerie"), aperçu de la photo pendant l'analyse (indicateur + "Analyse en cours..."), carte de résultat (plat, kcal, barres de macros, liste d'aliments identifiés) et état d'erreur (message en français + "Réessayer"). "Recommencer" réinitialise l'écran depuis n'importe quel état.
 
 `expo-image-picker` (`~17.0.11`) fournit la prise de photo et la sélection en galerie ; les permissions caméra/photos sont redemandées à la volée si elles n'ont pas déjà été accordées, avec un message d'erreur explicatif en français si l'utilisateur refuse. Les chaînes `NSCameraUsageDescription` / `NSPhotoLibraryUsageDescription` sont déclarées dans `app.json` (à la fois via le plugin `expo-image-picker` et dans `ios.infoPlist`).
 
