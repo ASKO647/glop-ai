@@ -25,6 +25,7 @@ export default function ChatInput({ value, onChangeText, onSend, disabled }: Cha
       />
       <Pressable
         accessibilityRole="button"
+        accessibilityLabel="Envoyer"
         onPress={onSend}
         disabled={!canSend}
         style={({ pressed }) => [

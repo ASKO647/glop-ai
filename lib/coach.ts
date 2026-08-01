@@ -1,12 +1,11 @@
 import type { Profile } from '../context/ProfileContext';
+import { ANTHROPIC_API_URL, ANTHROPIC_MODEL, anthropicHeaders, describeAnthropicError } from './anthropic';
 
 // No Anthropic SDK here on purpose: the SDK is a Node package (it pulls in
 // `node:fs` at import time), and React Native has no Node standard library —
 // bundling it breaks the app. Call the REST API directly with `fetch`
 // instead. Follow this same pattern for every future Anthropic call in this
 // app (e.g. the meal scanner) — never import `@anthropic-ai/sdk` here.
-const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-6';
 const MAX_TOKENS = 1000;
 
 export type ChatRole = 'user' | 'assistant';
@@ -19,6 +18,25 @@ export type ChatMessage = {
 type AnthropicMessageResponse = {
   content: { type: string; text?: string }[];
 };
+
+/**
+ * The Messages API requires strict user/assistant alternation. A caller's history can break
+ * that without doing anything wrong — e.g. a failed reply leaves a user turn unanswered, and
+ * the next message the user sends is then genuinely a second consecutive "user" turn. Rather
+ * than rely on every caller to prevent that, merge consecutive same-role messages into one.
+ */
+function mergeConsecutiveRoles(history: ChatMessage[]): ChatMessage[] {
+  const merged: ChatMessage[] = [];
+  for (const message of history) {
+    const last = merged[merged.length - 1];
+    if (last && last.role === message.role) {
+      last.content = `${last.content}\n\n${message.content}`;
+    } else {
+      merged.push({ ...message });
+    }
+  }
+  return merged;
+}
 
 function buildSystemPrompt(profile: Profile | null): string {
   const lines = [
@@ -52,21 +70,20 @@ export async function sendMessage(history: ChatMessage[], profile: Profile | nul
     );
   }
 
+  // Empty content is rejected outright; consecutive same-role turns are merged so the
+  // request always alternates strictly, regardless of what shape the caller's history is in.
+  const messages = mergeConsecutiveRoles(history.filter((message) => message.content.trim().length > 0));
+
   let response: Response;
   try {
     response = await fetch(ANTHROPIC_API_URL, {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
+      headers: anthropicHeaders(apiKey),
       body: JSON.stringify({
-        model: MODEL,
+        model: ANTHROPIC_MODEL,
         max_tokens: MAX_TOKENS,
         system: buildSystemPrompt(profile),
-        messages: history.map((message) => ({ role: message.role, content: message.content })),
+        messages: messages.map((message) => ({ role: message.role, content: message.content })),
       }),
     });
   } catch {
@@ -74,7 +91,7 @@ export async function sendMessage(history: ChatMessage[], profile: Profile | nul
   }
 
   if (!response.ok) {
-    throw new Error(`Le coach n'a pas pu répondre (erreur ${response.status}). Réessaie dans un instant.`);
+    throw new Error(await describeAnthropicError(response, "Le coach n'a pas pu répondre"));
   }
 
   let data: AnthropicMessageResponse;

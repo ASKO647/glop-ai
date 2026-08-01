@@ -1,9 +1,8 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import { ANTHROPIC_API_URL, ANTHROPIC_MODEL, anthropicHeaders, describeAnthropicError } from './anthropic';
 
 // Same rule as lib/coach.ts: no Anthropic SDK, ever — it pulls in `node:fs`
 // and breaks the React Native bundle. Raw `fetch` only.
-const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-6';
 const MAX_TOKENS = 1000;
 
 const MAX_WIDTH = 1024;
@@ -76,24 +75,23 @@ export async function analyzeMeal(base64Image: string, mimeType: string): Promis
     );
   }
 
+  // Defensive: strip a data-URI prefix if one ever slips in — Anthropic expects raw base64
+  // in `data`. compressImage() already returns a bare base64 string, so this is a no-op today.
+  const rawBase64 = base64Image.replace(/^data:[^;]+;base64,/, '');
+
   let response: Response;
   try {
     response = await fetch(ANTHROPIC_API_URL, {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
+      headers: anthropicHeaders(apiKey),
       body: JSON.stringify({
-        model: MODEL,
+        model: ANTHROPIC_MODEL,
         max_tokens: MAX_TOKENS,
         messages: [
           {
             role: 'user',
             content: [
-              { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64Image } },
+              { type: 'image', source: { type: 'base64', media_type: mimeType, data: rawBase64 } },
               { type: 'text', text: ANALYSIS_PROMPT },
             ],
           },
@@ -105,7 +103,7 @@ export async function analyzeMeal(base64Image: string, mimeType: string): Promis
   }
 
   if (!response.ok) {
-    throw new Error(`L'analyse a échoué (erreur ${response.status}). Réessaie dans un instant.`);
+    throw new Error(await describeAnthropicError(response, "L'analyse a échoué"));
   }
 
   let data: AnthropicMessageResponse;
