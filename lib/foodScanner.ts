@@ -1,0 +1,128 @@
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+
+// Same rule as lib/coach.ts: no Anthropic SDK, ever — it pulls in `node:fs`
+// and breaks the React Native bundle. Raw `fetch` only.
+const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+const MODEL = 'claude-sonnet-4-6';
+const MAX_TOKENS = 1000;
+
+const MAX_WIDTH = 1024;
+const COMPRESS_QUALITY = 0.5;
+
+const ANALYSIS_PROMPT = `Analyse cette photo de repas. Identifie le plat principal et ses composants visibles, puis estime les valeurs nutritionnelles totales pour la portion visible sur la photo.
+
+Réponds UNIQUEMENT avec un objet JSON valide, sans aucun texte avant ou après, et sans balises markdown (pas de \`\`\`json), au format exact suivant :
+
+{"nom":"Nom du plat","kcal":0,"proteines":0,"glucides":0,"lipides":0,"aliments":[{"nom":"...","portion":"..."}]}
+
+- "kcal" est le total de calories estimées pour l'assiette entière (nombre entier).
+- "proteines", "glucides" et "lipides" sont en grammes, pour le total de l'assiette (nombres entiers).
+- "aliments" liste chaque aliment identifiable avec une portion estimée en texte court (ex: "150g", "1 portion", "2 tranches").
+
+Si aucun aliment n'est visible sur la photo, réponds uniquement avec : {"erreur":"Aucun aliment détecté"}`;
+
+export type MealAnalysis = {
+  nom: string;
+  kcal: number;
+  proteines: number;
+  glucides: number;
+  lipides: number;
+  aliments: { nom: string; portion: string }[];
+};
+
+export type MealAnalysisError = {
+  erreur: string;
+};
+
+type AnthropicMessageResponse = {
+  content: { type: string; text?: string }[];
+};
+
+export type CompressedImage = {
+  base64: string;
+  mimeType: string;
+};
+
+/** Downscales to at most 1024px wide (never upscales), re-encodes as JPEG at 0.5 quality. */
+export async function compressImage(uri: string, originalWidth: number): Promise<CompressedImage> {
+  const targetWidth = originalWidth > 0 ? Math.min(originalWidth, MAX_WIDTH) : MAX_WIDTH;
+
+  const context = ImageManipulator.manipulate(uri).resize({ width: targetWidth });
+  const rendered = await context.renderAsync();
+  const result = await rendered.saveAsync({
+    compress: COMPRESS_QUALITY,
+    format: SaveFormat.JPEG,
+    base64: true,
+  });
+
+  if (!result.base64) {
+    throw new Error("Impossible de préparer la photo. Réessaie.");
+  }
+
+  return { base64: result.base64, mimeType: 'image/jpeg' };
+}
+
+function stripJsonFences(text: string): string {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  return fenced ? fenced[1].trim() : trimmed;
+}
+
+export async function analyzeMeal(base64Image: string, mimeType: string): Promise<MealAnalysis | MealAnalysisError> {
+  const apiKey = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "Clé API Anthropic manquante. Ajoute EXPO_PUBLIC_ANTHROPIC_API_KEY dans ton fichier .env."
+    );
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(ANTHROPIC_API_URL, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64Image } },
+              { type: 'text', text: ANALYSIS_PROMPT },
+            ],
+          },
+        ],
+      }),
+    });
+  } catch {
+    throw new Error("Impossible d'analyser la photo. Vérifie ta connexion internet et réessaie.");
+  }
+
+  if (!response.ok) {
+    throw new Error(`L'analyse a échoué (erreur ${response.status}). Réessaie dans un instant.`);
+  }
+
+  let data: AnthropicMessageResponse;
+  try {
+    data = (await response.json()) as AnthropicMessageResponse;
+  } catch {
+    throw new Error('Réponse illisible. Réessaie dans un instant.');
+  }
+
+  const text = data.content?.[0]?.text;
+  if (!text) {
+    throw new Error("L'analyse n'a renvoyé aucun résultat. Réessaie.");
+  }
+
+  try {
+    return JSON.parse(stripJsonFences(text)) as MealAnalysis | MealAnalysisError;
+  } catch {
+    throw new Error("Impossible de lire le résultat de l'analyse. Réessaie.");
+  }
+}

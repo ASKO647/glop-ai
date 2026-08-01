@@ -389,6 +389,19 @@ Si `sendMessage` échoue (réseau, clé manquante, erreur API), le message d'err
 
 Au premier lancement (aucun message en base), l'écran affiche 3 suggestions en pilules qui envoient directement le message correspondant au tap plutôt que de pré-remplir le champ de saisie.
 
+## Scanner de repas
+
+`(tabs)/scanner.tsx` analyse une photo de repas avec `claude-sonnet-4-6` (vision) et enregistre le résultat dans `meals`. Quatre états s'enchaînent sur un seul écran : état initial (icône + les deux boutons "Prendre une photo" / "Choisir dans la galerie"), aperçu de la photo pendant l'analyse (indicateur + "Analyse en cours..."), carte de résultat (plat, kcal, barres de macros, liste d'aliments identifiés) et état d'erreur (message en français + "Réessayer"). "Recommencer" réinitialise l'écran depuis n'importe quel état.
+
+`expo-image-picker` (`~17.0.11`) fournit la prise de photo et la sélection en galerie ; les permissions caméra/photos sont redemandées à la volée si elles n'ont pas déjà été accordées, avec un message d'erreur explicatif en français si l'utilisateur refuse. Les chaînes `NSCameraUsageDescription` / `NSPhotoLibraryUsageDescription` sont déclarées dans `app.json` (à la fois via le plugin `expo-image-picker` et dans `ios.infoPlist`).
+
+`lib/foodScanner.ts` fait tout le travail :
+- `compressImage(uri, originalWidth)` redimensionne à 1024px de large maximum (sans jamais agrandir une image plus petite) et ré-encode en JPEG qualité 0.5 via `expo-image-manipulator` (`~14.0.8`, nouvelle API contextuelle `ImageManipulator.manipulate(uri).resize(...).renderAsync()` — `manipulateAsync` est dépréciée depuis la v14).
+- `analyzeMeal(base64Image, mimeType)` suit exactement le même pattern `fetch` brut que `lib/coach.ts` (voir section Coach IA ci-dessus — toujours pas de SDK Anthropic), avec un message contenant un bloc `image` (base64) suivi d'un bloc `text` donnant la consigne d'analyse. La réponse attendue est un JSON strict (`{"nom","kcal","proteines","glucides","lipides","aliments"}` ou `{"erreur":"Aucun aliment détecté"}`) ; d'éventuelles balises ```` ```json ```` autour sont retirées avant le `JSON.parse`, le tout dans un try/catch.
+- Le cas "aucun aliment détecté" est un résultat normal (union `MealAnalysis | MealAnalysisError`), distinct des vraies erreurs (réseau, HTTP, JSON illisible) qui sont levées comme des `Error` avec un message en français — c'est ce qui déclenche l'état d'erreur avec bouton "Réessayer" dans l'écran.
+
+"Enregistrer ce repas" insère une ligne dans `meals` avec `date: todayISODate()`, affiche une confirmation puis redirige vers le dashboard (`router.replace('/')`).
+
 ## Visuels
 
 `app.json` référence `./assets/icon.png`, `./assets/splash-icon.png` (splash, `resizeMode: "contain"`, fond `#0a0d0c`) et `./assets/adaptive-icon.png` (icône adaptative Android, même fond).
@@ -411,8 +424,8 @@ Toutes les couleurs sont importées depuis `constants/theme.ts` — aucune coule
 
 ## Prochaines étapes
 
-- Brancher les écrans restants (scanner, progression) sur de vraies données — les photos `exercise-*`/`meal-*` sont déjà dans `assets/images/` pour ça.
-- Déplacer l'appel Anthropic du coach derrière un backend (Edge Function) pour ne plus exposer `EXPO_PUBLIC_ANTHROPIC_API_KEY` côté client.
+- Brancher l'écran restant (progression) sur de vraies données — les photos `exercise-*`/`meal-*` sont déjà dans `assets/images/` pour ça.
+- Déplacer les appels Anthropic (coach, scanner) derrière un backend (Edge Function) pour ne plus exposer `EXPO_PUBLIC_ANTHROPIC_API_KEY` côté client.
 - Remplacer le CTA du paywall par un vrai flux d'achat (RevenueCat).
 - Implémenter Sign in with Apple / Google Sign-In (development build requis).
 - Ajouter une Edge Function pour la suppression complète du compte Supabase Auth.

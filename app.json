@@ -13,9 +13,23 @@
       "resizeMode": "contain",
       "backgroundColor": "#0a0d0c"
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "GlowUp AI accède à tes photos pour analyser tes repas",
+          "cameraPermission": "GlowUp AI utilise l'appareil photo pour analyser tes repas",
+          "microphonePermission": false
+        }
+      ]
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "GlowUp AI utilise l'appareil photo pour analyser tes repas",
+        "NSPhotoLibraryUsageDescription": "GlowUp AI accède à tes photos pour analyser tes repas"
+      }
     },
     "android": {
       "adaptiveIcon": {
