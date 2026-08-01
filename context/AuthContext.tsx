@@ -136,12 +136,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       // Storage objects aren't tracked anywhere else, so remove them before their
-      // only record (the progress_photos rows) is deleted below.
+      // only record (the progress_photos rows, or the profiles row for the avatar) is
+      // deleted below.
       const { data: photos } = await supabase.from('progress_photos').select('storage_path').eq('user_id', userId);
       const paths = (photos ?? []).map((photo) => photo.storage_path).filter(Boolean) as string[];
       if (paths.length > 0) {
         await supabase.storage.from('progress-photos').remove(paths);
       }
+      await supabase.storage.from('avatars').remove([`${userId}/avatar.jpg`]);
 
       await Promise.all([
         supabase.from('messages').delete().eq('user_id', userId),

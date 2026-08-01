@@ -564,7 +564,9 @@ Le bucket restant privé, `getPublicUrl` ne fonctionnerait pas — c'est pour ç
 
 Neuf sections empilées, dans l'ordre : en-tête (avatar, email, badge d'abonnement, stats), Mon abonnement, carte de parrainage, Mes objectifs, Compte, Notifications, Préférences, À propos, Mes données, Zone de danger.
 
-**En-tête** (`components/profil/ProfileHeader.tsx`) : cercle 72px avec l'initiale (dérivée de l'email via `getDisplayName`, comme sur le dashboard), badge Premium/Gratuit, puis trois stats séparées par des traits verticaux — "Jour X / 90" (`getProgramDay`, `profile.created_at`), "X kg perdus" (`profile.poids_actuel` de l'onboarding moins la dernière entrée de `weight_logs`, jamais négatif), "X jours d'affilée" (`useMissionStreak`). Les deux dernières stats affichent "…" tant que `useWeightLogs`/`useMissionStreak` chargent, plutôt que de flasher "0" avant la vraie valeur.
+**En-tête** (`components/profil/ProfileHeader.tsx`) : cercle 72px avec l'initiale (dérivée de l'email via `getDisplayName`, comme sur le dashboard) ou la photo de profil si `profile.avatar_path` est renseigné, badge Premium/Gratuit, puis trois stats séparées par des traits verticaux — "Jour X / 90" (`getProgramDay`, `profile.created_at`), "X kg perdus" (`profile.poids_actuel` de l'onboarding moins la dernière entrée de `weight_logs`, jamais négatif), "X jours d'affilée" (`useMissionStreak`). Les deux dernières stats affichent "…" tant que `useWeightLogs`/`useMissionStreak` chargent, plutôt que de flasher "0" avant la vraie valeur.
+
+**Photo de profil.** Le cercle d'avatar est tapable (badge appareil photo en bas à droite) et ouvre `expo-image-picker` (galerie, même demande de permission que les photos de progression). `hooks/useAvatar.ts` reprend exactement le pattern de `useProgressPhotos.ts` : compression `expo-image-manipulator` (512px max, JPEG qualité 0.7), upload vers le bucket privé `avatars` sous `{user_id}/avatar.jpg` avec `upsert: true` (une nouvelle photo écrase toujours l'ancienne), chemin enregistré dans la nouvelle colonne `profiles.avatar_path`, puis affichage via `createSignedUrl` (24h). Le hook ne gère que le stockage/la colonne — c'est l'écran qui appelle `refreshProfile()` après un upload ou une suppression réussis, comme pour tout autre champ de `profiles` modifié depuis cet onglet (`updateProfileField`). Un appui long sur l'avatar (uniquement quand une photo existe) propose de la supprimer (`showConfirm`) ; l'upload, la suppression et le chargement de l'image journalisent chacun leur erreur avec `console.error`, même pattern que les photos de progression.
 
 **Mon abonnement** (`components/profil/SubscriptionCard.tsx`) a deux rendus complètement différents plutôt qu'un seul composant avec des branches internes lourdes : une carte accent lime "Passe à Premium" → paywall si `!isSubscribed`, ou une carte neutre avec Formule / Prochain renouvellement / Gérer mon abonnement / Changer de formule si abonné. "Formule" et "Prochain renouvellement" sont pour l'instant une valeur fixe ("Mensuel") et une date calculée localement (`// TODO: lire la formule et la date de renouvellement depuis RevenueCat` — ce sera branché une fois le paiement réel en place). "Gérer mon abonnement" et "Changer de formule" ouvrent tous les deux les réglages d'abonnement natifs du store (`Linking.openURL`, URL différente selon `Platform.OS`) — il n'existe pas d'API pour changer de formule autrement que depuis ces réglages, donc les deux lignes pointent vers le même endroit.
 
@@ -633,6 +635,39 @@ create policy "Users can delete referrals they're part of"
 
 alter table profiles add column code_parrainage text unique;
 alter table profiles add column parraine_par uuid references auth.users(id);
+alter table profiles add column avatar_path text;
+```
+
+Puis, comme pour `progress-photos`, crée un bucket **privé** nommé `avatars` (Storage → New bucket, "Public bucket" décochée) et ses policies (objets préfixés `{user_id}/...`) :
+
+```sql
+create policy "Users can upload to their own avatar folder"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "Users can read their own avatar folder"
+  on storage.objects for select
+  using (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "Users can update their own avatar folder"
+  on storage.objects for update
+  using (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "Users can delete their own avatar folder"
+  on storage.objects for delete
+  using (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
 ```
 
 ## Visuels
