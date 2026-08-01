@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { isoDaysAgo, todayISODate } from '../constants/dashboard';
 import { supabase } from '../lib/supabase';
 
@@ -16,36 +16,29 @@ export function useWeightLogs(userId: string | undefined) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!userId) {
       setLogs([]);
       setLoading(false);
       return;
     }
 
-    let cancelled = false;
     setLoading(true);
+    const since = isoDaysAgo(HISTORY_WINDOW_DAYS - 1);
+    const { data } = await supabase
+      .from('weight_logs')
+      .select('id, date, poids')
+      .eq('user_id', userId)
+      .gte('date', since)
+      .order('date', { ascending: true });
 
-    const load = async () => {
-      const since = isoDaysAgo(HISTORY_WINDOW_DAYS - 1);
-      const { data } = await supabase
-        .from('weight_logs')
-        .select('id, date, poids')
-        .eq('user_id', userId)
-        .gte('date', since)
-        .order('date', { ascending: true });
-
-      if (!cancelled) {
-        setLogs((data ?? []) as WeightLog[]);
-        setLoading(false);
-      }
-    };
-
-    load();
-    return () => {
-      cancelled = true;
-    };
+    setLogs((data ?? []) as WeightLog[]);
+    setLoading(false);
   }, [userId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   /** Writes today's weight, overwriting the existing entry for today if there is one. */
   const saveTodayWeight = async (poids: number): Promise<boolean> => {
@@ -73,5 +66,5 @@ export function useWeightLogs(userId: string | undefined) {
     return true;
   };
 
-  return { logs, loading, saving, saveTodayWeight };
+  return { logs, loading, saving, saveTodayWeight, refetch: load };
 }
