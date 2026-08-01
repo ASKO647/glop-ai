@@ -3,12 +3,14 @@ import { computeStreak, isoDaysAgo, todayISODate } from '../constants/dashboard'
 import { supabase } from '../lib/supabase';
 
 export type DayCompletion = 'full' | 'partial' | 'none';
+export type DayCount = { done: number; total: number };
 
 const STREAK_WINDOW_DAYS = 30;
 
 /** Read-only 30-day view of `daily_missions`, used by the streak grid — never creates rows (unlike useDailyMissions). */
 export function useMissionStreak(userId: string | undefined) {
   const [statusByDate, setStatusByDate] = useState<Record<string, DayCompletion>>({});
+  const [countsByDate, setCountsByDate] = useState<Record<string, DayCount>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -44,6 +46,7 @@ export function useMissionStreak(userId: string | undefined) {
 
       if (!cancelled) {
         setStatusByDate(status);
+        setCountsByDate(totalsByDate);
         setLoading(false);
       }
     };
@@ -60,5 +63,7 @@ export function useMissionStreak(userId: string | undefined) {
   });
   const streak = computeStreak(completionByDate, todayISODate());
 
-  return { statusByDate, streak, loading };
+  const activeDays = Object.values(statusByDate).filter((status) => status !== 'none').length;
+
+  return { statusByDate, countsByDate, streak, activeDays, loading };
 }

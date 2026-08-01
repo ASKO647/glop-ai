@@ -216,8 +216,9 @@ app/
                               bulle système en cas d'erreur réseau
     scanner.tsx                Scan photo d'un repas (Anthropic vision) — aperçu, analyse, carte
                               résultat (kcal/macros/aliments), enregistrement dans `meals`
-    progression.tsx            Poids (carte + modale + courbe SVG), 4 stats, régularité 30 jours
-                              (`daily_missions`), emplacement photos (non implémenté)
+    progression.tsx            Poids (carte + stepper sans clavier + courbe SVG), 4 stats, régularité
+                              30 jours (`daily_missions`), photos avant/après (`progress_photos`
+                              + bucket Storage privé)
     profil.tsx                 Email, statut d'abonnement, déconnexion, suppression de compte
                               (voir caveat plus bas), liens Conditions/Confidentialité
   workout/
@@ -406,7 +407,7 @@ Au premier lancement (aucun message en base), l'écran affiche 3 suggestions en 
 
 ## Écran Progression
 
-`(tabs)/progression.tsx` empile six sections en défilement vertical : carte de poids actuel, modale de saisie, graphique d'évolution, grille de 4 statistiques, série de régularité (30 jours) et un emplacement pour les photos de progression (non implémenté — carte vide seulement).
+`(tabs)/progression.tsx` empile six sections en défilement vertical : carte de poids actuel, modale de saisie, graphique d'évolution, grille de 4 statistiques, série de régularité (30 jours) et photos de progression.
 
 Le poids "actuel" est la dernière ligne de `weight_logs` (repli sur `profile.poids_actuel` s'il n'y a encore aucune pesée) ; le poids "de départ" est `profile.poids_actuel` tel que renseigné à l'onboarding, qui ne change plus ensuite — c'est ce qui rend l'écart "depuis le départ" et le pourcentage de progression stables même si l'utilisateur modifie sa pesée du jour. `hooks/useWeightLogs.ts` (sur le modèle de `useDailyMissions`) lit jusqu'à 90 jours d'historique et expose `saveTodayWeight`, qui met à jour la ligne du jour si elle existe déjà plutôt que d'en créer une seconde. La table attendue :
 
@@ -441,7 +442,81 @@ create policy "Users can delete their own weight logs"
 
 Le graphique (`components/progression/WeightChart.tsx`) est tracé à la main avec `react-native-svg` (même bibliothèque que `CalorieRing` sur le dashboard) plutôt qu'avec une lib de charts : ligne + points + dégradé sous la courbe + ligne pointillée au niveau de l'objectif, avec un domaine vertical qui s'étend toujours pour inclure l'objectif même s'il est loin des mesures récentes. En dessous de deux mesures sur la période sélectionnée, l'écran affiche un état vide plutôt qu'un graphique vide ou une erreur.
 
-La grille de régularité réutilise `daily_missions` (déjà utilisée par le dashboard) via `hooks/useMissionStreak.ts` — une lecture seule sur 30 jours, volontairement séparée de `useDailyMissions` qui, lui, insère les missions par défaut du jour : la page Progression ne doit jamais créer de lignes en arrière-plan simplement parce qu'on l'a consultée.
+**Saisie du poids sans clavier.** `components/progression/WeightEntryModal.tsx` n'utilise aucun `TextInput` : le poids se règle avec deux boutons ronds (±0,1 kg par tap, appui long pour défiler — `onPressIn`/`onPressOut` + un `setTimeout` de 400 ms avant de démarrer un `setInterval` de répétition, pattern classique de "hold to repeat") et quatre pilules de raccourci (±0,5 / ±1 kg). La valeur initiale est le dernier poids connu (`weight_logs` le plus récent, ou `profile.poids_actuel` à défaut) — jamais la ligne du jour spécifiquement, pour que la modale s'ouvre toujours sur une valeur pertinente même si l'utilisateur n'a encore rien saisi aujourd'hui.
+
+**Deux lignes de comparaison** sur la carte de poids (`components/progression/WeightCard.tsx`, logique dans `computeWeightTrend`, `constants/progression.ts`) : l'écart avec l'avant-dernière pesée (`weight_logs[length-2]`, masqué s'il n'y a qu'une seule pesée) et l'écart avec `profile.poids_actuel`. La flèche (haut/bas) suit le sens réel du changement ; sa couleur dépend de `profile.objectif` — "bonne" direction si le poids baisse, sauf pour "Prise de muscle" où la logique s'inverse. Le fond de la carte étant déjà l'accent lime, une flèche "verte" y serait invisible : la direction "bonne" reste donc en noir (comme le reste du texte de la carte) et seule la direction "à surveiller" prend une couleur dédiée (`colors.warning`, nouveau token orange dans `constants/theme.ts`) pour rester lisible et se démarquer.
+
+**Régularité, expliquée.** La grille affiche désormais une légende (`Toutes les missions` / `Partiellement` / `Aucune`), un texte d'intro, un compteur "X / 30 jours actifs", et un appui long sur un carré affiche une info-bulle avec la date et le détail (`hooks/useMissionStreak.ts` expose maintenant `countsByDate` en plus de `statusByDate` pour ça). Cette grille réutilise `daily_missions` (déjà utilisée par le dashboard) via `hooks/useMissionStreak.ts` — une lecture seule sur 30 jours, volontairement séparée de `useDailyMissions` qui, lui, insère les missions par défaut du jour : la page Progression ne doit jamais créer de lignes en arrière-plan simplement parce qu'on l'a consultée.
+
+**Photos de progression.** `hooks/useProgressPhotos.ts` gère la table `progress_photos` et le bucket Storage privé `progress-photos`. Chaque photo est compressée avec `expo-image-manipulator` (largeur max 1024px, JPEG qualité 0.6 — même API contextuelle que `lib/foodScanner.ts`, mais sans `base64` puisque c'est l'URI locale qui sert à l'upload) puis envoyée vers `{user_id}/{date}.jpg` avec `upsert: true` : une deuxième photo le même jour écrase la précédente plutôt que d'empiler des doublons, aussi bien côté Storage que côté ligne `progress_photos` (upsert manuel : update si une ligne existe déjà pour la date du jour, insert sinon). Le bucket étant privé, l'affichage passe systématiquement par `createSignedUrl` (URLs valables 1h, régénérées à chaque chargement de la liste).
+
+Affichage : une seule photo s'affiche seule ; à partir de deux, un comparateur affiche la plus ancienne à gauche ("Avant", fixe) et une photo sélectionnable à droite ("Après", la plus récente par défaut), avec l'écart de poids entre les deux dates en dessous. Une bande de vignettes sous le comparateur permet de changer la photo "Après" (tap) ou de supprimer n'importe quelle photo (appui long + confirmation, y compris sur les photos "Avant"/"Après" elles-mêmes). La suppression retire l'objet du bucket puis la ligne en base ; un échec de suppression côté Storage (objet déjà absent, par exemple) n'empêche pas de retirer la ligne, pour ne jamais laisser une photo supprimée réapparaître dans l'app.
+
+Table et bucket à créer dans Supabase :
+
+```sql
+create table progress_photos (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  date date not null,
+  storage_path text not null,
+  poids numeric,
+  created_at timestamptz not null default now()
+);
+
+alter table progress_photos enable row level security;
+
+create policy "Users can insert their own progress photos"
+  on progress_photos for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can read their own progress photos"
+  on progress_photos for select
+  using (auth.uid() = user_id);
+
+create policy "Users can update their own progress photos"
+  on progress_photos for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Users can delete their own progress photos"
+  on progress_photos for delete
+  using (auth.uid() = user_id);
+```
+
+Puis, dans le dashboard Supabase (Storage → New bucket), crée un bucket **privé** nommé `progress-photos` (case "Public bucket" décochée), et ajoute ses policies (Storage → Policies, ou en SQL — les objets sont préfixés `{user_id}/...`, donc la policy compare `(storage.foldername(name))[1]` au `uid()` courant) :
+
+```sql
+create policy "Users can upload to their own folder"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'progress-photos'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "Users can read their own folder"
+  on storage.objects for select
+  using (
+    bucket_id = 'progress-photos'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "Users can update their own folder"
+  on storage.objects for update
+  using (
+    bucket_id = 'progress-photos'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "Users can delete their own folder"
+  on storage.objects for delete
+  using (
+    bucket_id = 'progress-photos'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+```
+
+Le bucket restant privé, `getPublicUrl` ne fonctionnerait pas — c'est pour ça que l'app utilise `createSignedUrl` partout où une photo doit s'afficher.
 
 ## Visuels
 
@@ -465,7 +540,7 @@ Toutes les couleurs sont importées depuis `constants/theme.ts` — aucune coule
 
 ## Prochaines étapes
 
-- Implémenter l'ajout de photos de progression (`components/progression/PhotosCard.tsx` n'a qu'un état vide pour l'instant).
+- Étendre les photos de progression à la prise de vue directe (`expo-image-picker` — galerie uniquement pour l'instant, caméra à ajouter si besoin).
 - Déplacer les appels Anthropic (coach, scanner) derrière un backend (Edge Function) pour ne plus exposer `EXPO_PUBLIC_ANTHROPIC_API_KEY` côté client.
 - Remplacer le CTA du paywall par un vrai flux d'achat (RevenueCat).
 - Implémenter Sign in with Apple / Google Sign-In (development build requis).

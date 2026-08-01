@@ -1,17 +1,50 @@
-import { Plus } from 'lucide-react-native';
+import { ArrowDown, ArrowUp, Plus } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { formatWeight, formatWeightDelta } from '../../constants/progression';
+import { computeWeightTrend, formatSignedWeight, formatWeight, type WeightTrend } from '../../constants/progression';
 import { colors, radii } from '../../constants/theme';
 
 type WeightCardProps = {
   currentWeight: number | null;
+  previousWeight: number | null;
   startWeight: number | null;
+  objectif: string | null;
   loading: boolean;
   onAddPress: () => void;
 };
 
-export default function WeightCard({ currentWeight, startWeight, loading, onAddPress }: WeightCardProps) {
-  const hasDelta = !loading && currentWeight != null && startWeight != null;
+// The card's background is the lime accent, so a literal "green" arrow would
+// vanish against it. Good direction stays on-brand black (like the rest of
+// the card's text); only the "wrong direction" case gets a color of its own.
+function TrendLine({ trend, suffix }: { trend: WeightTrend; suffix: string }) {
+  const Icon = trend.direction === 'up' ? ArrowUp : trend.direction === 'down' ? ArrowDown : null;
+  const color = trend.isGood ? colors.background : colors.warning;
+
+  return (
+    <View style={styles.trendRow}>
+      {Icon && <Icon color={color} size={13} strokeWidth={3} />}
+      <Text style={[styles.delta, { color }]}>
+        {formatSignedWeight(trend.diff)} {suffix}
+      </Text>
+    </View>
+  );
+}
+
+export default function WeightCard({
+  currentWeight,
+  previousWeight,
+  startWeight,
+  objectif,
+  loading,
+  onAddPress,
+}: WeightCardProps) {
+  const sinceLastTrend =
+    !loading && currentWeight != null && previousWeight != null
+      ? computeWeightTrend(currentWeight, previousWeight, objectif)
+      : null;
+  const sinceStartTrend =
+    !loading && currentWeight != null && startWeight != null
+      ? computeWeightTrend(currentWeight, startWeight, objectif)
+      : null;
 
   return (
     <View style={styles.card}>
@@ -29,7 +62,8 @@ export default function WeightCard({ currentWeight, startWeight, loading, onAddP
           <Text style={styles.value}>—</Text>
         )}
 
-        {hasDelta && <Text style={styles.delta}>{formatWeightDelta(currentWeight!, startWeight!)}</Text>}
+        {sinceLastTrend && <TrendLine trend={sinceLastTrend} suffix="depuis la dernière pesée" />}
+        {sinceStartTrend && <TrendLine trend={sinceStartTrend} suffix="depuis le départ" />}
       </View>
 
       <Pressable
@@ -81,11 +115,15 @@ const styles = StyleSheet.create({
     color: colors.background,
     marginBottom: 6,
   },
+  trendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
   delta: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.background,
-    marginTop: 2,
   },
   addButton: {
     width: 44,

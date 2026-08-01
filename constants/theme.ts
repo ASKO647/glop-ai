@@ -24,6 +24,8 @@ export const colors = {
   labelMuted: '#7c8781',
   // Form validation / auth error state.
   danger: '#ff6161',
+  // Warning / "wrong direction" state (e.g. a weight-trend arrow going the wrong way).
+  warning: '#ffa63a',
   // Pure white — required background for the "Continuer avec Apple" button per Apple's HIG.
   white: '#ffffff',
 } as const;
