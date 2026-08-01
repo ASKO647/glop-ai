@@ -1,5 +1,5 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
-import { ANTHROPIC_API_URL, ANTHROPIC_MODEL, anthropicHeaders, describeAnthropicError } from './anthropic';
+import { ANTHROPIC_API_URL, ANTHROPIC_MODEL, anthropicHeaders, describeAnthropicError, stripJsonFences } from './anthropic';
 
 // Same rule as lib/coach.ts: no Anthropic SDK, ever — it pulls in `node:fs`
 // and breaks the React Native bundle. Raw `fetch` only.
@@ -59,12 +59,6 @@ export async function compressImage(uri: string, originalWidth: number): Promise
   }
 
   return { base64: result.base64, mimeType: 'image/jpeg' };
-}
-
-function stripJsonFences(text: string): string {
-  const trimmed = text.trim();
-  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
-  return fenced ? fenced[1].trim() : trimmed;
 }
 
 export async function analyzeMeal(base64Image: string, mimeType: string): Promise<MealAnalysis | MealAnalysisError> {

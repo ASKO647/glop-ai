@@ -1,5 +1,5 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { uploadBase64Image } from '../lib/storageUpload';
 
@@ -19,31 +19,30 @@ export function useAvatar(userId: string | undefined, avatarPath: string | null 
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
+  // Extracted so uploadAvatar() can force a fresh sign after a replacement — the storage path
+  // is always `{user_id}/avatar.jpg`, so `avatarPath` never actually changes on re-upload and
+  // the effect below wouldn't rerun on its own, leaving the old photo on screen.
+  const sign = useCallback(async (path: string | null) => {
+    if (!path) {
+      setSignedUrl(null);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+    if (error) {
+      console.error(`Failed to sign avatar URL for ${path}:`, error);
+    }
+    // Cache-bust: same path in, same signed token shape out — append a fresh timestamp so
+    // RN's <Image> (and any HTTP cache in front of Storage) treats this as a new resource
+    // instead of reusing whatever it fetched for the previous photo at this path.
+    setSignedUrl(data?.signedUrl ? `${data.signedUrl}&t=${Date.now()}` : null);
+    setLoading(false);
+  }, []);
+
   useEffect(() => {
-    let cancelled = false;
-
-    const sign = async () => {
-      if (!avatarPath) {
-        setSignedUrl(null);
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(avatarPath, SIGNED_URL_TTL_SECONDS);
-      if (error) {
-        console.error(`Failed to sign avatar URL for ${avatarPath}:`, error);
-      }
-      if (!cancelled) {
-        setSignedUrl(data?.signedUrl ?? null);
-        setLoading(false);
-      }
-    };
-
-    sign();
-    return () => {
-      cancelled = true;
-    };
-  }, [avatarPath]);
+    sign(avatarPath ?? null);
+  }, [avatarPath, sign]);
 
   /** Compresses, uploads to `{user_id}/avatar.jpg` (overwriting any existing photo) and saves the path on `profiles`. */
   const uploadAvatar = async (uri: string, originalWidth: number): Promise<{ ok: boolean; error?: string }> => {
@@ -73,6 +72,10 @@ export function useAvatar(userId: string | undefined, avatarPath: string | null 
         return { ok: false, error: "L'enregistrement de ta photo de profil a échoué. Réessaie." };
       }
 
+      // The path is unchanged from before this upload (always `{user_id}/avatar.jpg`), so
+      // nothing will otherwise trigger a re-sign — force it here rather than relying on the
+      // `avatarPath` effect.
+      await sign(storagePath);
       return { ok: true };
     } catch (err) {
       console.error('Failed to upload avatar:', err);

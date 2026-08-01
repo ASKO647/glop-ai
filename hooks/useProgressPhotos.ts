@@ -10,8 +10,19 @@ const COMPRESS_QUALITY = 0.6;
 // 24h — long enough that a screen left mounted in the background doesn't need to re-sign.
 const SIGNED_URL_TTL_SECONDS = 86400;
 
+export type PhotoSlot = 'avant' | 'milieu' | 'apres';
+
+export const PHOTO_SLOTS: PhotoSlot[] = ['avant', 'milieu', 'apres'];
+
+export const SLOT_LABELS: Record<PhotoSlot, string> = {
+  avant: 'Avant',
+  milieu: 'Milieu',
+  apres: 'Après',
+};
+
 export type ProgressPhoto = {
   id: string;
+  slot: PhotoSlot;
   date: string;
   storagePath: string;
   poids: number | null;
@@ -21,54 +32,61 @@ export type ProgressPhoto = {
 
 type ProgressPhotoRow = {
   id: string;
+  slot: PhotoSlot;
   date: string;
   storage_path: string;
   poids: number | null;
   created_at: string;
 };
 
-async function signPhotos(rows: ProgressPhotoRow[]): Promise<ProgressPhoto[]> {
-  return Promise.all(
-    rows.map(async (row) => {
-      const { data, error } = await supabase.storage
-        .from(BUCKET)
-        .createSignedUrl(row.storage_path, SIGNED_URL_TTL_SECONDS);
-      if (error) {
-        console.error(`Failed to sign progress photo URL for ${row.storage_path}:`, error);
-      }
-      return {
-        id: row.id,
-        date: row.date,
-        storagePath: row.storage_path,
-        poids: row.poids,
-        createdAt: row.created_at,
-        signedUrl: data?.signedUrl ?? null,
-      };
-    })
-  );
+async function signRow(row: ProgressPhotoRow): Promise<ProgressPhoto> {
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(row.storage_path, SIGNED_URL_TTL_SECONDS);
+  if (error) {
+    console.error(`Failed to sign progress photo URL for ${row.storage_path}:`, error);
+  }
+  return {
+    id: row.id,
+    slot: row.slot,
+    date: row.date,
+    storagePath: row.storage_path,
+    poids: row.poids,
+    createdAt: row.created_at,
+    // Cache-bust: the storage path is fixed per slot (`{user_id}/{slot}.jpg`), so replacing a
+    // photo reuses the exact same path — append a fresh timestamp so RN's <Image> treats the
+    // new signed URL as a different resource instead of reusing whatever it fetched before.
+    signedUrl: data?.signedUrl ? `${data.signedUrl}&t=${Date.now()}` : null,
+  };
 }
 
-/** Reads/writes `progress_photos` + the private `progress-photos` storage bucket (one photo per day, keyed by date). */
+type PhotosBySlot = Record<PhotoSlot, ProgressPhoto | null>;
+const EMPTY_SLOTS: PhotosBySlot = { avant: null, milieu: null, apres: null };
+
+/** Reads/writes `progress_photos` + the private `progress-photos` storage bucket — exactly one photo per slot (avant/milieu/après). */
 export function useProgressPhotos(userId: string | undefined) {
-  const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
+  const [photosBySlot, setPhotosBySlot] = useState<PhotosBySlot>(EMPTY_SLOTS);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
   const load = useCallback(async () => {
     if (!userId) {
-      setPhotos([]);
+      setPhotosBySlot(EMPTY_SLOTS);
       setLoading(false);
       return;
     }
     setLoading(true);
     const { data } = await supabase
       .from('progress_photos')
-      .select('id, date, storage_path, poids, created_at')
-      .eq('user_id', userId)
-      .order('date', { ascending: true });
+      .select('id, slot, date, storage_path, poids, created_at')
+      .eq('user_id', userId);
 
-    const signed = await signPhotos((data ?? []) as ProgressPhotoRow[]);
-    setPhotos(signed);
+    const signed = await Promise.all(((data ?? []) as ProgressPhotoRow[]).map(signRow));
+    const next: PhotosBySlot = { ...EMPTY_SLOTS };
+    signed.forEach((photo) => {
+      next[photo.slot] = photo;
+    });
+    setPhotosBySlot(next);
     setLoading(false);
   }, [userId]);
 
@@ -76,8 +94,9 @@ export function useProgressPhotos(userId: string | undefined) {
     load();
   }, [load]);
 
-  /** Compresses, uploads to `{user_id}/{date}.jpg` (overwriting today's photo if one exists) and upserts the row. */
+  /** Compresses, uploads to `{user_id}/{slot}.jpg` (overwriting that slot's photo if one exists) and upserts the row. */
   const addPhoto = async (
+    slot: PhotoSlot,
     uri: string,
     originalWidth: number,
     poidsToday: number | null
@@ -96,19 +115,18 @@ export function useProgressPhotos(userId: string | undefined) {
         return { ok: false, error: "Impossible de préparer cette image. Réessaie." };
       }
 
-      const today = todayISODate();
-      const storagePath = `${userId}/${today}.jpg`;
-
+      const storagePath = `${userId}/${slot}.jpg`;
       const uploadResult = await uploadBase64Image(BUCKET, storagePath, result.base64, 'image/jpeg');
       if (!uploadResult.ok) {
         return { ok: false, error: uploadResult.error };
       }
 
-      const existing = photos.find((photo) => photo.date === today);
+      const today = todayISODate();
+      const existing = photosBySlot[slot];
       if (existing) {
         const { error } = await supabase
           .from('progress_photos')
-          .update({ storage_path: storagePath, poids: poidsToday })
+          .update({ date: today, storage_path: storagePath, poids: poidsToday })
           .eq('id', existing.id);
         if (error) {
           console.error('Failed to update progress photo row:', error);
@@ -117,7 +135,7 @@ export function useProgressPhotos(userId: string | undefined) {
       } else {
         const { error } = await supabase
           .from('progress_photos')
-          .insert({ user_id: userId, date: today, storage_path: storagePath, poids: poidsToday });
+          .insert({ user_id: userId, slot, date: today, storage_path: storagePath, poids: poidsToday });
         if (error) {
           console.error('Failed to insert progress photo row:', error);
           return { ok: false, error: "L'enregistrement de la photo a échoué. Réessaie." };
@@ -134,14 +152,19 @@ export function useProgressPhotos(userId: string | undefined) {
     }
   };
 
-  const deletePhoto = async (photo: ProgressPhoto): Promise<boolean> => {
+  const deletePhoto = async (slot: PhotoSlot): Promise<boolean> => {
+    const existing = photosBySlot[slot];
+    if (!existing) return false;
     // Best-effort: an already-missing storage object shouldn't block removing the row.
-    await supabase.storage.from(BUCKET).remove([photo.storagePath]);
-    const { error } = await supabase.from('progress_photos').delete().eq('id', photo.id);
-    if (error) return false;
-    setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
+    await supabase.storage.from(BUCKET).remove([existing.storagePath]);
+    const { error } = await supabase.from('progress_photos').delete().eq('id', existing.id);
+    if (error) {
+      console.error('Failed to delete progress photo row:', error);
+      return false;
+    }
+    setPhotosBySlot((prev) => ({ ...prev, [slot]: null }));
     return true;
   };
 
-  return { photos, loading, uploading, addPhoto, deletePhoto };
+  return { photosBySlot, loading, uploading, addPhoto, deletePhoto };
 }
