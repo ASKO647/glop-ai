@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import {
   Bell,
@@ -39,6 +40,7 @@ import { QUESTIONS, type SingleChoiceQuestion } from '../../constants/questionna
 import { colors, spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/ProfileContext';
+import { useAvatar } from '../../hooks/useAvatar';
 import { useMissionStreak } from '../../hooks/useMissionStreak';
 import { useReferral } from '../../hooks/useReferral';
 import { useSettings } from '../../hooks/useSettings';
@@ -47,6 +49,8 @@ import { showAlert, showConfirm } from '../../lib/alert';
 import { supabase } from '../../lib/supabase';
 
 const CONTACT_EMAIL = 'contact@glowupai.app';
+const PHOTOS_PERMISSION_DENIED_MESSAGE =
+  "GlowUp AI a besoin d'accéder à tes photos pour changer ta photo de profil. Active l'accès dans les réglages de ton téléphone.";
 
 const GOAL_OPTIONS = (QUESTIONS.find((q) => q.id === 'goal') as SingleChoiceQuestion).options as ChoiceOption[];
 const PACE_OPTIONS = (QUESTIONS.find((q) => q.id === 'pace') as SingleChoiceQuestion).options as ChoiceOption[];
@@ -76,6 +80,10 @@ export default function ProfilScreen() {
   );
   const { logs: weightLogs, loading: weightLoading, refetch: refetchWeightLogs } = useWeightLogs(user?.id);
   const { streak, loading: streakLoading, refetch: refetchStreak } = useMissionStreak(user?.id);
+  const { signedUrl: avatarUrl, uploading: avatarUploading, uploadAvatar, deleteAvatar } = useAvatar(
+    user?.id,
+    profile?.avatar_path
+  );
 
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [savingField, setSavingField] = useState(false);
@@ -97,6 +105,39 @@ export default function ProfilScreen() {
     }
     await refreshProfile();
     closeModal();
+  };
+
+  const handlePressAvatar = async () => {
+    const { status: existing } = await ImagePicker.getMediaLibraryPermissionsAsync();
+    if (existing !== 'granted') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        showAlert('Accès à tes photos refusé', PHOTOS_PERMISSION_DENIED_MESSAGE);
+        return;
+      }
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+    if (result.canceled || result.assets.length === 0) return;
+
+    const asset = result.assets[0];
+    const ok = await uploadAvatar(asset.uri, asset.width);
+    if (ok) {
+      await refreshProfile();
+    } else {
+      showAlert('Erreur', "Impossible d'enregistrer ta photo de profil. Réessaie.");
+    }
+  };
+
+  const handleLongPressAvatar = () => {
+    showConfirm('Supprimer ta photo de profil ?', 'Ton avatar reviendra à ton initiale.', 'Supprimer', async () => {
+      const ok = await deleteAvatar();
+      if (ok) {
+        await refreshProfile();
+      } else {
+        showAlert('Erreur', 'Impossible de supprimer ta photo de profil. Réessaie.');
+      }
+    });
   };
 
   const handleResetPassword = () => {
@@ -265,6 +306,10 @@ export default function ProfilScreen() {
           weightLost={weightLost}
           streak={streak}
           statsLoading={weightLoading || streakLoading}
+          avatarUrl={avatarUrl}
+          avatarUploading={avatarUploading}
+          onPressAvatar={handlePressAvatar}
+          onLongPressAvatar={handleLongPressAvatar}
         />
 
         <SubscriptionCard isSubscribed={!!isSubscribed} />

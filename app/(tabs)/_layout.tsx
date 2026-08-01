@@ -1,19 +1,22 @@
 import { PlatformPressable } from '@react-navigation/elements';
 import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { Tabs } from 'expo-router';
-import { Camera, Home, MessageCircle, TrendingUp, User, type LucideIcon } from 'lucide-react-native';
-import { StyleSheet, View } from 'react-native';
+import { Camera, Dumbbell, Home, MessageCircle, TrendingUp, User, type LucideIcon } from 'lucide-react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radii } from '../../constants/theme';
 
 const TAB_BAR_MARGIN = 20;
 const TAB_BAR_BOTTOM_MIN = 24;
-const TAB_BAR_HEIGHT = 64;
+const TAB_BAR_HEIGHT = 68;
 
-function TabIcon({ Icon, focused }: { Icon: LucideIcon; focused: boolean }) {
+function TabIcon({ Icon, label, focused }: { Icon: LucideIcon; label: string; focused: boolean }) {
   return (
-    <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
-      <Icon color={focused ? colors.background : colors.textTertiary} size={22} />
+    <View style={styles.iconWrap}>
+      <Icon color={focused ? colors.accent : colors.textTertiary} size={22} />
+      <Text style={[styles.label, focused && styles.labelActive]} numberOfLines={1}>
+        {label}
+      </Text>
     </View>
   );
 }
@@ -45,23 +48,27 @@ export default function TabsLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={Home} focused={focused} /> }}
+        options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={Home} label="Accueil" focused={focused} /> }}
       />
       <Tabs.Screen
         name="coach"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={MessageCircle} focused={focused} /> }}
+        options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={MessageCircle} label="Coach" focused={focused} /> }}
+      />
+      <Tabs.Screen
+        name="workout"
+        options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={Dumbbell} label="Séance" focused={focused} /> }}
       />
       <Tabs.Screen
         name="scanner"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={Camera} focused={focused} /> }}
+        options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={Camera} label="Scanner" focused={focused} /> }}
       />
       <Tabs.Screen
         name="progression"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={TrendingUp} focused={focused} /> }}
+        options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={TrendingUp} label="Progression" focused={focused} /> }}
       />
       <Tabs.Screen
         name="profil"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={User} focused={focused} /> }}
+        options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={User} label="Profil" focused={focused} /> }}
       />
       <Tabs.Screen name="meals" options={{ href: null }} />
     </Tabs>
@@ -96,13 +103,16 @@ const styles = StyleSheet.create({
     margin: 0,
   },
   iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.full,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 2,
   },
-  iconWrapActive: {
-    backgroundColor: colors.accent,
+  label: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.textTertiary,
+  },
+  labelActive: {
+    color: colors.accent,
   },
 });

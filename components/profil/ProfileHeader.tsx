@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Camera } from 'lucide-react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatWeight } from '../../constants/progression';
 import { colors, radii, spacing } from '../../constants/theme';
 
@@ -12,6 +13,10 @@ type ProfileHeaderProps = {
   weightLost: number | null;
   streak: number;
   statsLoading: boolean;
+  avatarUrl: string | null;
+  avatarUploading: boolean;
+  onPressAvatar: () => void;
+  onLongPressAvatar: () => void;
 };
 
 export default function ProfileHeader({
@@ -23,12 +28,42 @@ export default function ProfileHeader({
   weightLost,
   streak,
   statsLoading,
+  avatarUrl,
+  avatarUploading,
+  onPressAvatar,
+  onLongPressAvatar,
 }: ProfileHeaderProps) {
   return (
     <View style={styles.container}>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{initial}</Text>
-      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={
+          avatarUrl ? 'Photo de profil — appui long pour la supprimer' : 'Ajouter une photo de profil'
+        }
+        onPress={onPressAvatar}
+        onLongPress={avatarUrl ? onLongPressAvatar : undefined}
+        style={styles.avatarWrap}
+      >
+        <View style={styles.avatar}>
+          {avatarUrl ? (
+            <Image
+              source={{ uri: avatarUrl }}
+              style={styles.avatarImage}
+              onError={(e) => console.error(`Failed to load avatar (${avatarUrl}):`, e.nativeEvent.error)}
+            />
+          ) : (
+            <Text style={styles.avatarText}>{initial}</Text>
+          )}
+          {avatarUploading && (
+            <View style={styles.avatarOverlay}>
+              <ActivityIndicator color={colors.accent} />
+            </View>
+          )}
+        </View>
+        <View style={styles.cameraBadge}>
+          <Camera color={colors.background} size={13} />
+        </View>
+      </Pressable>
 
       <Text style={styles.email} numberOfLines={1}>
         {email}
@@ -66,6 +101,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
+  avatarWrap: {
+    width: 72,
+    height: 72,
+  },
   avatar: {
     width: 72,
     height: 72,
@@ -73,11 +112,35 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(10, 13, 12, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatarText: {
     fontSize: 28,
     fontWeight: '800',
     color: colors.accent,
+  },
+  cameraBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 24,
+    height: 24,
+    borderRadius: radii.full,
+    backgroundColor: colors.accent,
+    borderWidth: 2,
+    borderColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   email: {
     fontSize: 15,

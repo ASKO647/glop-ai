@@ -250,6 +250,9 @@ export type WorkoutExercise = {
   reps: string;
 };
 
+/** 'both' = no equipment required (or dumbbells only) — doable at home or in a gym. */
+export type WorkoutLocation = 'gym' | 'home' | 'both';
+
 export type WorkoutSession = {
   id: string;
   title: string;
@@ -257,6 +260,7 @@ export type WorkoutSession = {
   duration: number;
   kcal: number;
   category: Exclude<WorkoutCategoryId, 'all'>;
+  location: WorkoutLocation;
   exercises: WorkoutExercise[];
 };
 
@@ -268,6 +272,7 @@ export const WORKOUT_SESSIONS: WorkoutSession[] = [
     duration: 30,
     kcal: 280,
     category: 'full_body',
+    location: 'both',
     exercises: [
       { name: 'Squats', sets: 3, reps: '15' },
       { name: 'Rowing haltères', sets: 3, reps: '12' },
@@ -282,6 +287,7 @@ export const WORKOUT_SESSIONS: WorkoutSession[] = [
     duration: 40,
     kcal: 320,
     category: 'upper',
+    location: 'gym',
     exercises: [
       { name: 'Développé couché', sets: 4, reps: '10' },
       { name: 'Développé incliné haltères', sets: 3, reps: '12' },
@@ -296,6 +302,7 @@ export const WORKOUT_SESSIONS: WorkoutSession[] = [
     duration: 35,
     kcal: 260,
     category: 'upper',
+    location: 'gym',
     exercises: [
       { name: 'Tractions', sets: 4, reps: '8' },
       { name: 'Rowing barre', sets: 3, reps: '10' },
@@ -310,6 +317,7 @@ export const WORKOUT_SESSIONS: WorkoutSession[] = [
     duration: 45,
     kcal: 380,
     category: 'lower',
+    location: 'gym',
     exercises: [
       { name: 'Squats barre', sets: 4, reps: '10' },
       { name: 'Fentes marchées', sets: 3, reps: '12' },
@@ -324,6 +332,7 @@ export const WORKOUT_SESSIONS: WorkoutSession[] = [
     duration: 25,
     kcal: 220,
     category: 'lower',
+    location: 'both',
     exercises: [
       { name: 'Hip thrust', sets: 4, reps: '15' },
       { name: 'Fentes bulgares', sets: 3, reps: '12' },
@@ -338,6 +347,7 @@ export const WORKOUT_SESSIONS: WorkoutSession[] = [
     duration: 20,
     kcal: 300,
     category: 'cardio',
+    location: 'both',
     exercises: [
       { name: 'Jumping jacks', sets: 4, reps: '40s' },
       { name: 'Burpees', sets: 4, reps: '30s' },
@@ -352,6 +362,7 @@ export const WORKOUT_SESSIONS: WorkoutSession[] = [
     duration: 30,
     kcal: 340,
     category: 'cardio',
+    location: 'both',
     exercises: [
       { name: 'Corde à sauter', sets: 5, reps: '60s' },
       { name: 'Squats sautés', sets: 4, reps: '15' },
@@ -366,6 +377,7 @@ export const WORKOUT_SESSIONS: WorkoutSession[] = [
     duration: 40,
     kcal: 310,
     category: 'full_body',
+    location: 'gym',
     exercises: [
       { name: 'Deadlift', sets: 4, reps: '8' },
       { name: 'Pompes', sets: 3, reps: '15' },
@@ -374,6 +386,50 @@ export const WORKOUT_SESSIONS: WorkoutSession[] = [
     ],
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Today's workout
+// ---------------------------------------------------------------------------
+
+const GOAL_CATEGORY: Record<string, (dayOfYear: number) => Exclude<WorkoutCategoryId, 'all'>> = {
+  'Perte de poids': () => 'cardio',
+  'Prise de muscle': (dayOfYear) => (dayOfYear % 2 === 0 ? 'upper' : 'lower'),
+  'Glow up & esthétique': () => 'full_body',
+  'Être plus discipliné': () => 'full_body',
+};
+const DEFAULT_GOAL_CATEGORY: Exclude<WorkoutCategoryId, 'all'> = 'full_body';
+
+/** How many days a picked session stays "today's" session before rotating to the next one. */
+const ROTATION_PERIOD_BY_FREQUENCY: Record<string, number> = {
+  '1-2': 4,
+  '3-4': 2,
+  '5-6': 1,
+  'Tous les jours': 1,
+};
+const DEFAULT_ROTATION_PERIOD = 3;
+
+/**
+ * Today's recommended session, derived from the profile's goal (muscle group focus),
+ * training location (excludes gym-only sessions for "Maison"), and weekly frequency
+ * (how often the pick rotates) — deterministic for a given day, like `getTipOfTheDay`.
+ */
+export function getTodaysWorkout(profile: Profile | null): WorkoutSession {
+  const dayOfYear = getDayOfYear(new Date());
+  const category = (GOAL_CATEGORY[profile?.objectif ?? ''] ?? (() => DEFAULT_GOAL_CATEGORY))(dayOfYear);
+  const homeOnly = profile?.lieu_entrainement === 'Maison';
+
+  let pool = WORKOUT_SESSIONS.filter((s) => s.category === category && (!homeOnly || s.location !== 'gym'));
+  if (pool.length === 0) {
+    pool = WORKOUT_SESSIONS.filter((s) => !homeOnly || s.location !== 'gym');
+  }
+  if (pool.length === 0) {
+    pool = WORKOUT_SESSIONS;
+  }
+
+  const period = ROTATION_PERIOD_BY_FREQUENCY[profile?.frequence_entrainement ?? ''] ?? DEFAULT_ROTATION_PERIOD;
+  const index = Math.floor(dayOfYear / period) % pool.length;
+  return pool[index];
+}
 
 // ---------------------------------------------------------------------------
 // Tip of the day

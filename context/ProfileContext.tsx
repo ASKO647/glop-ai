@@ -24,6 +24,7 @@ export type Profile = {
   created_at: string | null;
   code_parrainage: string | null;
   parraine_par: string | null;
+  avatar_path: string | null;
 };
 
 type ProfileContextValue = {
