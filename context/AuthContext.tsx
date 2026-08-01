@@ -16,6 +16,7 @@ type AuthContextValue = {
   signUp: (email: string, password: string) => Promise<SignUpResult>;
   signIn: (email: string, password: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<AuthResult>;
   /** Stubbed until the development build ships native Sign in with Apple support. */
   signInWithApple: () => void;
   /** Stubbed until the development build ships native Google Sign-In support. */
@@ -127,6 +128,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const deleteAccount = async (): Promise<AuthResult> => {
+    const userId = session?.user?.id;
+    if (!userId) {
+      return { error: 'Aucun compte connecté.' };
+    }
+
+    try {
+      // Storage objects aren't tracked anywhere else, so remove them before their
+      // only record (the progress_photos rows) is deleted below.
+      const { data: photos } = await supabase.from('progress_photos').select('storage_path').eq('user_id', userId);
+      const paths = (photos ?? []).map((photo) => photo.storage_path).filter(Boolean) as string[];
+      if (paths.length > 0) {
+        await supabase.storage.from('progress-photos').remove(paths);
+      }
+
+      await Promise.all([
+        supabase.from('messages').delete().eq('user_id', userId),
+        supabase.from('meals').delete().eq('user_id', userId),
+        supabase.from('daily_missions').delete().eq('user_id', userId),
+        supabase.from('weight_logs').delete().eq('user_id', userId),
+        supabase.from('progress_photos').delete().eq('user_id', userId),
+        supabase.from('user_settings').delete().eq('user_id', userId),
+        supabase.from('referrals').delete().eq('filleul_id', userId),
+        supabase.from('referrals').delete().eq('parrain_id', userId),
+      ]);
+
+      // Deleting the Supabase Auth user itself needs the service_role key, which
+      // can't live in the client bundle — that part needs a server-side Edge
+      // Function. Wiping the profile row and every other table, then signing out,
+      // is the closest this client can do on its own.
+      await supabase.from('profiles').delete().eq('id', userId);
+      await supabase.auth.signOut();
+      return { error: null };
+    } catch {
+      return { error: 'Impossible de supprimer le compte. Réessaie.' };
+    }
+  };
+
   const signInWithApple = () => {
     showAlert('Bientôt disponible', "La connexion avec Apple arrivera avec le build de développement.");
   };
@@ -148,6 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signUp,
     signIn,
     signOut,
+    deleteAccount,
     signInWithApple,
     signInWithGoogle,
   };

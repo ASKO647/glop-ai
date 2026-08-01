@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from '../constants/theme';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { ProfileProvider } from '../context/ProfileContext';
 
 function RootNavigator() {
   const { session, isSubscribed, loading } = useAuth();
@@ -22,21 +23,28 @@ function RootNavigator() {
   const showTabs = !!session && !!isSubscribed;
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: colors.background },
-      }}
-    >
-      <Stack.Protected guard={!showTabs}>
-        <Stack.Screen name="(onboarding)" />
-      </Stack.Protected>
-      <Stack.Protected guard={showTabs}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="workout/[id]" />
-        <Stack.Screen name="notifications" />
-      </Stack.Protected>
-    </Stack>
+    // Wraps the whole navigator (not just (tabs)) so screens declared as siblings —
+    // settings, legal/* — can also read the profile via useProfile().
+    <ProfileProvider>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      >
+        <Stack.Protected guard={!showTabs}>
+          <Stack.Screen name="(onboarding)" />
+        </Stack.Protected>
+        <Stack.Protected guard={showTabs}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="workout/[id]" />
+          <Stack.Screen name="notifications" />
+          <Stack.Screen name="settings" />
+          <Stack.Screen name="legal/terms" />
+          <Stack.Screen name="legal/privacy" />
+        </Stack.Protected>
+      </Stack>
+    </ProfileProvider>
   );
 }
 

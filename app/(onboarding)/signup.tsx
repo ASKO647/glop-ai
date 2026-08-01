@@ -12,6 +12,7 @@ import { colors, spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { asString, useOnboarding } from '../../context/OnboardingContext';
 import { mapAuthError } from '../../lib/authErrors';
+import { generateUniqueReferralCode } from '../../lib/referral';
 import { supabase } from '../../lib/supabase';
 
 const MIN_PASSWORD_LENGTH = 6;
@@ -60,9 +61,12 @@ export default function SignupScreen() {
       .map((id) => getOptionLabel('dietary_restrictions', id))
       .filter((label): label is string => Boolean(label));
 
+    const codeParrainage = await generateUniqueReferralCode(email.trim());
+
     const { error: profileError } = await supabase.from('profiles').insert({
       id: userId,
       email: email.trim(),
+      code_parrainage: codeParrainage,
       objectif: getOptionLabel('goal', asString(answers.goal)) ?? null,
       sexe: getOptionLabel('gender', asString(answers.gender)) ?? null,
       age: typeof answers.age === 'number' ? answers.age : null,

@@ -22,6 +22,8 @@ export type Profile = {
   engagement: string | null;
   is_subscribed: boolean;
   created_at: string | null;
+  code_parrainage: string | null;
+  parraine_par: string | null;
 };
 
 type ProfileContextValue = {
