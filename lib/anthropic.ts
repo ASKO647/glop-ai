@@ -19,6 +19,13 @@ export function anthropicHeaders(apiKey: string): Record<string, string> {
   };
 }
 
+/** Strips a ```json ... ``` (or bare ```) fence Claude sometimes wraps its JSON response in. */
+export function stripJsonFences(text: string): string {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  return fenced ? fenced[1].trim() : trimmed;
+}
+
 /**
  * Logs the full response body from a failed Anthropic call — the API's own error message
  * names the exact problem (bad field, broken role sequence, etc.), which a bare status code

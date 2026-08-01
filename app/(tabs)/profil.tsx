@@ -205,7 +205,7 @@ export default function ProfilScreen() {
         supabase.from('daily_missions').select('*').eq('user_id', user.id),
         supabase.from('meals').select('*').eq('user_id', user.id),
         // Metadata only — the actual image bytes live in Storage, not the export.
-        supabase.from('progress_photos').select('id, date, storage_path, poids, created_at').eq('user_id', user.id),
+        supabase.from('progress_photos').select('id, slot, date, storage_path, poids, created_at').eq('user_id', user.id),
         supabase.from('messages').select('*').eq('user_id', user.id),
         supabase.from('user_settings').select('*').eq('user_id', user.id).maybeSingle(),
         supabase.from('referrals').select('*').or(`filleul_id.eq.${user.id},parrain_id.eq.${user.id}`),

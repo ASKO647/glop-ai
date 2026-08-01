@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import PhotosCard from '../../components/progression/PhotosCard';
+import ProgressAnalysisCard from '../../components/progression/ProgressAnalysisCard';
 import StatTile from '../../components/progression/StatTile';
 import StreakGrid from '../../components/progression/StreakGrid';
 import WeightCard from '../../components/progression/WeightCard';
@@ -15,9 +16,10 @@ import { colors, radii, spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/ProfileContext';
 import { useMissionStreak } from '../../hooks/useMissionStreak';
-import { useProgressPhotos } from '../../hooks/useProgressPhotos';
+import { PHOTO_SLOTS, SLOT_LABELS, useProgressPhotos, type PhotoSlot, type ProgressPhoto } from '../../hooks/useProgressPhotos';
 import { useWeightLogs } from '../../hooks/useWeightLogs';
 import { showAlert } from '../../lib/alert';
+import { analyzeProgress, type ProgressAnalysis } from '../../lib/progressAnalysis';
 
 const PHOTOS_PERMISSION_DENIED_MESSAGE =
   "GlowUp AI a besoin d'accéder à tes photos pour enregistrer ta progression. Active l'accès dans les réglages de ton téléphone.";
@@ -27,10 +29,14 @@ export default function ProgressionScreen() {
   const { profile, loading: profileLoading } = useProfile();
   const { logs, loading: logsLoading, saving, saveTodayWeight } = useWeightLogs(user?.id);
   const { statusByDate, countsByDate, streak, activeDays, loading: streakLoading } = useMissionStreak(user?.id);
-  const { photos, loading: photosLoading, uploading, addPhoto, deletePhoto } = useProgressPhotos(user?.id);
+  const { photosBySlot, loading: photosLoading, addPhoto, deletePhoto } = useProgressPhotos(user?.id);
 
   const [period, setPeriod] = useState<PeriodId>('30');
   const [modalVisible, setModalVisible] = useState(false);
+  const [uploadingSlot, setUploadingSlot] = useState<PhotoSlot | null>(null);
+  const [analysis, setAnalysis] = useState<ProgressAnalysis | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   const startWeight = profile?.poids_actuel ?? null;
   const targetWeight = profile?.poids_objectif ?? null;
@@ -59,7 +65,13 @@ export default function ProgressionScreen() {
     }
   };
 
-  const handleAddPhoto = async () => {
+  const presentPhotos = useMemo(
+    () => PHOTO_SLOTS.map((slot) => photosBySlot[slot]).filter((photo): photo is ProgressPhoto => photo != null),
+    [photosBySlot]
+  );
+  const canAnalyze = presentPhotos.length >= 2;
+
+  const handlePressSlot = async (slot: PhotoSlot) => {
     const { status: existing } = await ImagePicker.getMediaLibraryPermissionsAsync();
     if (existing !== 'granted') {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -73,16 +85,37 @@ export default function ProgressionScreen() {
     if (result.canceled || result.assets.length === 0) return;
 
     const asset = result.assets[0];
-    const outcome = await addPhoto(asset.uri, asset.width, currentWeight);
+    setUploadingSlot(slot);
+    const outcome = await addPhoto(slot, asset.uri, asset.width, currentWeight);
+    setUploadingSlot(null);
     if (!outcome.ok) {
       showAlert('Erreur', outcome.error ?? "Impossible d'enregistrer cette photo. Réessaie.");
     }
   };
 
-  const handleDeletePhoto = async (photo: (typeof photos)[number]) => {
-    const ok = await deletePhoto(photo);
+  // PhotosCard already confirms via showConfirm before calling this — just perform the delete.
+  const handleDeleteSlot = async (slot: PhotoSlot) => {
+    const ok = await deletePhoto(slot);
     if (!ok) {
       showAlert('Erreur', 'Impossible de supprimer cette photo. Réessaie.');
+    }
+  };
+
+  const handleAnalyze = async () => {
+    setAnalyzing(true);
+    setAnalysisError(null);
+    try {
+      const result = await analyzeProgress(presentPhotos, {
+        objectif: profile?.objectif ?? null,
+        poidsDepart: startWeight,
+        poidsActuel: currentWeight,
+        poidsObjectif: targetWeight,
+      });
+      setAnalysis(result);
+    } catch (err) {
+      setAnalysisError(err instanceof Error ? err.message : "Impossible d'analyser ta progression. Réessaie.");
+    } finally {
+      setAnalyzing(false);
     }
   };
 
@@ -186,13 +219,21 @@ export default function ProgressionScreen() {
         </View>
 
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Photos</Text>
-            <Pressable accessibilityRole="button" onPress={handleAddPhoto} disabled={uploading} hitSlop={8}>
-              <Text style={styles.addLink}>Ajouter</Text>
-            </Pressable>
-          </View>
-          <PhotosCard photos={photos} loading={photosLoading} uploading={uploading} onDelete={handleDeletePhoto} />
+          <Text style={styles.sectionTitle}>Photos</Text>
+          <PhotosCard
+            photosBySlot={photosBySlot}
+            loading={photosLoading}
+            uploadingSlot={uploadingSlot}
+            onPressSlot={handlePressSlot}
+            onDeleteSlot={handleDeleteSlot}
+          />
+          <ProgressAnalysisCard
+            analysis={analysis}
+            loading={analyzing}
+            error={analysisError}
+            canAnalyze={canAnalyze}
+            onAnalyze={handleAnalyze}
+          />
         </View>
       </ScrollView>
 
@@ -273,10 +314,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-  },
-  addLink: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.accent,
   },
 });
