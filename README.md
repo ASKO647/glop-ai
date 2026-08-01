@@ -57,7 +57,9 @@ Cette base contient la **structure de navigation**, des **écrans vides** (titre
      using (auth.uid() = id);
    ```
 
-   `is_subscribed` gates the paywall (see below) — without the update policy, the paywall's CTA can't flip it and the RLS update silently fails. The delete policy backs the "Supprimer mon compte" button on `profil.tsx`.
+   `is_subscribed` gates the paywall (see below) — without the update policy, the paywall's CTA can't flip it and the RLS update silently fails. The delete policy backs `deleteAccount()` (`context/AuthContext.tsx`), used by the "Supprimer mon compte" flow on `settings.tsx`.
+
+   `code_parrainage` and `parraine_par` (added below, alongside the referral system) also live on this table.
 
 3. Crée les tables `daily_missions` et `meals` (dashboard) :
 
@@ -204,7 +206,9 @@ app/
                               croix de fermeture déconnecte (pas d'accès gratuit à l'app)
   (tabs)/
     _layout.tsx             Barre de tabs flottante (pilule #101410, icônes seules, icône active
-                              dans un cercle plein #c6ff3a de 44px) — enveloppé dans ProfileProvider
+                              dans un cercle plein #c6ff3a de 44px) — ProfileProvider enveloppe tout
+                              le Stack authentifié depuis app/_layout.tsx, pas seulement ici, pour
+                              que settings.tsx (écran racine, hors tabs) y ait accès aussi
     index.tsx                Dashboard : header (avatar → profil, cloche → notifications), semaine,
                               carte calories (+ CTA "Continuer" → scanner), missions du jour, repas
                               du jour (ou état vide → scanner), catégories de séances, séances
@@ -219,12 +223,17 @@ app/
     progression.tsx            Poids (carte + stepper sans clavier + courbe SVG), 4 stats, régularité
                               30 jours (`daily_missions`), photos avant/après (`progress_photos`
                               + bucket Storage privé)
-    profil.tsx                 Email, statut d'abonnement, déconnexion, suppression de compte
-                              (voir caveat plus bas), liens Conditions/Confidentialité
+    profil.tsx                 Email, statut d'abonnement, icône engrenage (→ settings) — volontairement
+                              minimal, la déconnexion et la suppression de compte vivent dans Paramètres
   workout/
     [id].tsx                  Détail d'une séance (titre, muscles, durée, kcal, liste d'exercices
                               séries/reps, CTA "Commencer la séance") — écran racine (hors tabs)
   notifications.tsx           Liste des notifications, état vide propre — écran racine (hors tabs)
+  settings.tsx                 7 sections (parrainage, objectifs, compte, notifications, préférences,
+                              à propos, zone de danger) — écran racine (hors tabs), voir "Écran Paramètres"
+  legal/
+    terms.tsx                  Conditions d'utilisation — texte placeholder
+    privacy.tsx                 Politique de confidentialité — texte placeholder
 
 components/
   ScreenPlaceholder.tsx      Écran placeholder générique (tabs)
@@ -518,6 +527,77 @@ create policy "Users can delete their own folder"
 
 Le bucket restant privé, `getPublicUrl` ne fonctionnerait pas — c'est pour ça que l'app utilise `createSignedUrl` partout où une photo doit s'afficher.
 
+## Écran Paramètres
+
+`app/settings.tsx` est un écran racine (déclaré dans `app/_layout.tsx`, pas dans `(tabs)/`), atteint depuis l'icône engrenage en haut à droite de `profil.tsx`. Comme il est en dehors de `(tabs)`, `ProfileProvider` a dû remonter de `(tabs)/_layout.tsx` vers `app/_layout.tsx` (il enveloppe maintenant tout le Stack authentifié) pour que `useProfile()` reste utilisable ici — sans ce changement l'écran plante au montage. `profil.tsx` est resté volontairement minimal (email + statut d'abonnement) : "Se déconnecter" et "Supprimer mon compte" vivent désormais uniquement dans la zone de danger des Paramètres, avec un flux de confirmation plus strict — les garder à deux endroits aurait donné deux comportements différents pour la même action.
+
+Sept sections empilées : carte de parrainage, Mes objectifs, Compte, Notifications, Préférences, À propos, Zone de danger. Chaque modale de sélection à choix unique (Objectif principal, Vitesse, Entraînements par semaine) réutilise directement les options de `constants/questionnaire.ts` (les mêmes que l'onboarding) via un composant générique `components/settings/ChoiceModal.tsx`. La modale "Poids objectif" réutilise le stepper sans clavier de l'écran Progression — son UI a été extraite dans `components/ui/NumberStepperModal.tsx` (title/unit/step/quickAdjustments paramétrables), et `components/progression/WeightEntryModal.tsx` est maintenant un simple wrapper autour de ce composant partagé, avec la même interface externe qu'avant (aucun changement côté `progression.tsx`). "Rappel du matin"/"Rappel du soir" utilisent un stepper heure/minute maison (`components/settings/TimePickerModal.tsx`) plutôt qu'un date-picker natif — pas de nouvelle dépendance native, et ça reste testable sur web.
+
+Chaque changement s'écrit immédiatement en base : `hooks/useSettings.ts` (sur le modèle de `useWeightLogs`/`useDailyMissions`) lit `user_settings`, crée une ligne par défaut si elle n'existe pas encore, et applique chaque `update()` de façon optimiste (revert local si l'écriture échoue). Les notifications ne sont pas branchées : le switch et les rappels enregistrent la préférence sans déclencher quoi que ce soit (`// TODO: brancher expo-notifications` dans `app/settings.tsx`).
+
+**Parrainage.** À l'inscription (`app/(onboarding)/signup.tsx`), `lib/referral.ts` génère un code de 8 caractères dérivé de l'email (ex. `LUCAS4K2` — jusqu'à 5 lettres/chiffres de la partie locale de l'email + un suffixe aléatoire complétant à 8 caractères), en vérifiant l'unicité en base avant de l'utiliser (jusqu'à 10 tentatives, puis repli sur un code entièrement aléatoire). `hooks/useReferral.ts` lit le nombre de filleuls (`referrals` où `parrain_id` = l'utilisateur) et regénère un code au vol si un profil plus ancien n'en a pas ; `redeemCode()` refuse le propre code de l'utilisateur et refuse un second parrainage (`profiles.parraine_par` déjà renseigné) avant d'insérer la ligne dans `referrals` et de mettre à jour `parraine_par`. Le bouton copie (`expo-clipboard`) et le bouton partage (`Share` de React Native) sont sur `components/settings/ReferralCard.tsx`.
+
+**Suppression de compte**, en deux étapes : une alerte de confirmation classique, puis une modale qui exige de taper "SUPPRIMER" mot pour mot avant d'activer le bouton final. `deleteAccount()` (`context/AuthContext.tsx`) supprime les lignes de l'utilisateur dans toutes les tables (`messages`, `meals`, `daily_missions`, `weight_logs`, `progress_photos` — et les fichiers Storage associés, supprimés avant leur seule trace en base —, `user_settings`, `referrals` des deux côtés de la relation, puis `profiles`) et déconnecte. Supprimer le compte Supabase Auth lui-même demande la clé `service_role` (impossible côté client) : ce sera une Edge Function plus tard, comme déjà noté pour ce même problème sur les tables au tout début de ce README.
+
+Tables à créer :
+
+```sql
+create table user_settings (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  notifications_actives boolean not null default true,
+  rappel_matin text not null default '08:00',
+  rappel_soir text not null default '20:00',
+  unite_poids text not null default 'kg',
+  langue text not null default 'Français',
+  updated_at timestamptz not null default now()
+);
+
+alter table user_settings enable row level security;
+
+create policy "Users can insert their own settings"
+  on user_settings for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can read their own settings"
+  on user_settings for select
+  using (auth.uid() = user_id);
+
+create policy "Users can update their own settings"
+  on user_settings for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Users can delete their own settings"
+  on user_settings for delete
+  using (auth.uid() = user_id);
+
+create table referrals (
+  id uuid primary key default gen_random_uuid(),
+  parrain_id uuid not null references auth.users(id) on delete cascade,
+  filleul_id uuid not null references auth.users(id) on delete cascade,
+  code_utilise text not null,
+  created_at timestamptz not null default now(),
+  unique (filleul_id) -- one redeemed code per account, enforced at the DB level too
+);
+
+alter table referrals enable row level security;
+
+create policy "Users can insert referrals they're part of"
+  on referrals for insert
+  with check (auth.uid() = filleul_id or auth.uid() = parrain_id);
+
+create policy "Users can read referrals they're part of"
+  on referrals for select
+  using (auth.uid() = filleul_id or auth.uid() = parrain_id);
+
+create policy "Users can delete referrals they're part of"
+  on referrals for delete
+  using (auth.uid() = filleul_id or auth.uid() = parrain_id);
+
+alter table profiles add column code_parrainage text unique;
+alter table profiles add column parraine_par uuid references auth.users(id);
+```
+
 ## Visuels
 
 `app.json` référence `./assets/icon.png`, `./assets/splash-icon.png` (splash, `resizeMode: "contain"`, fond `#0a0d0c`) et `./assets/adaptive-icon.png` (icône adaptative Android, même fond).
@@ -545,4 +625,5 @@ Toutes les couleurs sont importées depuis `constants/theme.ts` — aucune coule
 - Remplacer le CTA du paywall par un vrai flux d'achat (RevenueCat).
 - Implémenter Sign in with Apple / Google Sign-In (development build requis).
 - Ajouter une Edge Function pour la suppression complète du compte Supabase Auth.
+- Brancher `expo-notifications` sur les préférences de `settings.tsx` (switch + rappels matin/soir) — pour l'instant elles s'enregistrent sans déclencher aucune notification.
 - Décider si/où réutiliser `AppImage.tsx` et `Logo.tsx`.

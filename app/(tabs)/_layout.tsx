@@ -5,7 +5,6 @@ import { Camera, Home, MessageCircle, TrendingUp, User, type LucideIcon } from '
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radii } from '../../constants/theme';
-import { ProfileProvider } from '../../context/ProfileContext';
 
 const TAB_BAR_MARGIN = 20;
 const TAB_BAR_BOTTOM_MIN = 24;
@@ -35,39 +34,37 @@ export default function TabsLayout() {
   const tabBarBottom = Math.max(TAB_BAR_BOTTOM_MIN, insets.bottom + 12);
 
   return (
-    <ProfileProvider>
-      <Tabs
-        screenOptions={{
-          headerShown: false,
-          tabBarShowLabel: false,
-          tabBarButton: (props) => <TabBarButton {...props} />,
-          tabBarStyle: [styles.tabBar, { bottom: tabBarBottom }],
-          tabBarItemStyle: styles.tabBarItem,
-        }}
-      >
-        <Tabs.Screen
-          name="index"
-          options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={Home} focused={focused} /> }}
-        />
-        <Tabs.Screen
-          name="coach"
-          options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={MessageCircle} focused={focused} /> }}
-        />
-        <Tabs.Screen
-          name="scanner"
-          options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={Camera} focused={focused} /> }}
-        />
-        <Tabs.Screen
-          name="progression"
-          options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={TrendingUp} focused={focused} /> }}
-        />
-        <Tabs.Screen
-          name="profil"
-          options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={User} focused={focused} /> }}
-        />
-        <Tabs.Screen name="meals" options={{ href: null }} />
-      </Tabs>
-    </ProfileProvider>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarShowLabel: false,
+        tabBarButton: (props) => <TabBarButton {...props} />,
+        tabBarStyle: [styles.tabBar, { bottom: tabBarBottom }],
+        tabBarItemStyle: styles.tabBarItem,
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={Home} focused={focused} /> }}
+      />
+      <Tabs.Screen
+        name="coach"
+        options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={MessageCircle} focused={focused} /> }}
+      />
+      <Tabs.Screen
+        name="scanner"
+        options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={Camera} focused={focused} /> }}
+      />
+      <Tabs.Screen
+        name="progression"
+        options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={TrendingUp} focused={focused} /> }}
+      />
+      <Tabs.Screen
+        name="profil"
+        options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={User} focused={focused} /> }}
+      />
+      <Tabs.Screen name="meals" options={{ href: null }} />
+    </Tabs>
   );
 }
 
