@@ -1,3 +1,4 @@
+import * as ImagePicker from 'expo-image-picker';
 import { Flag, Ruler, Target, TrendingUp } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -8,28 +9,33 @@ import StreakGrid from '../../components/progression/StreakGrid';
 import WeightCard from '../../components/progression/WeightCard';
 import WeightChart from '../../components/progression/WeightChart';
 import WeightEntryModal from '../../components/progression/WeightEntryModal';
-import { isoDaysAgo, todayISODate } from '../../constants/dashboard';
+import { isoDaysAgo } from '../../constants/dashboard';
 import { PERIOD_OPTIONS, computeProgressPercent, formatWeight, type PeriodId } from '../../constants/progression';
 import { colors, radii, spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/ProfileContext';
 import { useMissionStreak } from '../../hooks/useMissionStreak';
+import { useProgressPhotos } from '../../hooks/useProgressPhotos';
 import { useWeightLogs } from '../../hooks/useWeightLogs';
 import { showAlert } from '../../lib/alert';
+
+const PHOTOS_PERMISSION_DENIED_MESSAGE =
+  "GlowUp AI a besoin d'accéder à tes photos pour enregistrer ta progression. Active l'accès dans les réglages de ton téléphone.";
 
 export default function ProgressionScreen() {
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
   const { logs, loading: logsLoading, saving, saveTodayWeight } = useWeightLogs(user?.id);
-  const { statusByDate, streak, loading: streakLoading } = useMissionStreak(user?.id);
+  const { statusByDate, countsByDate, streak, activeDays, loading: streakLoading } = useMissionStreak(user?.id);
+  const { photos, loading: photosLoading, uploading, addPhoto, deletePhoto } = useProgressPhotos(user?.id);
 
   const [period, setPeriod] = useState<PeriodId>('30');
   const [modalVisible, setModalVisible] = useState(false);
 
-  const todayLog = logs.find((log) => log.date === todayISODate());
   const startWeight = profile?.poids_actuel ?? null;
   const targetWeight = profile?.poids_objectif ?? null;
   const currentWeight = logs.length > 0 ? logs[logs.length - 1].poids : startWeight;
+  const previousWeight = logs.length > 1 ? logs[logs.length - 2].poids : null;
 
   const periodOption = PERIOD_OPTIONS.find((option) => option.id === period)!;
   const filteredLogs = useMemo(() => {
@@ -53,6 +59,33 @@ export default function ProgressionScreen() {
     }
   };
 
+  const handleAddPhoto = async () => {
+    const { status: existing } = await ImagePicker.getMediaLibraryPermissionsAsync();
+    if (existing !== 'granted') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        showAlert('Accès à tes photos refusé', PHOTOS_PERMISSION_DENIED_MESSAGE);
+        return;
+      }
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+    if (result.canceled || result.assets.length === 0) return;
+
+    const asset = result.assets[0];
+    const ok = await addPhoto(asset.uri, asset.width, currentWeight);
+    if (!ok) {
+      showAlert('Erreur', "Impossible d'enregistrer cette photo. Réessaie.");
+    }
+  };
+
+  const handleDeletePhoto = async (photo: (typeof photos)[number]) => {
+    const ok = await deletePhoto(photo);
+    if (!ok) {
+      showAlert('Erreur', 'Impossible de supprimer cette photo. Réessaie.');
+    }
+  };
+
   if (profileLoading) {
     return (
       <SafeAreaView style={styles.loadingScreen} edges={['top']}>
@@ -68,7 +101,9 @@ export default function ProgressionScreen() {
 
         <WeightCard
           currentWeight={currentWeight}
+          previousWeight={previousWeight}
           startWeight={startWeight}
+          objectif={profile?.objectif ?? null}
           loading={logsLoading}
           onAddPress={() => setModalVisible(true)}
         />
@@ -141,24 +176,29 @@ export default function ProgressionScreen() {
           {streakLoading ? (
             <ActivityIndicator color={colors.accent} />
           ) : (
-            <StreakGrid statusByDate={statusByDate} streak={streak} />
+            <StreakGrid
+              statusByDate={statusByDate}
+              countsByDate={countsByDate}
+              streak={streak}
+              activeDays={activeDays}
+            />
           )}
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Photos</Text>
-            <Pressable accessibilityRole="button" accessibilityState={{ disabled: true }} disabled hitSlop={8}>
+            <Pressable accessibilityRole="button" onPress={handleAddPhoto} disabled={uploading} hitSlop={8}>
               <Text style={styles.addLink}>Ajouter</Text>
             </Pressable>
           </View>
-          <PhotosCard />
+          <PhotosCard photos={photos} loading={photosLoading} uploading={uploading} onDelete={handleDeletePhoto} />
         </View>
       </ScrollView>
 
       <WeightEntryModal
         visible={modalVisible}
-        initialValue={todayLog?.poids ?? null}
+        initialValue={currentWeight}
         saving={saving}
         onCancel={() => setModalVisible(false)}
         onSave={handleSaveWeight}
