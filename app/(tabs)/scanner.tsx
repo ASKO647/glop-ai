@@ -8,6 +8,7 @@ import AppImage from '../../components/ui/AppImage';
 import Button from '../../components/ui/Button';
 import ProgressBar from '../../components/ui/ProgressBar';
 import { todayISODate } from '../../constants/dashboard';
+import { appImage } from '../../constants/images';
 import { colors, radii, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { showAlert } from '../../lib/alert';
@@ -145,7 +146,7 @@ export default function ScannerScreen() {
         )}
 
         {screenState === 'idle' && !photoUri && (
-          <AppImage source={require('../../assets/images/meal-example.jpg')} style={styles.idle} overlay={0.6}>
+          <AppImage source={appImage('meal-example.jpg')} style={styles.idle} overlay={0.6}>
             <View style={styles.iconCircle}>
               <CameraIcon color={colors.accent} size={32} />
             </View>

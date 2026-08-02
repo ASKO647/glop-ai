@@ -1,5 +1,6 @@
 import type { ImageSourcePropType } from 'react-native';
 import type { Profile } from '../context/ProfileContext';
+import { appImage } from './images';
 
 // ---------------------------------------------------------------------------
 // Display name
@@ -438,9 +439,9 @@ export function getTodaysWorkout(profile: Profile | null): WorkoutSession {
 
 // Only 3 stock photos exist for workouts — "full_body" and "upper" both fall back to the
 // dumbbells shot since there's no dedicated asset for either.
-const EXERCISE_DUMBBELLS_IMAGE = require('../assets/images/exercise-dumbbells.jpg');
-const EXERCISE_SQUAT_IMAGE = require('../assets/images/exercise-squat.jpg');
-const EXERCISE_CARDIO_IMAGE = require('../assets/images/exercise-cardio.jpg');
+const EXERCISE_DUMBBELLS_IMAGE = appImage('exercise-dumbbells.jpg');
+const EXERCISE_SQUAT_IMAGE = appImage('exercise-squat.jpg');
+const EXERCISE_CARDIO_IMAGE = appImage('exercise-cardio.jpg');
 
 export const WORKOUT_CATEGORY_IMAGES: Record<Exclude<WorkoutCategoryId, 'all'>, ImageSourcePropType> = {
   full_body: EXERCISE_DUMBBELLS_IMAGE,
