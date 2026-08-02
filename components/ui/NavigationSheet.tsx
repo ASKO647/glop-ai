@@ -31,7 +31,7 @@ const GRID_ITEMS: NavItem[] = [
   { key: 'groups', label: 'Groupes', Icon: Users, comingSoon: true },
   { key: 'widgets', label: 'Widgets', Icon: LayoutGrid, comingSoon: true },
   { key: 'recipes', label: 'Recettes', Icon: ChefHat, comingSoon: true },
-  { key: 'badges', label: 'Badges', Icon: Award, comingSoon: true },
+  { key: 'badges', label: 'Badges', Icon: Award, route: '/badges' },
 ];
 
 // Chunked into fixed pairs rather than left to flex-wrap, which would fit 3 (or more)

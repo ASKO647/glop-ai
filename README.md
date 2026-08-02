@@ -588,6 +588,63 @@ Le prompt système (`buildSystemPrompt`) injecte l'objectif de l'utilisateur et 
 
 Le résultat s'affiche dans une carte : le score dans un anneau SVG (`components/progression/ScoreRing.tsx`, même construction que `CalorieRing`/`ProgressRing` — piste `colors.border`, arc `colors.accent`), le résumé à côté, puis deux listes à puces ("Points positifs" en puces accent, "Axes de travail" en puces `colors.warning`). Un bouton "Réanalyser" relance le même appel. Les erreurs (réseau, clé manquante, réponse Anthropic en échec) utilisent `describeAnthropicError` pour un message en français adapté au code de statut, affiché au-dessus du bouton plutôt que de bloquer l'écran.
 
+## Système de badges
+
+8 badges fixes (`constants/badges.ts`, `BADGES`), chacun une clé, un nom, une description (qui sert aussi de texte de condition affiché tant que le badge est verrouillé), une icône lucide et une fonction `isUnlocked(ctx: BadgeContext) => boolean` :
+
+| Clé | Nom | Condition |
+|---|---|---|
+| `premier_pas` | Premier pas | 1ʳᵉ mission complétée (tous types confondus) |
+| `regularite` | Régularité | 7 jours d'affilée avec au moins une mission complétée |
+| `discipline` | Discipline | 30 jours d'affilée avec au moins une mission complétée |
+| `nutritionniste` | Nutritionniste | 20 repas scannés |
+| `transformation` | Transformation | 3 photos de progression enregistrées (les 3 emplacements remplis) |
+| `objectif_atteint` | Objectif atteint | Poids cible atteint dans `weight_logs` |
+| `marathonien` | Marathonien | 10 séances d'entraînement terminées |
+| `fidele` | Fidèle | 90 jours depuis l'inscription |
+
+`hooks/useBadges.ts` recharge et évalue ces conditions à chaque montage (donc à chaque ouverture d'écran qui l'utilise, dashboard compris — "à l'ouverture de l'app" en pratique) :
+- Interroge `user_badges` (déblocages déjà enregistrés), `daily_missions` (95 derniers jours — assez pour couvrir la fenêtre de 90 jours de "Fidèle" et le calcul de streak), `meals` (comptage total via `count: 'exact', head: true`), `progress_photos` (une ligne par emplacement rempli) et `weight_logs` (dernière pesée).
+- La streak "régularité/discipline" **n'est pas** celle du dashboard (`computeStreak` sur `completionByDate`, qui exige que *toutes* les missions du jour soient complétées) : c'est une notion plus permissive, "au moins une mission complétée ce jour-là". Le hook construit sa propre carte jour → bool à partir de `daily_missions` puis réutilise l'algorithme générique `computeStreak` de `constants/dashboard.ts` (marche arrière depuis aujourd'hui/hier, compte les jours consécutifs vrais) — seule la carte passée en entrée diffère.
+- "Marathonien" n'a pas de table dédiée aux séances terminées : il n'existe dans toute l'app aucun historique de séance individuelle, seulement la mission du jour `daily_missions.mission_key = 'workout'` (plafonnée à 1 par jour, voir "Suivi de séance en direct" ci-dessus). Le badge compte donc le nombre de jours où cette mission a été marquée complétée — une approximation raisonnable de "séances terminées" tant qu'aucune table `workout_completions` n'existe pour compter plusieurs séances le même jour.
+- "Objectif atteint" compare le dernier poids connu à `profile.poids_objectif`, en tenant compte du sens de l'objectif (`poids_objectif < poids_actuel` de départ ⇒ objectif de perte, atteint si le dernier poids logué est ≤ la cible ; sinon objectif de prise, atteint si ≥ la cible).
+- Les badges qui passent de verrouillé à débloqué pendant cette évaluation sont insérés dans `user_badges` (un `insert` groupé) puis mis en file d'attente (`pendingUnlock`, une queue vidée un par un via `dismissPendingUnlock`) pour la modale de célébration — jamais plus d'une modale affichée à la fois même si plusieurs badges se débloquent dans la même évaluation.
+
+Table Supabase :
+
+```sql
+create table user_badges (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  badge_key text not null,
+  unlocked_at timestamptz not null default now(),
+  constraint user_badges_user_badge_key unique (user_id, badge_key)
+);
+
+alter table user_badges enable row level security;
+
+create policy "Users can insert their own badges"
+  on user_badges for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can read their own badges"
+  on user_badges for select
+  using (auth.uid() = user_id);
+
+create policy "Users can update their own badges"
+  on user_badges for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Users can delete their own badges"
+  on user_badges for delete
+  using (auth.uid() = user_id);
+```
+
+`app/badges.tsx` (route `/badges`, écran racine hors `(tabs)` comme `notifications.tsx`) affiche l'en-tête "X / 8 badges débloqués" avec une barre de progression, puis une grille de 2 colonnes (paires chunkées manuellement, même technique que `NavigationSheet.tsx` plutôt qu'un `flexWrap` qui laisserait le nombre de colonnes dépendre de la largeur d'écran). Chaque cellule est un médaillon (`components/badges/BadgeMedal.tsx`, réutilisé aussi dans la modale et la bande du dashboard à des tailles différentes) : cercle plein `colors.accent` + icône noire + nom blanc + date de déblocage si débloqué, cercle `colors.surface`/bordure `colors.border` + icône `colors.borderMuted` + nom `colors.textTertiary` + condition (la description du badge) en 10px sinon. `components/badges/BadgeUnlockModal.tsx` affiche la modale "Badge débloqué !" (médaillon 96px, nom, description, bouton "Super") pour `pendingUnlock`, fermée via `dismissPendingUnlock`.
+
+Le point d'entrée "Badges" de `NavigationSheet.tsx` (jusque-là marqué `comingSoon`) pointe maintenant vers `/badges`. Dans le profil, une ligne "Mes badges" (`SettingsSection` "Mes objectifs") affiche le compteur `X/8` et mène au même écran. Sur le dashboard, une bande horizontale sous les statistiques rapides affiche les 3 derniers badges débloqués (triés par `unlocked_at` décroissant) — masquée si aucun badge n'est encore débloqué, pour ne jamais montrer une rangée de médaillons verrouillés à cet endroit.
+
 ## Écran Profil
 
 `(tabs)/profil.tsx` fusionne l'ancien écran Paramètres (`app/settings.tsx`, supprimé) directement dans l'onglet Profil — plus d'icône engrenage, plus d'écran séparé, plus de route `/settings`. `ProfileProvider` était déjà remonté de `(tabs)/_layout.tsx` vers `app/_layout.tsx` pour cet ancien écran racine ; il reste à cet endroit (inutile de le redescendre) même si tout son contenu vit maintenant dans `(tabs)/` — ça n'a aucun effet visible, `useProfile()` fonctionne pareil dans les deux cas.

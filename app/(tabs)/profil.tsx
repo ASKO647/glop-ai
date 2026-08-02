@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import {
+  Award,
   Bell,
   Download,
   Dumbbell,
@@ -41,6 +42,7 @@ import { colors, spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/ProfileContext';
 import { useAvatar } from '../../hooks/useAvatar';
+import { useBadges } from '../../hooks/useBadges';
 import { useMissionStreak } from '../../hooks/useMissionStreak';
 import { useReferral } from '../../hooks/useReferral';
 import { useSettings } from '../../hooks/useSettings';
@@ -80,6 +82,7 @@ export default function ProfilScreen() {
   );
   const { logs: weightLogs, loading: weightLoading, refetch: refetchWeightLogs } = useWeightLogs(user?.id);
   const { streak, loading: streakLoading, refetch: refetchStreak } = useMissionStreak(user?.id);
+  const { earnedCount: badgesEarnedCount, totalCount: badgesTotalCount } = useBadges();
   const { signedUrl: avatarUrl, uploading: avatarUploading, uploadAvatar, deleteAvatar } = useAvatar(
     user?.id,
     profile?.avatar_path
@@ -200,16 +203,18 @@ export default function ProfilScreen() {
     if (!user) return;
     setExporting(true);
     try {
-      const [weightRes, missionsRes, mealsRes, photosRes, messagesRes, settingsRes, referralsRes] = await Promise.all([
-        supabase.from('weight_logs').select('*').eq('user_id', user.id),
-        supabase.from('daily_missions').select('*').eq('user_id', user.id),
-        supabase.from('meals').select('*').eq('user_id', user.id),
-        // Metadata only — the actual image bytes live in Storage, not the export.
-        supabase.from('progress_photos').select('id, slot, date, storage_path, poids, created_at').eq('user_id', user.id),
-        supabase.from('messages').select('*').eq('user_id', user.id),
-        supabase.from('user_settings').select('*').eq('user_id', user.id).maybeSingle(),
-        supabase.from('referrals').select('*').or(`filleul_id.eq.${user.id},parrain_id.eq.${user.id}`),
-      ]);
+      const [weightRes, missionsRes, mealsRes, photosRes, messagesRes, settingsRes, referralsRes, badgesRes] =
+        await Promise.all([
+          supabase.from('weight_logs').select('*').eq('user_id', user.id),
+          supabase.from('daily_missions').select('*').eq('user_id', user.id),
+          supabase.from('meals').select('*').eq('user_id', user.id),
+          // Metadata only — the actual image bytes live in Storage, not the export.
+          supabase.from('progress_photos').select('id, slot, date, storage_path, poids, created_at').eq('user_id', user.id),
+          supabase.from('messages').select('*').eq('user_id', user.id),
+          supabase.from('user_settings').select('*').eq('user_id', user.id).maybeSingle(),
+          supabase.from('referrals').select('*').or(`filleul_id.eq.${user.id},parrain_id.eq.${user.id}`),
+          supabase.from('user_badges').select('*').eq('user_id', user.id),
+        ]);
 
       const exportPayload = {
         exported_at: new Date().toISOString(),
@@ -221,6 +226,7 @@ export default function ProfilScreen() {
         messages: messagesRes.data ?? [],
         settings: settingsRes.data ?? null,
         referrals: referralsRes.data ?? [],
+        badges: badgesRes.data ?? [],
       };
 
       await Share.share({
@@ -340,6 +346,12 @@ export default function ProfilScreen() {
             label="Entraînements par semaine"
             onPress={() => setActiveModal('workouts')}
             right={<SettingsValue value={profile?.frequence_entrainement ?? '-'} />}
+          />
+          <SettingsRow
+            icon={Award}
+            label="Mes badges"
+            onPress={() => router.push('/badges')}
+            right={<SettingsValue value={`${badgesEarnedCount}/${badgesTotalCount}`} />}
           />
         </SettingsSection>
 

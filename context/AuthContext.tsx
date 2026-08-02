@@ -154,6 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase.from('user_settings').delete().eq('user_id', userId),
         supabase.from('referrals').delete().eq('filleul_id', userId),
         supabase.from('referrals').delete().eq('parrain_id', userId),
+        supabase.from('user_badges').delete().eq('user_id', userId),
       ]);
 
       // Deleting the Supabase Auth user itself needs the service_role key, which
