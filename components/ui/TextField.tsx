@@ -1,6 +1,8 @@
-import { forwardRef } from 'react';
+import { forwardRef, useMemo } from 'react';
 import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 type TextFieldProps = TextInputProps & {
   label?: string;
@@ -8,6 +10,9 @@ type TextFieldProps = TextInputProps & {
 };
 
 const TextField = forwardRef<TextInput, TextFieldProps>(({ label, error, style, ...rest }, ref) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <View style={styles.container}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
@@ -26,30 +31,32 @@ TextField.displayName = 'TextField';
 
 export default TextField;
 
-const styles = StyleSheet.create({
-  container: {
-    gap: spacing.xs,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  input: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: colors.textPrimary,
-  },
-  inputError: {
-    borderColor: colors.danger,
-  },
-  error: {
-    fontSize: 12,
-    color: colors.danger,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: {
+      gap: spacing.xs,
+    },
+    label: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    input: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.lg,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 12,
+      fontSize: 15,
+      color: colors.textPrimary,
+    },
+    inputError: {
+      borderColor: colors.danger,
+    },
+    error: {
+      fontSize: 12,
+      color: colors.danger,
+    },
+  });
+}

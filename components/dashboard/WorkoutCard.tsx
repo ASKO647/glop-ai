@@ -1,8 +1,11 @@
 import { useRouter } from 'expo-router';
 import { Clock, Flame } from 'lucide-react-native';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { WORKOUT_CATEGORY_IMAGES, type WorkoutSession } from '../../constants/dashboard';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import AppImage from '../ui/AppImage';
 
 type WorkoutCardProps = {
@@ -11,6 +14,8 @@ type WorkoutCardProps = {
 
 export default function WorkoutCard({ session }: WorkoutCardProps) {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
     <Pressable
@@ -39,51 +44,53 @@ export default function WorkoutCard({ session }: WorkoutCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  thumbnail: {
-    width: 56,
-    height: 56,
-    borderRadius: radii.md,
-  },
-  info: {
-    flex: 1,
-    gap: 6,
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  muscles: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginTop: 4,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  metaText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    card: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.lg,
+      padding: spacing.md,
+      gap: spacing.sm,
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+    thumbnail: {
+      width: 56,
+      height: 56,
+      borderRadius: radii.md,
+    },
+    info: {
+      flex: 1,
+      gap: 6,
+    },
+    title: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    muscles: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      gap: spacing.md,
+      marginTop: 4,
+    },
+    metaItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    metaText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+  });
+}

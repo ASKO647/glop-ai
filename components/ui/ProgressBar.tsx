@@ -1,5 +1,8 @@
+import { useMemo } from 'react';
 import { StyleSheet, View, type ViewProps } from 'react-native';
-import { colors, radii } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 type ProgressBarProps = ViewProps & {
   /** Progress value between 0 and 1. */
@@ -8,6 +11,8 @@ type ProgressBarProps = ViewProps & {
 };
 
 export default function ProgressBar({ progress, height = 8, style, ...rest }: ProgressBarProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const clamped = Math.min(1, Math.max(0, progress));
 
   return (
@@ -22,16 +27,18 @@ export default function ProgressBar({ progress, height = 8, style, ...rest }: Pr
   );
 }
 
-const styles = StyleSheet.create({
-  track: {
-    width: '100%',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  fill: {
-    height: '100%',
-    backgroundColor: colors.accent,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    track: {
+      width: '100%',
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+    },
+    fill: {
+      height: '100%',
+      backgroundColor: colors.accent,
+    },
+  });
+}

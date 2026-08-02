@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ChatInput from '../../components/coach/ChatInput';
 import MessageBubble from '../../components/coach/MessageBubble';
 import SuggestionChip from '../../components/coach/SuggestionChip';
 import TypingIndicator from '../../components/coach/TypingIndicator';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/ProfileContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useCoachMessages } from '../../hooks/useCoachMessages';
 
 const SUGGESTIONS = ['Comment perdre du gras ?', 'Que manger ce soir ?', 'Je manque de motivation'];
@@ -15,6 +17,8 @@ const SUGGESTIONS = ['Comment perdre du gras ?', 'Que manger ce soir ?', 'Je man
 export default function CoachScreen() {
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { messages, loading, sending, send } = useCoachMessages(user?.id, profile);
   const [draft, setDraft] = useState('');
 
@@ -80,7 +84,8 @@ export default function CoachScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -176,4 +181,5 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: 100,
   },
-});
+  });
+}

@@ -1,10 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 const PERIOD = 900;
 
-function Dot({ delay }: { delay: number }) {
+function Dot({ delay, color }: { delay: number; color: string }) {
   const opacity = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
@@ -20,39 +22,38 @@ function Dot({ delay }: { delay: number }) {
     return () => loop.stop();
   }, [delay, opacity]);
 
-  return <Animated.View style={[styles.dot, { opacity }]} />;
+  return <Animated.View style={[{ width: 6, height: 6, borderRadius: radii.full, backgroundColor: color }, { opacity }]} />;
 }
 
 export default function TypingIndicator() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <View style={styles.row}>
       <View style={styles.bubble}>
-        <Dot delay={0} />
-        <Dot delay={150} />
-        <Dot delay={300} />
+        <Dot delay={0} color={colors.textSecondary} />
+        <Dot delay={150} color={colors.textSecondary} />
+        <Dot delay={300} color={colors.textSecondary} />
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-  },
-  bubble: {
-    flexDirection: 'row',
-    gap: 5,
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    borderBottomLeftRadius: 4,
-    paddingVertical: 14,
-    paddingHorizontal: spacing.md,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: radii.full,
-    backgroundColor: colors.textSecondary,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'flex-start',
+    },
+    bubble: {
+      flexDirection: 'row',
+      gap: 5,
+      backgroundColor: colors.surface,
+      borderRadius: radii.lg,
+      borderBottomLeftRadius: 4,
+      paddingVertical: 14,
+      paddingHorizontal: spacing.md,
+    },
+  });
+}

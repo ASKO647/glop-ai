@@ -1,5 +1,8 @@
+import { useMemo } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, type PressableProps } from 'react-native';
-import { colors, radii, spacing, typography } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
@@ -18,6 +21,8 @@ export default function Button({
   style,
   ...rest
 }: ButtonProps) {
+  const { colors } = useTheme();
+  const { styles, variantStyles, labelVariantStyles } = useMemo(() => makeStyles(colors), [colors]);
   const isDisabled = disabled || loading;
 
   return (
@@ -43,55 +48,59 @@ export default function Button({
   );
 }
 
-const styles = StyleSheet.create({
-  base: {
-    borderRadius: radii['2xl'],
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pressed: {
-    opacity: 0.8,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: -0.2,
-  },
-});
+function makeStyles(colors: Colors) {
+  const styles = StyleSheet.create({
+    base: {
+      borderRadius: radii['2xl'],
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    pressed: {
+      opacity: 0.8,
+    },
+    disabled: {
+      opacity: 0.5,
+    },
+    label: {
+      fontSize: 16,
+      fontWeight: '800',
+      letterSpacing: -0.2,
+    },
+  });
 
-const variantStyles = StyleSheet.create({
-  primary: {
-    backgroundColor: colors.accent,
-  },
-  secondary: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-  },
-  danger: {
-    backgroundColor: 'transparent',
-  },
-});
+  const variantStyles = StyleSheet.create({
+    primary: {
+      backgroundColor: colors.accent,
+    },
+    secondary: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    ghost: {
+      backgroundColor: 'transparent',
+    },
+    danger: {
+      backgroundColor: 'transparent',
+    },
+  });
 
-const labelVariantStyles = StyleSheet.create({
-  primary: {
-    color: colors.background,
-  },
-  secondary: {
-    color: colors.textPrimary,
-  },
-  ghost: {
-    color: colors.accent,
-  },
-  danger: {
-    color: colors.danger,
-  },
-});
+  const labelVariantStyles = StyleSheet.create({
+    primary: {
+      color: colors.onAccent,
+    },
+    secondary: {
+      color: colors.textPrimary,
+    },
+    ghost: {
+      color: colors.accent,
+    },
+    danger: {
+      color: colors.danger,
+    },
+  });
+
+  return { styles, variantStyles, labelVariantStyles };
+}

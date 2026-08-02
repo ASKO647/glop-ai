@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 export type WeightUnit = 'kg' | 'lb';
+export type ThemeMode = 'dark' | 'light' | 'system';
 
 export type UserSettings = {
   notificationsActives: boolean;
@@ -9,6 +10,7 @@ export type UserSettings = {
   rappelSoir: string;
   unitePoids: WeightUnit;
   langue: string;
+  themeMode: ThemeMode;
 };
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -17,6 +19,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   rappelSoir: '20:00',
   unitePoids: 'kg',
   langue: 'Français',
+  themeMode: 'dark',
 };
 
 type SettingsRow = {
@@ -25,7 +28,10 @@ type SettingsRow = {
   rappel_soir: string;
   unite_poids: WeightUnit;
   langue: string;
+  theme_mode: ThemeMode;
 };
+
+const SETTINGS_COLUMNS = 'notifications_actives, rappel_matin, rappel_soir, unite_poids, langue, theme_mode';
 
 function fromRow(row: SettingsRow): UserSettings {
   return {
@@ -34,6 +40,7 @@ function fromRow(row: SettingsRow): UserSettings {
     rappelSoir: row.rappel_soir,
     unitePoids: row.unite_poids,
     langue: row.langue,
+    themeMode: row.theme_mode,
   };
 }
 
@@ -44,6 +51,7 @@ function toRow(settings: UserSettings): SettingsRow {
     rappel_soir: settings.rappelSoir,
     unite_poids: settings.unitePoids,
     langue: settings.langue,
+    theme_mode: settings.themeMode,
   };
 }
 
@@ -65,7 +73,7 @@ export function useSettings(userId: string | undefined) {
       setLoading(true);
       const { data } = await supabase
         .from('user_settings')
-        .select('notifications_actives, rappel_matin, rappel_soir, unite_poids, langue')
+        .select(SETTINGS_COLUMNS)
         .eq('user_id', userId)
         .maybeSingle();
 
@@ -80,7 +88,7 @@ export function useSettings(userId: string | undefined) {
       const { data: created } = await supabase
         .from('user_settings')
         .insert({ user_id: userId, ...toRow(DEFAULT_SETTINGS) })
-        .select('notifications_actives, rappel_matin, rappel_soir, unite_poids, langue')
+        .select(SETTINGS_COLUMNS)
         .single();
 
       if (!cancelled) {
