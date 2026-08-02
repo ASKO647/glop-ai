@@ -4,8 +4,9 @@ import { useCallback } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import WeekHistoryStrip from '../../components/workout/WeekHistoryStrip';
+import AppImage from '../../components/ui/AppImage';
 import Button from '../../components/ui/Button';
-import { getTodaysWorkout, todayISODate } from '../../constants/dashboard';
+import { getExerciseThumbnail, getTodaysWorkout, todayISODate } from '../../constants/dashboard';
 import { colors, radii, spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/ProfileContext';
@@ -37,6 +38,8 @@ export default function WorkoutTabScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <AppImage source={require('../../assets/images/plan-hero.jpg')} style={styles.banner} overlay={0.5} />
+
         <Text style={typography.title}>Séance du jour</Text>
         <Text style={styles.subtitle}>
           Recommandée selon ton objectif{profile?.frequence_entrainement ? ` · ${profile.frequence_entrainement}/sem` : ''}
@@ -68,6 +71,7 @@ export default function WorkoutTabScreen() {
           <View style={styles.exercisesList}>
             {session.exercises.map((exercise) => (
               <View key={exercise.name} style={styles.exerciseRow}>
+                <AppImage source={getExerciseThumbnail(exercise.name)} style={styles.exerciseThumbnail} overlay={0.3} />
                 <Text style={styles.exerciseName}>{exercise.name}</Text>
                 <Text style={styles.exerciseDetail}>
                   {exercise.sets} x {exercise.reps}
@@ -112,6 +116,11 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: 100,
     gap: spacing.lg,
+  },
+  banner: {
+    width: '100%',
+    height: 140,
+    borderRadius: radii.lg,
   },
   subtitle: {
     fontSize: 13,
@@ -171,15 +180,21 @@ const styles = StyleSheet.create({
   exerciseRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.md,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+  },
+  exerciseThumbnail: {
+    width: 48,
+    height: 48,
+    borderRadius: radii.sm,
   },
   exerciseName: {
+    flex: 1,
     fontSize: 14,
     fontWeight: '600',
     color: colors.textPrimary,

@@ -1,12 +1,26 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppImage from '../../components/ui/AppImage';
 import Button from '../../components/ui/Button';
 import { colors, spacing, typography } from '../../constants/theme';
 
 export default function WelcomeScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
+      <AppImage
+        source={require('../../assets/images/welcome-bg.jpg')}
+        style={StyleSheet.absoluteFill}
+        resizeMode="cover"
+      />
+      <LinearGradient
+        colors={['rgba(10,13,12,0.25)', 'rgba(10,13,12,0.7)', colors.background]}
+        locations={[0, 0.6, 1]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+
       <View style={styles.hero}>
         <Text style={styles.brand}>GlowUp AI</Text>
         <Text style={typography.title}>Ta transformation, guidée par l'IA.</Text>

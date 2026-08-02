@@ -11,10 +11,10 @@ import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 
 const BENEFITS = [
-  'Coach IA illimité, chat & vocal',
-  'Scanner de repas par photo',
-  'Programmes muscu personnalisés',
-  'Suivi de progression & statistiques',
+  { label: 'Coach IA illimité, chat & vocal', image: require('../../assets/images/benefit-coach.jpg') },
+  { label: 'Scanner de repas par photo', image: require('../../assets/images/benefit-scanner.jpg') },
+  { label: 'Programmes muscu personnalisés', image: require('../../assets/images/benefit-workout.jpg') },
+  { label: 'Suivi de progression & statistiques', image: require('../../assets/images/benefit-progress.jpg') },
 ];
 
 type PlanId = 'annual' | 'monthly';
@@ -75,8 +75,8 @@ export default function PaywallScreen() {
       </View>
 
       <View style={styles.benefits}>
-        {BENEFITS.map((label) => (
-          <BenefitRow key={label} label={label} />
+        {BENEFITS.map((benefit) => (
+          <BenefitRow key={benefit.label} label={benefit.label} image={benefit.image} />
         ))}
       </View>
 

@@ -1,12 +1,25 @@
 import { useRouter } from 'expo-router';
 import { ArrowLeft, UtensilsCrossed } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppImage from '../../components/ui/AppImage';
 import { isoDaysAgo, todayISODate } from '../../constants/dashboard';
 import { colors, radii, spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+
+const MEAL_BREAKFAST_IMAGE = require('../../assets/images/meal-breakfast.jpg');
+const MEAL_LUNCH_IMAGE = require('../../assets/images/meal-lunch.jpg');
+const MEAL_DINNER_IMAGE = require('../../assets/images/meal-dinner.jpg');
+
+/** Generic thumbnail for a meal with no photo of its own, picked from the hour it was logged. */
+function getMealTimeThumbnail(createdAt: string): ImageSourcePropType {
+  const hour = new Date(createdAt).getHours();
+  if (hour < 11) return MEAL_BREAKFAST_IMAGE;
+  if (hour < 17) return MEAL_LUNCH_IMAGE;
+  return MEAL_DINNER_IMAGE;
+}
 
 type Meal = {
   id: string;
@@ -115,6 +128,7 @@ export default function MealsScreen() {
               <View style={styles.mealsList}>
                 {group.meals.map((meal) => (
                   <View key={meal.id} style={styles.mealRow}>
+                    <AppImage source={getMealTimeThumbnail(meal.created_at)} style={styles.mealThumbnail} overlay={0.3} />
                     <Text style={styles.mealName} numberOfLines={1}>
                       {meal.name}
                     </Text>
@@ -203,13 +217,18 @@ const styles = StyleSheet.create({
   mealRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.lg,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+  },
+  mealThumbnail: {
+    width: 48,
+    height: 48,
+    borderRadius: radii.md,
   },
   mealName: {
     flex: 1,

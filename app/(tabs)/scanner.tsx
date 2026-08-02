@@ -4,6 +4,7 @@ import { Camera as CameraIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import AppImage from '../../components/ui/AppImage';
 import Button from '../../components/ui/Button';
 import ProgressBar from '../../components/ui/ProgressBar';
 import { todayISODate } from '../../constants/dashboard';
@@ -144,13 +145,13 @@ export default function ScannerScreen() {
         )}
 
         {screenState === 'idle' && !photoUri && (
-          <View style={styles.idle}>
+          <AppImage source={require('../../assets/images/meal-example.jpg')} style={styles.idle} overlay={0.6}>
             <View style={styles.iconCircle}>
               <CameraIcon color={colors.accent} size={32} />
             </View>
             <Text style={styles.title}>Scanne ton repas</Text>
             <Text style={styles.subtitle}>Prends ton plat en photo pour connaître ses calories</Text>
-          </View>
+          </AppImage>
         )}
 
         {screenState === 'analyzing' && (
@@ -256,6 +257,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: spacing['2xl'],
     gap: spacing.sm,
+    borderRadius: radii.lg,
   },
   iconCircle: {
     width: 72,
