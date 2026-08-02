@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { appImage } from '../../constants/images';
 import { colors } from '../../constants/theme';
 import AppImage from './AppImage';
 
@@ -10,7 +11,7 @@ export default function Logo({ height = 20 }: LogoProps) {
   return (
     <View style={styles.row}>
       <AppImage
-        source={require('../../assets/images/logo-mark.png')}
+        source={appImage('logo-mark.png')}
         style={{ width: height, height }}
         resizeMode="contain"
       />

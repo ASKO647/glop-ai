@@ -4,13 +4,14 @@ import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppImage from '../../components/ui/AppImage';
 import Button from '../../components/ui/Button';
+import { appImage } from '../../constants/images';
 import { colors, spacing, typography } from '../../constants/theme';
 
 export default function WelcomeScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
       <AppImage
-        source={require('../../assets/images/welcome-bg.jpg')}
+        source={appImage('welcome-bg.jpg')}
         style={StyleSheet.absoluteFill}
         resizeMode="cover"
       />

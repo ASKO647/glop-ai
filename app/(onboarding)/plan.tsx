@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AppImage from '../../components/ui/AppImage';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
+import { appImage } from '../../constants/images';
 import { getOptionLabel } from '../../constants/questionnaire';
 import { colors, radii, spacing } from '../../constants/theme';
 import { asString, useOnboarding } from '../../context/OnboardingContext';
@@ -116,7 +117,7 @@ export default function PlanScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
-      <AppImage source={require('../../assets/images/plan-hero.jpg')} style={styles.heroBanner} overlay={0.45} />
+      <AppImage source={appImage('plan-hero.jpg')} style={styles.heroBanner} overlay={0.45} />
 
       <View style={styles.header}>
         <Text style={styles.title}>Ton plan est prêt 🎉</Text>

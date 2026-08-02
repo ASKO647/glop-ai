@@ -7,6 +7,7 @@ import WeekHistoryStrip from '../../components/workout/WeekHistoryStrip';
 import AppImage from '../../components/ui/AppImage';
 import Button from '../../components/ui/Button';
 import { getExerciseThumbnail, getTodaysWorkout, todayISODate } from '../../constants/dashboard';
+import { appImage } from '../../constants/images';
 import { colors, radii, spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/ProfileContext';
@@ -38,7 +39,7 @@ export default function WorkoutTabScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <AppImage source={require('../../assets/images/plan-hero.jpg')} style={styles.banner} overlay={0.5} />
+        <AppImage source={appImage('plan-hero.jpg')} style={styles.banner} overlay={0.5} />
 
         <Text style={typography.title}>Séance du jour</Text>
         <Text style={styles.subtitle}>

@@ -1,6 +1,7 @@
 import { StyleSheet, View, type ImageSourcePropType } from 'react-native';
 import type { AnswerValue } from '../../context/OnboardingContext';
 import type { Question, QuestionOption } from '../../constants/questionnaire';
+import { appImage } from '../../constants/images';
 import { spacing } from '../../constants/theme';
 import NumericStepper from './NumericStepper';
 import OptionCard from './OptionCard';
@@ -8,10 +9,10 @@ import OptionCard from './OptionCard';
 // Only the "goal" question gets thumbnails — every other single/multiple-choice question
 // renders as plain text rows.
 const GOAL_IMAGES: Record<string, ImageSourcePropType> = {
-  weight_loss: require('../../assets/images/goal-weightloss.jpg'),
-  muscle_gain: require('../../assets/images/goal-muscle.jpg'),
-  glow_up: require('../../assets/images/goal-glowup.jpg'),
-  discipline: require('../../assets/images/goal-discipline.jpg'),
+  weight_loss: appImage('goal-weightloss.jpg'),
+  muscle_gain: appImage('goal-muscle.jpg'),
+  glow_up: appImage('goal-glowup.jpg'),
+  discipline: appImage('goal-discipline.jpg'),
 };
 
 type QuestionInputProps = {

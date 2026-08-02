@@ -6,15 +6,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BenefitRow from '../../components/onboarding/BenefitRow';
 import PlanCard from '../../components/onboarding/PlanCard';
 import Button from '../../components/ui/Button';
+import { appImage } from '../../constants/images';
 import { colors, radii, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 
 const BENEFITS = [
-  { label: 'Coach IA illimité, chat & vocal', image: require('../../assets/images/benefit-coach.jpg') },
-  { label: 'Scanner de repas par photo', image: require('../../assets/images/benefit-scanner.jpg') },
-  { label: 'Programmes muscu personnalisés', image: require('../../assets/images/benefit-workout.jpg') },
-  { label: 'Suivi de progression & statistiques', image: require('../../assets/images/benefit-progress.jpg') },
+  { label: 'Coach IA illimité, chat & vocal', image: appImage('benefit-coach.jpg') },
+  { label: 'Scanner de repas par photo', image: appImage('benefit-scanner.jpg') },
+  { label: 'Programmes muscu personnalisés', image: appImage('benefit-workout.jpg') },
+  { label: 'Suivi de progression & statistiques', image: appImage('benefit-progress.jpg') },
 ];
 
 type PlanId = 'annual' | 'monthly';

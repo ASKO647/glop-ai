@@ -5,13 +5,14 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppImage from '../../components/ui/AppImage';
 import { isoDaysAgo, todayISODate } from '../../constants/dashboard';
+import { appImage } from '../../constants/images';
 import { colors, radii, spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 
-const MEAL_BREAKFAST_IMAGE = require('../../assets/images/meal-breakfast.jpg');
-const MEAL_LUNCH_IMAGE = require('../../assets/images/meal-lunch.jpg');
-const MEAL_DINNER_IMAGE = require('../../assets/images/meal-dinner.jpg');
+const MEAL_BREAKFAST_IMAGE = appImage('meal-breakfast.jpg');
+const MEAL_LUNCH_IMAGE = appImage('meal-lunch.jpg');
+const MEAL_DINNER_IMAGE = appImage('meal-dinner.jpg');
 
 /** Generic thumbnail for a meal with no photo of its own, picked from the hour it was logged. */
 function getMealTimeThumbnail(createdAt: string): ImageSourcePropType {
