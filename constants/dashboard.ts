@@ -1,3 +1,4 @@
+import type { ImageSourcePropType } from 'react-native';
 import type { Profile } from '../context/ProfileContext';
 
 // ---------------------------------------------------------------------------
@@ -429,6 +430,33 @@ export function getTodaysWorkout(profile: Profile | null): WorkoutSession {
   const period = ROTATION_PERIOD_BY_FREQUENCY[profile?.frequence_entrainement ?? ''] ?? DEFAULT_ROTATION_PERIOD;
   const index = Math.floor(dayOfYear / period) % pool.length;
   return pool[index];
+}
+
+// ---------------------------------------------------------------------------
+// Workout thumbnails
+// ---------------------------------------------------------------------------
+
+// Only 3 stock photos exist for workouts — "full_body" and "upper" both fall back to the
+// dumbbells shot since there's no dedicated asset for either.
+const EXERCISE_DUMBBELLS_IMAGE = require('../assets/images/exercise-dumbbells.jpg');
+const EXERCISE_SQUAT_IMAGE = require('../assets/images/exercise-squat.jpg');
+const EXERCISE_CARDIO_IMAGE = require('../assets/images/exercise-cardio.jpg');
+
+export const WORKOUT_CATEGORY_IMAGES: Record<Exclude<WorkoutCategoryId, 'all'>, ImageSourcePropType> = {
+  full_body: EXERCISE_DUMBBELLS_IMAGE,
+  upper: EXERCISE_DUMBBELLS_IMAGE,
+  lower: EXERCISE_SQUAT_IMAGE,
+  cardio: EXERCISE_CARDIO_IMAGE,
+};
+
+const LOWER_BODY_KEYWORDS = /squat|fente|soulevé|mollet|hip thrust|jambe/i;
+const CARDIO_KEYWORDS = /jumping|burpee|mountain|corde|sauté|dynamique/i;
+
+/** Best-effort classification of a single exercise by name, for its own thumbnail (distinct from the session's overall category image). */
+export function getExerciseThumbnail(exerciseName: string): ImageSourcePropType {
+  if (LOWER_BODY_KEYWORDS.test(exerciseName)) return EXERCISE_SQUAT_IMAGE;
+  if (CARDIO_KEYWORDS.test(exerciseName)) return EXERCISE_CARDIO_IMAGE;
+  return EXERCISE_DUMBBELLS_IMAGE;
 }
 
 // ---------------------------------------------------------------------------
