@@ -647,6 +647,63 @@ create policy "Users can delete their own badges"
 
 Le point d'entrée "Badges" de `NavigationSheet.tsx` (jusque-là marqué `comingSoon`) pointe maintenant vers `/badges`. Dans le profil, une ligne "Mes badges" (`SettingsSection` "Mes objectifs") affiche le compteur `X/8` et mène au même écran. Sur le dashboard, une bande horizontale sous les statistiques rapides affiche les 3 derniers badges débloqués (triés par `unlocked_at` décroissant) — masquée si aucun badge n'est encore débloqué, pour ne jamais montrer une rangée de médaillons verrouillés à cet endroit.
 
+## Recettes
+
+`app/recipes.tsx` (route `/recipes`, écran racine hors `(tabs)`) et `app/recipe/[id].tsx` — accessibles depuis la carte "Recettes" du menu **+** (`NavigationSheet.tsx`, jusque-là `comingSoon`, pointe maintenant vers `/recipes`). Trois onglets en pilules horizontales : Suggestions, Mon frigo, Favoris.
+
+**`lib/recipes.ts`** suit exactement le même pattern `fetch` brut que `lib/foodScanner.ts`/`lib/progressAnalysis.ts` (toujours pas de SDK Anthropic — voir la section Coach IA) : `generateSuggestions(profile)` envoie un unique message texte au `system` prompt injectant objectif/poids actuel/poids cible/niveau d'activité/restrictions (même convention conditionnelle que `buildSystemPrompt` dans `progressAnalysis.ts` — une ligne par champ non nul), et `analyzeFridge(images, profile)` construit un tableau `content` avec un bloc `image` par photo (jusqu'à 3) suivi d'un bloc `text` d'instructions, sur le modèle de `analyzeProgress` dans `progressAnalysis.ts`. Les deux renvoient un JSON strict (`stripJsonFences` avant `JSON.parse`, dans un try/catch, erreurs traduites via `describeAnthropicError`). Le prompt précise explicitement que les recettes doivent respecter toutes les restrictions alimentaires du profil sans exception et que chaque étape de préparation doit être détaillée et exploitable (2 à 3 phrases, températures, durées, techniques) plutôt qu'un simple résumé.
+
+**Onglet Suggestions.** Au montage, `generateSuggestions` est appelé pour 6 recettes adaptées au profil. Le résultat du jour est mis en cache dans `AsyncStorage` (clé `recipes_suggestions_{userId}_{date}`) : une réouverture de l'écran le même jour relit le cache plutôt que de rappeler l'IA. Le bouton "Générer d'autres idées" ignore toujours le cache, réappelle l'IA et écrase l'entrée du jour avec le nouveau résultat.
+
+**Onglet Mon frigo.** État initial : icône appareil photo, titre "Qu'est-ce que tu as chez toi ?", sous-titre, bouton "Ajouter une photo" (`expo-image-picker`, galerie, même vérification de permission que `scanner.tsx`) — jusqu'à 3 photos, vignettes 80px avec croix de suppression. `compressImage` (réutilisée telle quelle depuis `lib/foodScanner.ts`) prépare chaque photo avant l'envoi. "Trouver des recettes" (actif dès une photo) appelle `analyzeFridge`, qui renvoie d'abord les ingrédients détectés (affichés en pilules), puis 4 recettes réalisables avec ces ingrédients — chacune porte un tableau `ingredients_manquants` (vide si la recette est entièrement couverte par les photos), affiché sur la carte en `colors.warning`.
+
+**Cartes de recette** (`components/recipes/RecipeCard.tsx`, réutilisée par les trois onglets) : fond `colors.surface`, bordure `colors.border`, rayon 16px, padding 16px ; titre 16px gras blanc, description 12px `colors.textSecondary` sur 2 lignes max, rangée de 3 métadonnées (calories/temps/difficulté, icônes 12px `colors.accent`), icône cœur en haut à droite pour le favori — rendue comme un `Pressable` frère du corps de la carte (pas imbriqué dans le `Pressable` principal, pour éviter tout conflit de capture tactile entre les deux zones tapables).
+
+**Favoris et déblocage des détails sans aller-retour réseau.** Taper une carte (Suggestions, Mon frigo ou Favoris) pousse vers `/recipe/[id]` avec la recette entière sérialisée en JSON dans le paramètre de route `recette` — la recette étant déjà entièrement chargée en mémoire (générée par l'IA ou lue depuis `saved_recipes`), l'écran de détail n'a besoin d'aucune requête pour l'afficher ; il ne retombe sur une lecture Supabase par `id` que si ce paramètre est absent (accès direct par lien). Mettre en favori depuis une carte (Suggestions/Mon frigo) ou depuis le bouton cœur du détail insère une ligne dans `saved_recipes` (`source: 'suggestion' | 'frigo'`) et retire du favori la supprime — le mapping `index → id enregistré` est tenu en state local le temps de la session, pas re-dérivé de la base à chaque rendu. L'onglet Favoris liste `saved_recipes`, état vide propre, appui long pour supprimer.
+
+**Écran de détail (`app/recipe/[id].tsx`)** : titre 24px extrabold, description 13px `colors.textSecondary` ; rangée de 4 métadonnées séparées par des filets verticaux (calories, temps, difficulté, portions — `portions` n'existe pas dans `saved_recipes`, donc une recette rechargée depuis les favoris retombe sur 2 par défaut, seules les recettes encore en mémoire depuis Suggestions/Mon frigo portent la vraie valeur) ; carte macros avec trois `ProgressBar` (protéines/glucides/lipides, progression relative au macro dominant de la recette, comme `MacroLine` dans `scanner.tsx` — pas de "cible" pertinente pour une recette isolée) ; section Ingrédients en liste à puces avec quantités ; section Préparation en étapes numérotées dans des cercles `colors.accent`. "Ajouter à mes repas" insère dans `meals` (`user_id, date: todayISODate(), name: titre, kcal, proteines, glucides, lipides`) exactement comme `handleSave` dans `scanner.tsx`.
+
+Table Supabase :
+
+```sql
+create table saved_recipes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  titre text not null,
+  description text not null,
+  kcal int not null,
+  proteines int not null default 0,
+  glucides int not null default 0,
+  lipides int not null default 0,
+  temps_preparation text not null,
+  difficulte text not null,
+  ingredients jsonb not null default '[]'::jsonb,
+  etapes jsonb not null default '[]'::jsonb,
+  source text not null,
+  created_at timestamptz not null default now(),
+  constraint saved_recipes_source_check check (source in ('suggestion', 'frigo'))
+);
+
+alter table saved_recipes enable row level security;
+
+create policy "Users can insert their own saved recipes"
+  on saved_recipes for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can read their own saved recipes"
+  on saved_recipes for select
+  using (auth.uid() = user_id);
+
+create policy "Users can update their own saved recipes"
+  on saved_recipes for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Users can delete their own saved recipes"
+  on saved_recipes for delete
+  using (auth.uid() = user_id);
+```
+
 ## Écran Profil
 
 `(tabs)/profil.tsx` fusionne l'ancien écran Paramètres (`app/settings.tsx`, supprimé) directement dans l'onglet Profil — plus d'icône engrenage, plus d'écran séparé, plus de route `/settings`. `ProfileProvider` était déjà remonté de `(tabs)/_layout.tsx` vers `app/_layout.tsx` pour cet ancien écran racine ; il reste à cet endroit (inutile de le redescendre) même si tout son contenu vit maintenant dans `(tabs)/` — ça n'a aucun effet visible, `useProfile()` fonctionne pareil dans les deux cas.
