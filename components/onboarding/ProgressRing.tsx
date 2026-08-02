@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { Circle, Svg } from 'react-native-svg';
-import { colors } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -19,6 +21,8 @@ export default function ProgressRing({
   size = 180,
   strokeWidth = 12,
 }: ProgressRingProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = progress.interpolate({
@@ -59,20 +63,22 @@ export default function ProgressRing({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  labelContainer: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  percentage: {
-    fontSize: 40,
-    fontWeight: '800',
-    letterSpacing: -1,
-    color: colors.textPrimary,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    labelContainer: {
+      position: 'absolute',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    percentage: {
+      fontSize: 40,
+      fontWeight: '800',
+      letterSpacing: -1,
+      color: colors.textPrimary,
+    },
+  });
+}

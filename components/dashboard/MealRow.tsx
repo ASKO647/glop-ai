@@ -1,6 +1,9 @@
 import { useRouter } from 'expo-router';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 type MealRowProps = {
   name: string;
@@ -10,6 +13,8 @@ type MealRowProps = {
 
 export default function MealRow({ name, time, kcal }: MealRowProps) {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
     <Pressable
@@ -28,38 +33,40 @@ export default function MealRow({ name, time, kcal }: MealRowProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  info: {
-    flexShrink: 1,
-    marginRight: spacing.sm,
-  },
-  name: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  time: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  kcal: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.accent,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.lg,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+    info: {
+      flexShrink: 1,
+      marginRight: spacing.sm,
+    },
+    name: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    time: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    kcal: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.accent,
+    },
+  });
+}

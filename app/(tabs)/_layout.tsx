@@ -2,11 +2,13 @@ import { PlatformPressable } from '@react-navigation/elements';
 import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { Tabs } from 'expo-router';
 import { Camera, Home, MessageCircle, Plus, User, type LucideIcon } from 'lucide-react-native';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import NavigationSheet from '../../components/ui/NavigationSheet';
-import { colors, radii } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 const TAB_BAR_MARGIN = 20;
 const TAB_BAR_BOTTOM_MIN = 24;
@@ -26,7 +28,19 @@ const BAR_SHADOW = {
   shadowRadius: 12,
 } as const;
 
-function TabIcon({ Icon, label, focused }: { Icon: LucideIcon; label: string; focused: boolean }) {
+function TabIcon({
+  Icon,
+  label,
+  focused,
+  colors,
+  styles,
+}: {
+  Icon: LucideIcon;
+  label: string;
+  focused: boolean;
+  colors: Colors;
+  styles: ReturnType<typeof makeStyles>;
+}) {
   return (
     <View style={styles.iconWrap}>
       <Icon color={focused ? colors.accent : colors.textTertiary} size={22} />
@@ -41,12 +55,18 @@ function TabIcon({ Icon, label, focused }: { Icon: LucideIcon; label: string; fo
 // (`tabVerticalUiKit`) top-aligns content instead of centering it — no amount
 // of tabBarItemStyle/tabBarIconStyle can reach that inner style, so the icon
 // only centers reliably if we own the pressable ourselves.
-function TabBarButton({ style, ...rest }: BottomTabBarButtonProps) {
+function TabBarButton({
+  style,
+  styles,
+  ...rest
+}: BottomTabBarButtonProps & { styles: ReturnType<typeof makeStyles> }) {
   return <PlatformPressable {...rest} style={[style, styles.tabButton]} />;
 }
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   // On devices with a home indicator, keep the bar (and the + button) clear of
   // the safe-area/system-gesture zone instead of sitting at a fixed 24px from
   // the raw screen edge.
@@ -60,7 +80,7 @@ export default function TabsLayout() {
         screenOptions={{
           headerShown: false,
           tabBarShowLabel: false,
-          tabBarButton: (props) => <TabBarButton {...props} />,
+          tabBarButton: (props) => <TabBarButton {...props} styles={styles} />,
           // `end` (not `right`) leaves room for the + button (its width + the gap) outside the
           // pill. React Navigation's own default tab bar style sets `start`/`end` (logical,
           // writing-direction-aware), and Yoga resolves those ahead of physical `left`/`right`
@@ -74,19 +94,35 @@ export default function TabsLayout() {
       >
         <Tabs.Screen
           name="index"
-          options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={Home} label="Accueil" focused={focused} /> }}
+          options={{
+            tabBarIcon: ({ focused }) => (
+              <TabIcon Icon={Home} label="Accueil" focused={focused} colors={colors} styles={styles} />
+            ),
+          }}
         />
         <Tabs.Screen
           name="coach"
-          options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={MessageCircle} label="Coach" focused={focused} /> }}
+          options={{
+            tabBarIcon: ({ focused }) => (
+              <TabIcon Icon={MessageCircle} label="Coach" focused={focused} colors={colors} styles={styles} />
+            ),
+          }}
         />
         <Tabs.Screen
           name="scanner"
-          options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={Camera} label="Scanner" focused={focused} /> }}
+          options={{
+            tabBarIcon: ({ focused }) => (
+              <TabIcon Icon={Camera} label="Scanner" focused={focused} colors={colors} styles={styles} />
+            ),
+          }}
         />
         <Tabs.Screen
           name="profil"
-          options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={User} label="Profil" focused={focused} /> }}
+          options={{
+            tabBarIcon: ({ focused }) => (
+              <TabIcon Icon={User} label="Profil" focused={focused} colors={colors} styles={styles} />
+            ),
+          }}
         />
         {/* Reachable only from the + button's sheet — no longer tabs of their own. */}
         <Tabs.Screen name="progression" options={{ href: null }} />
@@ -101,7 +137,8 @@ export default function TabsLayout() {
           onPress={() => setSheetVisible(true)}
           style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
         >
-          <Plus color={colors.background} size={32} strokeWidth={2.75} />
+          {/* onAccent, not background: this icon sits on the accent-colored FAB surface. */}
+          <Plus color={colors.onAccent} size={32} strokeWidth={2.75} />
         </Pressable>
       </View>
 
@@ -110,59 +147,61 @@ export default function TabsLayout() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  tabBar: {
-    position: 'absolute',
-    // `start`, not `left` — see the comment above `tabBarStyle` in TabsLayout.
-    start: TAB_BAR_MARGIN,
-    height: TAB_BAR_HEIGHT,
-    borderRadius: radii.full,
-    backgroundColor: colors.surface,
-    borderTopWidth: 0,
-    ...BAR_SHADOW,
-  },
-  tabBarItem: {
-    height: TAB_BAR_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 0,
-    margin: 0,
-  },
-  iconWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  label: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textTertiary,
-  },
-  labelActive: {
-    color: colors.accent,
-  },
-  fabWrap: {
-    position: 'absolute',
-    right: TAB_BAR_MARGIN,
-  },
-  fab: {
-    width: FAB_SIZE,
-    height: FAB_SIZE,
-    borderRadius: radii.full,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...BAR_SHADOW,
-  },
-  fabPressed: {
-    opacity: 0.85,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+    },
+    tabBar: {
+      position: 'absolute',
+      // `start`, not `left` — see the comment above `tabBarStyle` in TabsLayout.
+      start: TAB_BAR_MARGIN,
+      height: TAB_BAR_HEIGHT,
+      borderRadius: radii.full,
+      backgroundColor: colors.surface,
+      borderTopWidth: 0,
+      ...BAR_SHADOW,
+    },
+    tabBarItem: {
+      height: TAB_BAR_HEIGHT,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    tabButton: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 0,
+      margin: 0,
+    },
+    iconWrap: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 2,
+    },
+    label: {
+      fontSize: 10,
+      fontWeight: '600',
+      color: colors.textTertiary,
+    },
+    labelActive: {
+      color: colors.accent,
+    },
+    fabWrap: {
+      position: 'absolute',
+      right: TAB_BAR_MARGIN,
+    },
+    fab: {
+      width: FAB_SIZE,
+      height: FAB_SIZE,
+      borderRadius: radii.full,
+      backgroundColor: colors.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...BAR_SHADOW,
+    },
+    fabPressed: {
+      opacity: 0.85,
+    },
+  });
+}

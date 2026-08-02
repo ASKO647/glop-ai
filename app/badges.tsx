@@ -1,10 +1,13 @@
 import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
+import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BadgeMedal from '../components/badges/BadgeMedal';
 import BadgeUnlockModal from '../components/badges/BadgeUnlockModal';
-import { colors, radii, spacing, typography } from '../constants/theme';
+import type { Colors } from '../constants/theme';
+import { radii, spacing, typography } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import { useBadges, type BadgeWithStatus } from '../hooks/useBadges';
 
 const MONTHS_FR = [
@@ -26,6 +29,8 @@ function chunkPairs<T>(items: T[]): T[][] {
 
 export default function BadgesScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { badges, earnedCount, totalCount, pendingUnlock, dismissPendingUnlock } = useBadges();
 
   const rows = chunkPairs(badges);
@@ -42,7 +47,7 @@ export default function BadgesScreen() {
         >
           <ArrowLeft color={colors.textPrimary} size={22} />
         </Pressable>
-        <Text style={typography.heading}>Mes badges</Text>
+        <Text style={styles.headerTitle}>Mes badges</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -86,87 +91,93 @@ export default function BadgesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.full,
-    backgroundColor: colors.surface,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  headerSpacer: {
-    width: 36,
-  },
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: 100,
-    gap: spacing.lg,
-  },
-  progressBlock: {
-    gap: spacing.sm,
-  },
-  progressLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  progressTrack: {
-    height: 8,
-    borderRadius: radii.full,
-    backgroundColor: colors.border,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: 8,
-    borderRadius: radii.full,
-    backgroundColor: colors.accent,
-  },
-  grid: {
-    gap: spacing.lg,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  cell: {
-    flex: 1,
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  badgeName: {
-    fontSize: 13,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  badgeNameUnlocked: {
-    color: colors.textPrimary,
-  },
-  badgeNameLocked: {
-    color: colors.textTertiary,
-  },
-  badgeSub: {
-    fontSize: 10,
-    textAlign: 'center',
-  },
-  badgeSubUnlocked: {
-    color: colors.textSecondary,
-  },
-  badgeSubLocked: {
-    color: colors.labelMuted,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.md,
+    },
+    backButton: {
+      width: 36,
+      height: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: radii.full,
+      backgroundColor: colors.surface,
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+    headerSpacer: {
+      width: 36,
+    },
+    headerTitle: {
+      ...typography.heading,
+      color: colors.textPrimary,
+    },
+    content: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: 100,
+      gap: spacing.lg,
+    },
+    progressBlock: {
+      gap: spacing.sm,
+    },
+    progressLabel: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    progressTrack: {
+      height: 8,
+      borderRadius: radii.full,
+      backgroundColor: colors.border,
+      overflow: 'hidden',
+    },
+    progressFill: {
+      height: 8,
+      borderRadius: radii.full,
+      backgroundColor: colors.accent,
+    },
+    grid: {
+      gap: spacing.lg,
+    },
+    row: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    cell: {
+      flex: 1,
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    badgeName: {
+      fontSize: 13,
+      fontWeight: '700',
+      textAlign: 'center',
+    },
+    badgeNameUnlocked: {
+      color: colors.textPrimary,
+    },
+    badgeNameLocked: {
+      color: colors.textTertiary,
+    },
+    badgeSub: {
+      fontSize: 10,
+      textAlign: 'center',
+    },
+    badgeSubUnlocked: {
+      color: colors.textSecondary,
+    },
+    badgeSubLocked: {
+      color: colors.labelMuted,
+    },
+  });
+}

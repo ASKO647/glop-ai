@@ -1,6 +1,9 @@
 import { useRouter } from 'expo-router';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 type StatCardProps = {
   label: string;
@@ -9,6 +12,8 @@ type StatCardProps = {
 
 export default function StatCard({ label, value }: StatCardProps) {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
     <Pressable
@@ -26,29 +31,31 @@ export default function StatCard({ label, value }: StatCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    alignItems: 'center',
-    gap: 4,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  value: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.accent,
-  },
-  label: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    card: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.lg,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.sm,
+      alignItems: 'center',
+      gap: 4,
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+    value: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: colors.accent,
+    },
+    label: {
+      fontSize: 11,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+  });
+}

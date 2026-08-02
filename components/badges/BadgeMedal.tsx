@@ -1,6 +1,8 @@
 import type { LucideIcon } from 'lucide-react-native';
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { colors } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 type BadgeMedalProps = {
   Icon: LucideIcon;
@@ -11,6 +13,9 @@ type BadgeMedalProps = {
 
 /** The circular icon medallion shared by the badges grid, the dashboard strip, and the unlock modal. */
 export default function BadgeMedal({ Icon, unlocked, size, iconSize }: BadgeMedalProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <View
       style={[
@@ -19,22 +24,24 @@ export default function BadgeMedal({ Icon, unlocked, size, iconSize }: BadgeMeda
         unlocked ? styles.circleUnlocked : styles.circleLocked,
       ]}
     >
-      <Icon color={unlocked ? colors.background : colors.borderMuted} size={iconSize} />
+      <Icon color={unlocked ? colors.onAccent : colors.borderMuted} size={iconSize} />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  circle: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  circleUnlocked: {
-    backgroundColor: colors.accent,
-  },
-  circleLocked: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    circle: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    circleUnlocked: {
+      backgroundColor: colors.accent,
+    },
+    circleLocked: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+  });
+}

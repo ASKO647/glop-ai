@@ -1,5 +1,8 @@
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 type PastDateBannerProps = {
   label: string;
@@ -7,6 +10,9 @@ type PastDateBannerProps = {
 };
 
 export default function PastDateBanner({ label, onReset }: PastDateBannerProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <View style={styles.row}>
       <Text style={styles.text} numberOfLines={1}>
@@ -21,30 +27,32 @@ export default function PastDateBanner({ label, onReset }: PastDateBannerProps) 
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    backgroundColor: colors.accentSurface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  text: {
-    flexShrink: 1,
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  link: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.accent,
-  },
-  linkPressed: {
-    opacity: 0.7,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.sm,
+      backgroundColor: colors.accentSurface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.md,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+    },
+    text: {
+      flexShrink: 1,
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    link: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.accent,
+    },
+    linkPressed: {
+      opacity: 0.7,
+    },
+  });
+}

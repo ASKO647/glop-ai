@@ -1,6 +1,9 @@
 import { useRouter } from 'expo-router';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import CalorieRing from './CalorieRing';
 import MacroBar from './MacroBar';
 
@@ -22,6 +25,8 @@ export default function CalorieCard({
   lipides,
 }: CalorieCardProps) {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
     <View style={styles.card}>
@@ -51,59 +56,65 @@ export default function CalorieCard({
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.accent,
-    borderRadius: radii.xl,
-    padding: 20,
-    gap: spacing.md,
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  info: {
-    flexShrink: 1,
-  },
-  eyebrow: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: colors.background,
-    opacity: 0.6,
-  },
-  value: {
-    fontSize: 34,
-    fontWeight: '800',
-    letterSpacing: -1,
-    color: colors.background,
-    marginTop: 4,
-  },
-  unit: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.background,
-    opacity: 0.7,
-  },
-  macros: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  cta: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.background,
-    borderRadius: radii.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  ctaPressed: {
-    opacity: 0.7,
-  },
-  ctaText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.accent,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: colors.accent,
+      borderRadius: radii.xl,
+      padding: 20,
+      gap: spacing.md,
+    },
+    topRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    info: {
+      flexShrink: 1,
+    },
+    eyebrow: {
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+      color: colors.onAccent,
+      opacity: 0.6,
+    },
+    value: {
+      fontSize: 34,
+      fontWeight: '800',
+      letterSpacing: -1,
+      color: colors.onAccent,
+      marginTop: 4,
+    },
+    unit: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.onAccent,
+      opacity: 0.7,
+    },
+    macros: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    // The button intentionally reads as a "cutout" of the app's own background sitting on
+    // top of the accent card, so it uses colors.background/textPrimary — the app's normal
+    // background-on-text pairing, not the accent-card's onAccent pairing — to guarantee
+    // contrast regardless of how close background and accent end up in either palette.
+    cta: {
+      alignSelf: 'flex-start',
+      backgroundColor: colors.background,
+      borderRadius: radii.full,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    ctaPressed: {
+      opacity: 0.7,
+    },
+    ctaText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+  });
+}

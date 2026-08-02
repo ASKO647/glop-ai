@@ -736,6 +736,7 @@ create table user_settings (
   rappel_soir text not null default '20:00',
   unite_poids text not null default 'kg',
   langue text not null default 'Français',
+  theme_mode text not null default 'dark',
   updated_at timestamptz not null default now()
 );
 
@@ -757,7 +758,15 @@ create policy "Users can update their own settings"
 create policy "Users can delete their own settings"
   on user_settings for delete
   using (auth.uid() = user_id);
+```
 
+If `user_settings` already exists from before the theme toggle, add the column rather than recreating the table:
+
+```sql
+alter table user_settings add column theme_mode text not null default 'dark';
+```
+
+```sql
 create table referrals (
   id uuid primary key default gen_random_uuid(),
   parrain_id uuid not null references auth.users(id) on delete cascade,

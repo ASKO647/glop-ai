@@ -1,18 +1,24 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { colors } from '../constants/theme';
+import type { Colors } from '../constants/theme';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ProfileProvider } from '../context/ProfileContext';
+import { ThemeProvider, useTheme } from '../context/ThemeContext';
 
 function RootNavigator() {
   const { session, isSubscribed, loading } = useAuth();
+  const { colors, resolvedScheme } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const statusBar = <StatusBar style={resolvedScheme === 'light' ? 'dark' : 'light'} />;
 
   if (loading) {
     return (
       <View style={styles.loadingScreen}>
+        {statusBar}
         <ActivityIndicator color={colors.accent} size="large" />
       </View>
     );
@@ -26,6 +32,7 @@ function RootNavigator() {
     // Wraps the whole navigator (not just (tabs)) so screens declared as siblings —
     // legal/* — can also read the profile via useProfile().
     <ProfileProvider>
+      {statusBar}
       <Stack
         screenOptions={{
           headerShown: false,
@@ -56,19 +63,22 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthProvider>
-          <StatusBar style="light" />
-          <RootNavigator />
+          <ThemeProvider>
+            <RootNavigator />
+          </ThemeProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
 
-const styles = StyleSheet.create({
-  loadingScreen: {
-    flex: 1,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    loadingScreen: {
+      flex: 1,
+      backgroundColor: colors.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  });
+}

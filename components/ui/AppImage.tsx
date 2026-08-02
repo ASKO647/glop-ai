@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Image, StyleSheet, View, type ImageProps, type ImageSourcePropType } from 'react-native';
-import { colors } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import { hexToRgba } from '../../lib/color';
 
 type AppImageProps = Omit<ImageProps, 'source'> & {
@@ -20,6 +21,8 @@ export default function AppImage({
   children,
   ...rest
 }: AppImageProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -49,7 +52,10 @@ export default function AppImage({
       {overlay ? (
         <View
           pointerEvents="none"
-          style={[StyleSheet.absoluteFill, { backgroundColor: hexToRgba(colors.background, overlay) }]}
+          // The overlay always darkens toward black regardless of theme — it exists to keep
+          // light foreground content (icons/text drawn over a photo) readable, which is a
+          // property of the photo, not of the app's current color scheme.
+          style={[StyleSheet.absoluteFill, { backgroundColor: hexToRgba('#000000', overlay) }]}
         />
       ) : null}
       {children}
@@ -57,11 +63,13 @@ export default function AppImage({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    overflow: 'hidden',
-  },
-  placeholder: {
-    backgroundColor: colors.surface,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: {
+      overflow: 'hidden',
+    },
+    placeholder: {
+      backgroundColor: colors.surface,
+    },
+  });
+}

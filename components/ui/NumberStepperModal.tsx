@@ -1,7 +1,9 @@
 import { Minus, Plus } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import Button from './Button';
 
 const REPEAT_DELAY_MS = 400;
@@ -44,6 +46,8 @@ export default function NumberStepperModal({
   onCancel,
   onSave,
 }: NumberStepperModalProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const decimals = Number.isInteger(step) ? 0 : 1;
   const [value, setValue] = useState(initialValue);
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -163,7 +167,8 @@ export default function NumberStepperModal({
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
   backdrop: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -250,4 +255,5 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
   },
-});
+  });
+}

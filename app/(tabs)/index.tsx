@@ -31,9 +31,11 @@ import {
   todayISODate,
   type WorkoutCategoryId,
 } from '../../constants/dashboard';
-import { colors, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/ProfileContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useBadges } from '../../hooks/useBadges';
 import { useDailyMissions } from '../../hooks/useDailyMissions';
 import { useMeals } from '../../hooks/useMeals';
@@ -44,6 +46,8 @@ const RECOMMENDED_COUNT = 3;
 export default function DashboardScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { profile, loading: profileLoading } = useProfile();
   const [selectedDate, setSelectedDate] = useState(todayISODate());
   const isViewingPast = selectedDate !== todayISODate();
@@ -272,7 +276,8 @@ export default function DashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -384,4 +389,5 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     textAlign: 'center',
   },
-});
+  });
+}

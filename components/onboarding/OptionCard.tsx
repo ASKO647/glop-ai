@@ -1,6 +1,9 @@
 import { Check } from 'lucide-react-native';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, type ImageSourcePropType } from 'react-native';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import AppImage from '../ui/AppImage';
 
 type OptionCardProps = {
@@ -11,6 +14,9 @@ type OptionCardProps = {
 };
 
 export default function OptionCard({ label, selected, onPress, imageSource }: OptionCardProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -25,35 +31,37 @@ export default function OptionCard({ label, selected, onPress, imageSource }: Op
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderRadius: radii['2xl'],
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    gap: spacing.sm,
-  },
-  thumbnail: {
-    width: 56,
-    height: 56,
-    borderRadius: radii.md,
-  },
-  cardSelected: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accentMuted,
-  },
-  label: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  labelSelected: {
-    color: colors.accent,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    card: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.surface,
+      borderRadius: radii['2xl'],
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      gap: spacing.sm,
+    },
+    thumbnail: {
+      width: 56,
+      height: 56,
+      borderRadius: radii.md,
+    },
+    cardSelected: {
+      borderColor: colors.accent,
+      backgroundColor: colors.accentMuted,
+    },
+    label: {
+      flex: 1,
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    labelSelected: {
+      color: colors.accent,
+    },
+  });
+}
