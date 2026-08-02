@@ -5,7 +5,7 @@ import {
   ChefHat,
   Dumbbell,
   LayoutGrid,
-  MessageCircle,
+  TrendingUp,
   Users,
   Utensils,
   type LucideIcon,
@@ -24,14 +24,15 @@ type NavItem = {
 };
 
 const GRID_ITEMS: NavItem[] = [
-  { key: 'coach', label: 'Coach IA', Icon: MessageCircle, route: '/coach' },
+  // Coach isn't listed here — it left for a full tab of its own.
+  { key: 'progression', label: 'Progression', Icon: TrendingUp, route: '/progression' },
   { key: 'workout', label: 'Mes séances', Icon: Dumbbell, route: '/workout' },
   { key: 'meals', label: 'Mes repas', Icon: Utensils, route: '/meals' },
   { key: 'notifications', label: 'Notifications', Icon: Bell, route: '/notifications' },
+  { key: 'badges', label: 'Badges', Icon: Award, route: '/badges' },
   { key: 'groups', label: 'Groupes', Icon: Users, comingSoon: true },
   { key: 'widgets', label: 'Widgets', Icon: LayoutGrid, comingSoon: true },
   { key: 'recipes', label: 'Recettes', Icon: ChefHat, comingSoon: true },
-  { key: 'badges', label: 'Badges', Icon: Award, route: '/badges' },
 ];
 
 // Chunked into fixed pairs rather than left to flex-wrap, which would fit 3 (or more)

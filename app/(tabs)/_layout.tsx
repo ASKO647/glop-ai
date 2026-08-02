@@ -1,7 +1,7 @@
 import { PlatformPressable } from '@react-navigation/elements';
 import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { Tabs } from 'expo-router';
-import { Camera, Home, Plus, TrendingUp, User, type LucideIcon } from 'lucide-react-native';
+import { Camera, Home, MessageCircle, Plus, User, type LucideIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,13 +12,19 @@ const TAB_BAR_MARGIN = 20;
 const TAB_BAR_BOTTOM_MIN = 24;
 const TAB_BAR_HEIGHT = 68;
 
-// Reserved empty space at the bar's horizontal center for the floating + button —
-// applied as margin on the two tabs adjacent to it so their icon/label never sit under it.
-const CENTER_GAP_HALF = 32;
+// The + button sits outside the pill, to its right, same height as the bar —
+// diameter equal to TAB_BAR_HEIGHT so both share the exact same top/bottom edges.
+const FAB_SIZE = TAB_BAR_HEIGHT;
+const FAB_GAP = 12;
 
-const FAB_SIZE = 56;
-// How far the button's top edge pokes up above the bar's own top edge.
-const FAB_PROTRUSION = 16;
+// Same shadow on both the pill and the button, so they read as one row.
+const BAR_SHADOW = {
+  elevation: 8,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.3,
+  shadowRadius: 12,
+} as const;
 
 function TabIcon({ Icon, label, focused }: { Icon: LucideIcon; label: string; focused: boolean }) {
   return (
@@ -41,11 +47,10 @@ function TabBarButton({ style, ...rest }: BottomTabBarButtonProps) {
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-  // On devices with a home indicator, keep the bar (and its bottom-right tab)
-  // clear of the safe-area/system-gesture zone instead of sitting at a fixed
-  // 24px from the raw screen edge.
-  const tabBarBottom = Math.max(TAB_BAR_BOTTOM_MIN, insets.bottom + 12);
-  const fabBottom = tabBarBottom + TAB_BAR_HEIGHT - (FAB_SIZE - FAB_PROTRUSION);
+  // On devices with a home indicator, keep the bar (and the + button) clear of
+  // the safe-area/system-gesture zone instead of sitting at a fixed 24px from
+  // the raw screen edge.
+  const barBottom = Math.max(TAB_BAR_BOTTOM_MIN, insets.bottom + 12);
 
   const [sheetVisible, setSheetVisible] = useState(false);
 
@@ -56,7 +61,8 @@ export default function TabsLayout() {
           headerShown: false,
           tabBarShowLabel: false,
           tabBarButton: (props) => <TabBarButton {...props} />,
-          tabBarStyle: [styles.tabBar, { bottom: tabBarBottom }],
+          // Right edge leaves room for the + button (its width + the gap) outside the pill.
+          tabBarStyle: [styles.tabBar, { bottom: barBottom, right: TAB_BAR_MARGIN + FAB_SIZE + FAB_GAP }],
           tabBarItemStyle: styles.tabBarItem,
         }}
       >
@@ -65,37 +71,31 @@ export default function TabsLayout() {
           options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={Home} label="Accueil" focused={focused} /> }}
         />
         <Tabs.Screen
-          name="progression"
-          options={{
-            tabBarIcon: ({ focused }) => <TabIcon Icon={TrendingUp} label="Progression" focused={focused} />,
-            tabBarItemStyle: [styles.tabBarItem, styles.tabBarItemBeforeGap],
-          }}
+          name="coach"
+          options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={MessageCircle} label="Coach" focused={focused} /> }}
         />
         <Tabs.Screen
           name="scanner"
-          options={{
-            tabBarIcon: ({ focused }) => <TabIcon Icon={Camera} label="Scanner" focused={focused} />,
-            tabBarItemStyle: [styles.tabBarItem, styles.tabBarItemAfterGap],
-          }}
+          options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={Camera} label="Scanner" focused={focused} /> }}
         />
         <Tabs.Screen
           name="profil"
           options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={User} label="Profil" focused={focused} /> }}
         />
-        {/* Reachable only from the + button's sheet — no longer a tab of their own. */}
-        <Tabs.Screen name="coach" options={{ href: null }} />
+        {/* Reachable only from the + button's sheet — no longer tabs of their own. */}
+        <Tabs.Screen name="progression" options={{ href: null }} />
         <Tabs.Screen name="workout" options={{ href: null }} />
         <Tabs.Screen name="meals" options={{ href: null }} />
       </Tabs>
 
-      <View pointerEvents="box-none" style={[styles.fabWrap, { bottom: fabBottom }]}>
+      <View pointerEvents="box-none" style={[styles.fabWrap, { bottom: barBottom }]}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Explorer"
           onPress={() => setSheetVisible(true)}
           style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
         >
-          <Plus color={colors.background} size={26} strokeWidth={2.75} />
+          <Plus color={colors.background} size={32} strokeWidth={2.75} />
         </Pressable>
       </View>
 
@@ -111,27 +111,16 @@ const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
     left: TAB_BAR_MARGIN,
-    right: TAB_BAR_MARGIN,
     height: TAB_BAR_HEIGHT,
     borderRadius: radii.full,
     backgroundColor: colors.surface,
     borderTopWidth: 0,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+    ...BAR_SHADOW,
   },
   tabBarItem: {
     height: TAB_BAR_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  tabBarItemBeforeGap: {
-    marginRight: CENTER_GAP_HALF,
-  },
-  tabBarItemAfterGap: {
-    marginLeft: CENTER_GAP_HALF,
   },
   tabButton: {
     flex: 1,
@@ -155,9 +144,7 @@ const styles = StyleSheet.create({
   },
   fabWrap: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
+    right: TAB_BAR_MARGIN,
   },
   fab: {
     width: FAB_SIZE,
@@ -166,11 +153,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
+    ...BAR_SHADOW,
   },
   fabPressed: {
     opacity: 0.85,
