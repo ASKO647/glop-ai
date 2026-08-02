@@ -5,6 +5,8 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from '../../components/ui/Button';
 import Logo from '../../components/ui/Logo';
+import BadgeMedal from '../../components/badges/BadgeMedal';
+import BadgeUnlockModal from '../../components/badges/BadgeUnlockModal';
 import CalorieCard from '../../components/dashboard/CalorieCard';
 import CategoryChip from '../../components/dashboard/CategoryChip';
 import DashboardHeader from '../../components/dashboard/DashboardHeader';
@@ -32,6 +34,7 @@ import {
 import { colors, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/ProfileContext';
+import { useBadges } from '../../hooks/useBadges';
 import { useDailyMissions } from '../../hooks/useDailyMissions';
 import { useMeals } from '../../hooks/useMeals';
 import { useWeightLogs } from '../../hooks/useWeightLogs';
@@ -52,6 +55,7 @@ export default function DashboardScreen() {
   );
   const { meals, totals, loading: mealsLoading, refetch: refetchMeals } = useMeals(user?.id, selectedDate);
   const { logs: weightLogs, refetch: refetchWeightLogs } = useWeightLogs(user?.id);
+  const { badges, pendingUnlock, dismissPendingUnlock } = useBadges();
   const [category, setCategory] = useState<WorkoutCategoryId>('all');
 
   useFocusEffect(
@@ -81,6 +85,15 @@ export default function DashboardScreen() {
   }, [category]);
 
   const tip = getTipOfTheDay(profile?.objectif ?? null);
+
+  const recentBadges = useMemo(
+    () =>
+      badges
+        .filter((b) => b.unlockedAt)
+        .sort((a, b) => (b.unlockedAt! > a.unlockedAt! ? 1 : -1))
+        .slice(0, 3),
+    [badges]
+  );
 
   const poidsActuel = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].poids : profile?.poids_actuel ?? null;
   const poidsObjectif = profile?.poids_objectif;
@@ -228,8 +241,33 @@ export default function DashboardScreen() {
           <StatCard label="Écart restant" value={ecart != null ? `${ecart} kg` : '-'} />
         </View>
 
+        {recentBadges.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Tes badges</Text>
+              <Pressable accessibilityRole="button" onPress={() => router.push('/badges')} hitSlop={8}>
+                {({ pressed }) => (
+                  <Text style={[styles.link, pressed && styles.linkPressed]}>Voir tout</Text>
+                )}
+              </Pressable>
+            </View>
+            <View style={styles.badgesRow}>
+              {recentBadges.map((badge) => (
+                <View key={badge.key} style={styles.badgeChip}>
+                  <BadgeMedal Icon={badge.Icon} unlocked size={48} iconSize={22} />
+                  <Text style={styles.badgeChipLabel} numberOfLines={1}>
+                    {badge.name}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
         <TipCard text={tip} />
       </ScrollView>
+
+      <BadgeUnlockModal badge={pendingUnlock} onDismiss={dismissPendingUnlock} />
     </SafeAreaView>
   );
 }
@@ -330,5 +368,20 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  badgeChip: {
+    width: 72,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  badgeChipLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    textAlign: 'center',
   },
 });

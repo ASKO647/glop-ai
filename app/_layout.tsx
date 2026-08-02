@@ -40,6 +40,7 @@ function RootNavigator() {
           <Stack.Screen name="workout/[id]" />
           <Stack.Screen name="workout/session/[id]" />
           <Stack.Screen name="notifications" />
+          <Stack.Screen name="badges" />
           <Stack.Screen name="legal/terms" />
           <Stack.Screen name="legal/privacy" />
         </Stack.Protected>
