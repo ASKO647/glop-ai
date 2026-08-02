@@ -61,8 +61,14 @@ export default function TabsLayout() {
           headerShown: false,
           tabBarShowLabel: false,
           tabBarButton: (props) => <TabBarButton {...props} />,
-          // Right edge leaves room for the + button (its width + the gap) outside the pill.
-          tabBarStyle: [styles.tabBar, { bottom: barBottom, right: TAB_BAR_MARGIN + FAB_SIZE + FAB_GAP }],
+          // `end` (not `right`) leaves room for the + button (its width + the gap) outside the
+          // pill. React Navigation's own default tab bar style sets `start`/`end` (logical,
+          // writing-direction-aware), and Yoga resolves those ahead of physical `left`/`right`
+          // when both are present on native — a `right` override here is silently ignored there
+          // (though it works on react-native-web, which doesn't hit the same Yoga precedence),
+          // making the pill render full-width with the button floating on top of its end. Using
+          // the exact same keys the library sets guarantees our values win instead of theirs.
+          tabBarStyle: [styles.tabBar, { bottom: barBottom, end: TAB_BAR_MARGIN + FAB_SIZE + FAB_GAP }],
           tabBarItemStyle: styles.tabBarItem,
         }}
       >
@@ -110,7 +116,8 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     position: 'absolute',
-    left: TAB_BAR_MARGIN,
+    // `start`, not `left` — see the comment above `tabBarStyle` in TabsLayout.
+    start: TAB_BAR_MARGIN,
     height: TAB_BAR_HEIGHT,
     borderRadius: radii.full,
     backgroundColor: colors.surface,
