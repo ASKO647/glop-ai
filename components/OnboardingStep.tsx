@@ -1,9 +1,12 @@
 import { Link, type Href } from 'expo-router';
+import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from './ui/Button';
 import Card from './ui/Card';
-import { colors, spacing, typography } from '../constants/theme';
+import type { Colors } from '../constants/theme';
+import { spacing, typography } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 type OnboardingStepProps = {
   step: string;
@@ -20,15 +23,18 @@ export default function OnboardingStep({
   nextHref,
   nextLabel = 'Continuer',
 }: OnboardingStepProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.header}>
         <Text style={styles.step}>{step}</Text>
-        <Text style={typography.title}>{title}</Text>
+        <Text style={styles.title}>{title}</Text>
       </View>
 
       <Card style={styles.card}>
-        <Text style={typography.caption}>
+        <Text style={styles.description}>
           {description ?? 'Cet écran sera implémenté prochainement.'}
         </Text>
       </Card>
@@ -42,31 +48,41 @@ export default function OnboardingStep({
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.lg,
-    justifyContent: 'space-between',
-  },
-  header: {
-    marginTop: spacing.lg,
-    gap: spacing.xs,
-  },
-  step: {
-    color: colors.accent,
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-  },
-  card: {
-    flex: 1,
-    marginVertical: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actions: {
-    marginBottom: spacing.lg,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingHorizontal: spacing.lg,
+      justifyContent: 'space-between',
+    },
+    header: {
+      marginTop: spacing.lg,
+      gap: spacing.xs,
+    },
+    step: {
+      color: colors.accent,
+      fontSize: 13,
+      fontWeight: '800',
+      letterSpacing: 0.4,
+      textTransform: 'uppercase',
+    },
+    title: {
+      ...typography.title,
+      color: colors.textPrimary,
+    },
+    card: {
+      flex: 1,
+      marginVertical: spacing.lg,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    description: {
+      ...typography.caption,
+      color: colors.textSecondary,
+    },
+    actions: {
+      marginBottom: spacing.lg,
+    },
+  });
+}

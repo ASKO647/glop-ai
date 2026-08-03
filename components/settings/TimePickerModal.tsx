@@ -1,7 +1,9 @@
 import { Minus, Plus } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import Button from '../ui/Button';
 
 const MINUTE_STEP = 5;
@@ -33,6 +35,8 @@ function wrap(value: number, max: number): number {
 }
 
 export default function TimePickerModal({ visible, title, initialValue, saving = false, onCancel, onSave }: TimePickerModalProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [hour, setHour] = useState(0);
   const [minute, setMinute] = useState(0);
 
@@ -112,72 +116,74 @@ export default function TimePickerModal({ visible, title, initialValue, saving =
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radii['2xl'],
-    borderTopRightRadius: radii['2xl'],
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    paddingBottom: spacing.xl,
-    gap: spacing.lg,
-  },
-  title: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.md,
-  },
-  unitColumn: {
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  stepButton: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.full,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepButtonPressed: {
-    opacity: 0.7,
-  },
-  unitValue: {
-    fontSize: 34,
-    fontWeight: '800',
-    color: colors.accent,
-    fontVariant: ['tabular-nums'],
-  },
-  unitLabel: {
-    fontSize: 11,
-    color: colors.textTertiary,
-  },
-  separator: {
-    fontSize: 34,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    marginBottom: 20,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  actionButton: {
-    flex: 1,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    },
+    sheet: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: radii['2xl'],
+      borderTopRightRadius: radii['2xl'],
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.lg,
+      paddingBottom: spacing.xl,
+      gap: spacing.lg,
+    },
+    title: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      textAlign: 'center',
+    },
+    timeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.md,
+    },
+    unitColumn: {
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    stepButton: {
+      width: 44,
+      height: 44,
+      borderRadius: radii.full,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    stepButtonPressed: {
+      opacity: 0.7,
+    },
+    unitValue: {
+      fontSize: 34,
+      fontWeight: '800',
+      color: colors.accent,
+      fontVariant: ['tabular-nums'],
+    },
+    unitLabel: {
+      fontSize: 11,
+      color: colors.textTertiary,
+    },
+    separator: {
+      fontSize: 34,
+      fontWeight: '800',
+      color: colors.textPrimary,
+      marginBottom: 20,
+    },
+    actions: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    actionButton: {
+      flex: 1,
+    },
+  });
+}

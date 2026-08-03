@@ -1,7 +1,10 @@
 import { Camera } from 'lucide-react-native';
+import { useMemo } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatWeight } from '../../constants/progression';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 type ProfileHeaderProps = {
   initial: string;
@@ -33,6 +36,9 @@ export default function ProfileHeader({
   onPressAvatar,
   onLongPressAvatar,
 }: ProfileHeaderProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <View style={styles.container}>
       <Pressable
@@ -56,12 +62,15 @@ export default function ProfileHeader({
           )}
           {avatarUploading && (
             <View style={styles.avatarOverlay}>
-              <ActivityIndicator color={colors.accent} />
+              {/* Drawn over the fixed black photo scrim (avatarOverlay) — needs a fixed light
+                  color, not theme-reactive colors.accent (illegible in light mode's dark-green accent). */}
+              <ActivityIndicator color="#ffffff" />
             </View>
           )}
         </View>
         <View style={styles.cameraBadge}>
-          <Camera color={colors.background} size={13} />
+          {/* Icon on an accent-filled badge circle — onAccent, not colors.background. */}
+          <Camera color={colors.onAccent} size={13} />
         </View>
       </Pressable>
 
@@ -96,98 +105,101 @@ export default function ProfileHeader({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  avatarWrap: {
-    width: 72,
-    height: 72,
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: radii.full,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10, 13, 12, 0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: colors.accent,
-  },
-  cameraBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 24,
-    height: 24,
-    borderRadius: radii.full,
-    backgroundColor: colors.accent,
-    borderWidth: 2,
-    borderColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  email: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  badge: {
-    borderRadius: radii.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 4,
-  },
-  badgePremium: {
-    backgroundColor: colors.accent,
-  },
-  badgeFree: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  badgeTextPremium: {
-    color: colors.background,
-  },
-  badgeTextFree: {
-    color: colors.textSecondary,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.xs,
-  },
-  stat: {
-    paddingHorizontal: spacing.sm,
-  },
-  statValue: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  divider: {
-    width: 1,
-    height: 20,
-    backgroundColor: colors.border,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: {
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    avatarWrap: {
+      width: 72,
+      height: 72,
+    },
+    avatar: {
+      width: 72,
+      height: 72,
+      borderRadius: radii.full,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    avatarImage: {
+      width: '100%',
+      height: '100%',
+    },
+    avatarOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(10, 13, 12, 0.6)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarText: {
+      fontSize: 28,
+      fontWeight: '800',
+      color: colors.accent,
+    },
+    cameraBadge: {
+      position: 'absolute',
+      bottom: 0,
+      right: 0,
+      width: 24,
+      height: 24,
+      borderRadius: radii.full,
+      backgroundColor: colors.accent,
+      borderWidth: 2,
+      borderColor: colors.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    email: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textPrimary,
+      textAlign: 'center',
+    },
+    badge: {
+      borderRadius: radii.full,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 4,
+    },
+    badgePremium: {
+      backgroundColor: colors.accent,
+    },
+    badgeFree: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    badgeText: {
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    // Text on an accent-filled badge — onAccent, not colors.background.
+    badgeTextPremium: {
+      color: colors.onAccent,
+    },
+    badgeTextFree: {
+      color: colors.textSecondary,
+    },
+    statsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: spacing.xs,
+    },
+    stat: {
+      paddingHorizontal: spacing.sm,
+    },
+    statValue: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      textAlign: 'center',
+    },
+    divider: {
+      width: 1,
+      height: 20,
+      backgroundColor: colors.border,
+    },
+  });
+}

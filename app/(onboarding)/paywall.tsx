@@ -1,14 +1,16 @@
 import { useRouter } from 'expo-router';
 import { X } from 'lucide-react-native';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BenefitRow from '../../components/onboarding/BenefitRow';
 import PlanCard from '../../components/onboarding/PlanCard';
 import Button from '../../components/ui/Button';
 import { appImage } from '../../constants/images';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
 
 const BENEFITS = [
@@ -22,6 +24,8 @@ type PlanId = 'annual' | 'monthly';
 
 export default function PaywallScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user, signOut, refreshSubscription } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<PlanId>('annual');
   const [submitting, setSubmitting] = useState(false);
@@ -124,68 +128,70 @@ export default function PaywallScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.lg,
-  },
-  closeButton: {
-    width: 32,
-    height: 32,
-    marginTop: spacing.xs,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-  },
-  header: {
-    marginTop: spacing.xs,
-    alignItems: 'center',
-    gap: 6,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    paddingHorizontal: spacing.sm,
-  },
-  benefits: {
-    marginTop: spacing.lg,
-    gap: 10,
-  },
-  plans: {
-    marginTop: spacing.lg,
-    gap: spacing.sm,
-  },
-  footer: {
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-    gap: spacing.sm,
-  },
-  error: {
-    fontSize: 12,
-    textAlign: 'center',
-    color: colors.danger,
-  },
-  ctaButton: {
-    height: 52,
-    borderRadius: radii.lg,
-  },
-  linksRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  link: {
-    fontSize: 10,
-    color: colors.textTertiary,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingHorizontal: spacing.lg,
+    },
+    closeButton: {
+      width: 32,
+      height: 32,
+      marginTop: spacing.xs,
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+    },
+    header: {
+      marginTop: spacing.xs,
+      alignItems: 'center',
+      gap: 6,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: '800',
+      letterSpacing: -0.5,
+      color: colors.textPrimary,
+      textAlign: 'center',
+    },
+    subtitle: {
+      fontSize: 13,
+      lineHeight: 18,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      paddingHorizontal: spacing.sm,
+    },
+    benefits: {
+      marginTop: spacing.lg,
+      gap: 10,
+    },
+    plans: {
+      marginTop: spacing.lg,
+      gap: spacing.sm,
+    },
+    footer: {
+      marginTop: spacing.lg,
+      marginBottom: spacing.sm,
+      gap: spacing.sm,
+    },
+    error: {
+      fontSize: 12,
+      textAlign: 'center',
+      color: colors.danger,
+    },
+    ctaButton: {
+      height: 52,
+      borderRadius: radii.lg,
+    },
+    linksRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+    },
+    link: {
+      fontSize: 10,
+      color: colors.textTertiary,
+    },
+  });
+}

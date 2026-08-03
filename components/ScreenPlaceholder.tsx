@@ -1,7 +1,10 @@
+import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Card from './ui/Card';
-import { colors, spacing, typography } from '../constants/theme';
+import type { Colors } from '../constants/theme';
+import { spacing, typography } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 type ScreenPlaceholderProps = {
   title: string;
@@ -9,13 +12,16 @@ type ScreenPlaceholderProps = {
 };
 
 export default function ScreenPlaceholder({ title, description }: ScreenPlaceholderProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
-        <Text style={typography.title}>{title}</Text>
+        <Text style={styles.title}>{title}</Text>
       </View>
       <Card style={styles.card}>
-        <Text style={typography.caption}>
+        <Text style={styles.description}>
           {description ?? 'Cet écran sera implémenté prochainement.'}
         </Text>
       </Card>
@@ -23,18 +29,28 @@ export default function ScreenPlaceholder({ title, description }: ScreenPlacehol
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.lg,
-  },
-  header: {
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
-  },
-  card: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingHorizontal: spacing.lg,
+    },
+    header: {
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.md,
+    },
+    title: {
+      ...typography.title,
+      color: colors.textPrimary,
+    },
+    card: {
+      alignItems: 'center',
+      paddingVertical: spacing.xl,
+    },
+    description: {
+      ...typography.caption,
+      color: colors.textSecondary,
+    },
+  });
+}

@@ -1,7 +1,10 @@
 import { ArrowDown, ArrowUp, Plus } from 'lucide-react-native';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { computeWeightTrend, formatSignedWeight, formatWeight, type WeightTrend } from '../../constants/progression';
-import { colors, radii } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 type WeightCardProps = {
   currentWeight: number | null;
@@ -12,17 +15,17 @@ type WeightCardProps = {
   onAddPress: () => void;
 };
 
-// The card's background is the lime accent, so a literal "green" arrow would
-// vanish against it. Good direction stays on-brand black (like the rest of
-// the card's text); only the "wrong direction" case gets a color of its own.
-function TrendLine({ trend, suffix }: { trend: WeightTrend; suffix: string }) {
+// The card's background is the accent color, so a literal "green" arrow would
+// vanish against it. Good direction stays onAccent (like the rest of the
+// card's text); only the "wrong direction" case gets a color of its own.
+function TrendLine({ colors, trend, suffix }: { colors: Colors; trend: WeightTrend; suffix: string }) {
   const Icon = trend.direction === 'up' ? ArrowUp : trend.direction === 'down' ? ArrowDown : null;
-  const color = trend.isGood ? colors.background : colors.warning;
+  const color = trend.isGood ? colors.onAccent : colors.warning;
 
   return (
-    <View style={styles.trendRow}>
+    <View style={styles(colors).trendRow}>
       {Icon && <Icon color={color} size={13} strokeWidth={3} />}
-      <Text style={[styles.delta, { color }]}>
+      <Text style={[styles(colors).delta, { color }]}>
         {formatSignedWeight(trend.diff)} {suffix}
       </Text>
     </View>
@@ -37,6 +40,8 @@ export default function WeightCard({
   loading,
   onAddPress,
 }: WeightCardProps) {
+  const { colors } = useTheme();
+  const cardStyles = useMemo(() => styles(colors), [colors]);
   const sinceLastTrend =
     !loading && currentWeight != null && previousWeight != null
       ? computeWeightTrend(currentWeight, previousWeight, objectif)
@@ -47,30 +52,30 @@ export default function WeightCard({
       : null;
 
   return (
-    <View style={styles.card}>
-      <View style={styles.info}>
-        <Text style={styles.label}>POIDS ACTUEL</Text>
+    <View style={cardStyles.card}>
+      <View style={cardStyles.info}>
+        <Text style={cardStyles.label}>POIDS ACTUEL</Text>
 
         {loading ? (
-          <Text style={styles.value}>—</Text>
+          <Text style={cardStyles.value}>—</Text>
         ) : currentWeight != null ? (
-          <View style={styles.valueRow}>
-            <Text style={styles.value}>{formatWeight(currentWeight)}</Text>
-            <Text style={styles.unit}>kg</Text>
+          <View style={cardStyles.valueRow}>
+            <Text style={cardStyles.value}>{formatWeight(currentWeight)}</Text>
+            <Text style={cardStyles.unit}>kg</Text>
           </View>
         ) : (
-          <Text style={styles.value}>—</Text>
+          <Text style={cardStyles.value}>—</Text>
         )}
 
-        {sinceLastTrend && <TrendLine trend={sinceLastTrend} suffix="depuis la dernière pesée" />}
-        {sinceStartTrend && <TrendLine trend={sinceStartTrend} suffix="depuis le départ" />}
+        {sinceLastTrend && <TrendLine colors={colors} trend={sinceLastTrend} suffix="depuis la dernière pesée" />}
+        {sinceStartTrend && <TrendLine colors={colors} trend={sinceStartTrend} suffix="depuis le départ" />}
       </View>
 
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Ajouter la pesée du jour"
         onPress={onAddPress}
-        style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
+        style={({ pressed }) => [cardStyles.addButton, pressed && cardStyles.pressed]}
       >
         <Plus color={colors.accent} size={22} strokeWidth={2.5} />
       </Pressable>
@@ -78,62 +83,64 @@ export default function WeightCard({
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    backgroundColor: colors.accent,
-    borderRadius: radii.xl,
-    padding: 20,
-  },
-  info: {
-    flexShrink: 1,
-    gap: 4,
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-    color: colors.background,
-    opacity: 0.6,
-  },
-  valueRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 6,
-  },
-  value: {
-    fontSize: 38,
-    fontWeight: '800',
-    letterSpacing: -1,
-    color: colors.background,
-  },
-  unit: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.background,
-    marginBottom: 6,
-  },
-  trendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
-  },
-  delta: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.full,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pressed: {
-    opacity: 0.8,
-  },
-});
+function styles(colors: Colors) {
+  return StyleSheet.create({
+    card: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      backgroundColor: colors.accent,
+      borderRadius: radii.xl,
+      padding: 20,
+    },
+    info: {
+      flexShrink: 1,
+      gap: 4,
+    },
+    label: {
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 1,
+      color: colors.onAccent,
+      opacity: 0.6,
+    },
+    valueRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: 6,
+    },
+    value: {
+      fontSize: 38,
+      fontWeight: '800',
+      letterSpacing: -1,
+      color: colors.onAccent,
+    },
+    unit: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.onAccent,
+      marginBottom: 6,
+    },
+    trendRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      marginTop: 2,
+    },
+    delta: {
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    addButton: {
+      width: 44,
+      height: 44,
+      borderRadius: radii.full,
+      backgroundColor: colors.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    pressed: {
+      opacity: 0.8,
+    },
+  });
+}

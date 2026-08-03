@@ -1,8 +1,11 @@
 import { Plus } from 'lucide-react-native';
+import { useMemo } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatDisplayDate } from '../../constants/dashboard';
 import { formatWeight } from '../../constants/progression';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import { PHOTO_SLOTS, SLOT_LABELS, type PhotoSlot, type ProgressPhoto } from '../../hooks/useProgressPhotos';
 import { showConfirm } from '../../lib/alert';
 
@@ -15,6 +18,9 @@ type PhotosCardProps = {
 };
 
 export default function PhotosCard({ photosBySlot, loading, uploadingSlot, onPressSlot, onDeleteSlot }: PhotosCardProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   if (loading) {
     return (
       <View style={styles.stateCard}>
@@ -81,7 +87,10 @@ export default function PhotosCard({ photosBySlot, loading, uploadingSlot, onPre
               )}
               {isUploading && (
                 <View style={styles.uploadingOverlay}>
-                  <ActivityIndicator color={colors.accent} />
+                  {/* Drawn over the fixed black photo scrim (uploadingOverlay) — needs a fixed
+                      light color, not theme-reactive colors.accent (illegible in light mode's
+                      dark-green accent). */}
+                  <ActivityIndicator color="#ffffff" />
                 </View>
               )}
             </Pressable>
@@ -92,83 +101,89 @@ export default function PhotosCard({ photosBySlot, loading, uploadingSlot, onPre
   );
 }
 
-const styles = StyleSheet.create({
-  stateCard: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.xl,
-    alignItems: 'center',
-  },
-  row: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  column: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  pressed: {
-    opacity: 0.8,
-  },
-  frame: {
-    width: '100%',
-    aspectRatio: 3 / 4,
-    borderRadius: radii.md,
-    overflow: 'hidden',
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  frameEmpty: {
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.border,
-  },
-  emptyContent: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  emptyText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textTertiary,
-  },
-  photo: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  overlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(10, 13, 12, 0.75)',
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    gap: 1,
-  },
-  overlayDate: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    textTransform: 'capitalize',
-  },
-  overlayWeight: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  uploadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10, 13, 12, 0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    stateCard: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      borderRadius: radii.lg,
+      paddingVertical: spacing.xl,
+      alignItems: 'center',
+    },
+    row: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    column: {
+      flex: 1,
+      gap: spacing.xs,
+    },
+    label: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    pressed: {
+      opacity: 0.8,
+    },
+    frame: {
+      width: '100%',
+      aspectRatio: 3 / 4,
+      borderRadius: radii.md,
+      overflow: 'hidden',
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    frameEmpty: {
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: colors.border,
+    },
+    emptyContent: {
+      alignItems: 'center',
+      gap: 4,
+    },
+    emptyText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textTertiary,
+    },
+    photo: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    overlay: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(10, 13, 12, 0.75)',
+      paddingHorizontal: 6,
+      paddingVertical: 4,
+      gap: 1,
+    },
+    // Drawn over the fixed black photo scrim (overlay) — needs fixed light colors, not
+    // theme-reactive colors.textPrimary/textSecondary (illegible in light mode against the
+    // always-dark scrim).
+    overlayDate: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: '#ffffff',
+      textTransform: 'capitalize',
+    },
+    overlayWeight: {
+      fontSize: 10,
+      fontWeight: '600',
+      color: '#ffffff',
+      opacity: 0.75,
+    },
+    uploadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(10, 13, 12, 0.6)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  });
+}

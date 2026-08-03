@@ -1,14 +1,18 @@
 import { Link } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from '../../components/ui/Button';
 import TextField from '../../components/ui/TextField';
-import { colors, spacing, typography } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { spacing, typography } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import { mapAuthError } from '../../lib/authErrors';
 import { supabase } from '../../lib/supabase';
 
 export default function ForgotPasswordScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState<string | undefined>();
   const [formError, setFormError] = useState<string | undefined>();
@@ -47,7 +51,7 @@ export default function ForgotPasswordScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.header}>
-          <Text style={typography.title}>Mot de passe oublié</Text>
+          <Text style={[typography.title, { color: colors.textPrimary }]}>Mot de passe oublié</Text>
           <Text style={[typography.body, { color: colors.textSecondary }]}>
             Indique ton email, on t'envoie un lien pour le réinitialiser.
           </Text>
@@ -99,44 +103,46 @@ export default function ForgotPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.lg,
-  },
-  flex: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  header: {
-    marginTop: spacing.lg,
-    gap: spacing.xs,
-  },
-  form: {
-    marginTop: spacing.xl,
-    gap: spacing.md,
-  },
-  confirmation: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.textPrimary,
-  },
-  formError: {
-    fontSize: 13,
-    color: colors.danger,
-  },
-  footer: {
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  backLink: {
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
-  },
-  backLinkText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.accent,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingHorizontal: spacing.lg,
+    },
+    flex: {
+      flex: 1,
+      justifyContent: 'space-between',
+    },
+    header: {
+      marginTop: spacing.lg,
+      gap: spacing.xs,
+    },
+    form: {
+      marginTop: spacing.xl,
+      gap: spacing.md,
+    },
+    confirmation: {
+      fontSize: 14,
+      lineHeight: 20,
+      color: colors.textPrimary,
+    },
+    formError: {
+      fontSize: 13,
+      color: colors.danger,
+    },
+    footer: {
+      gap: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    backLink: {
+      alignItems: 'center',
+      paddingVertical: spacing.xs,
+    },
+    backLinkText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.accent,
+    },
+  });
+}

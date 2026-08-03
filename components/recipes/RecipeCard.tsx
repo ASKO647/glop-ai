@@ -1,6 +1,9 @@
 import { Clock, Flame, Gauge, Heart } from 'lucide-react-native';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 type RecipeCardData = {
   titre: string;
@@ -28,6 +31,9 @@ export default function RecipeCard({
   onPress,
   onLongPress,
 }: RecipeCardProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <View style={styles.card}>
       <Pressable
@@ -78,56 +84,58 @@ export default function RecipeCard({
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-  },
-  favoriteButton: {
-    position: 'absolute',
-    top: spacing.md,
-    right: spacing.md,
-    zIndex: 1,
-  },
-  favoriteButtonPressed: {
-    opacity: 0.6,
-  },
-  body: {
-    padding: spacing.md,
-    paddingRight: spacing.xl,
-    gap: spacing.sm,
-  },
-  bodyPressed: {
-    opacity: 0.85,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  description: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  missing: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.warning,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  metaText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.lg,
+    },
+    favoriteButton: {
+      position: 'absolute',
+      top: spacing.md,
+      right: spacing.md,
+      zIndex: 1,
+    },
+    favoriteButtonPressed: {
+      opacity: 0.6,
+    },
+    body: {
+      padding: spacing.md,
+      paddingRight: spacing.xl,
+      gap: spacing.sm,
+    },
+    bodyPressed: {
+      opacity: 0.85,
+    },
+    title: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    description: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    missing: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.warning,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    metaItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    metaText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+  });
+}

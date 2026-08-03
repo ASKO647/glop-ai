@@ -1,6 +1,6 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { CheckCircle2, Clock, Flame } from 'lucide-react-native';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import WeekHistoryStrip from '../../components/workout/WeekHistoryStrip';
@@ -8,14 +8,18 @@ import AppImage from '../../components/ui/AppImage';
 import Button from '../../components/ui/Button';
 import { getExerciseThumbnail, getTodaysWorkout, todayISODate } from '../../constants/dashboard';
 import { appImage } from '../../constants/images';
-import { colors, radii, spacing, typography } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/ProfileContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useWeeklyWorkouts } from '../../hooks/useWeeklyWorkouts';
 
 export default function WorkoutTabScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { profile, loading: profileLoading } = useProfile();
   const { completedByDate, loading: historyLoading, refetch: refetchHistory } = useWeeklyWorkouts(user?.id);
 
@@ -41,7 +45,7 @@ export default function WorkoutTabScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <AppImage source={appImage('plan-hero.jpg')} style={styles.banner} overlay={0.5} />
 
-        <Text style={typography.title}>Séance du jour</Text>
+        <Text style={styles.pageTitle}>Séance du jour</Text>
         <Text style={styles.subtitle}>
           Recommandée selon ton objectif{profile?.frequence_entrainement ? ` · ${profile.frequence_entrainement}/sem` : ''}
           {profile?.lieu_entrainement ? ` · ${profile.lieu_entrainement}` : ''}
@@ -101,7 +105,8 @@ export default function WorkoutTabScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -122,6 +127,10 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 140,
     borderRadius: radii.lg,
+  },
+  pageTitle: {
+    ...typography.title,
+    color: colors.textPrimary,
   },
   subtitle: {
     fontSize: 13,
@@ -213,4 +222,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
   },
-});
+  });
+}

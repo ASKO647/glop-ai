@@ -1,5 +1,6 @@
 import { Link } from 'expo-router';
 import { Check, Target } from 'lucide-react-native';
+import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppImage from '../../components/ui/AppImage';
@@ -7,8 +8,10 @@ import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import { appImage } from '../../constants/images';
 import { getOptionLabel } from '../../constants/questionnaire';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
 import { asString, useOnboarding } from '../../context/OnboardingContext';
+import { useTheme } from '../../context/ThemeContext';
 
 // Estimated weekly weight change (kg) per chosen pace — used only to derive a display duration.
 const WEEKLY_RATE_BY_PACE: Record<string, number> = {
@@ -69,6 +72,8 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 export default function PlanScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { answers } = useOnboarding();
 
   const goalLabel = getOptionLabel('goal', asString(answers.goal)) ?? 'Transformation personnalisée';
@@ -127,7 +132,9 @@ export default function PlanScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Card style={styles.heroCard}>
           <View style={styles.heroIcon}>
-            <Target color={colors.background} size={18} />
+            {/* Icon sits on a colors.accent-filled circle, so it needs onAccent, not background
+                (background would turn light-on-light-ish against accent once light mode flips). */}
+            <Target color={colors.onAccent} size={18} />
           </View>
           <View style={styles.heroTextGroup}>
             <Text style={styles.heroGoal}>{goalLabel}</Text>
@@ -160,93 +167,95 @@ export default function PlanScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.lg,
-  },
-  heroBanner: {
-    width: '100%',
-    height: 180,
-    borderRadius: radii.lg,
-    marginTop: spacing.lg,
-  },
-  header: {
-    marginTop: spacing.md,
-    gap: spacing.xs,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: -0.4,
-    color: colors.textPrimary,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  scrollContent: {
-    gap: spacing.lg,
-    paddingVertical: spacing.lg,
-  },
-  heroCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  heroIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.sm,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroTextGroup: {
-    flex: 1,
-    gap: 4,
-  },
-  heroGoal: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  heroDuration: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  section: {
-    gap: spacing.md,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: colors.labelMuted,
-  },
-  objectiveList: {
-    gap: 14,
-  },
-  objectiveRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  objectiveText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.textPrimary,
-  },
-  objectiveTitle: {
-    fontWeight: '700',
-  },
-  footer: {
-    paddingVertical: spacing.lg,
-  },
-  ctaButton: {
-    height: 52,
-    borderRadius: radii.lg,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingHorizontal: spacing.lg,
+    },
+    heroBanner: {
+      width: '100%',
+      height: 180,
+      borderRadius: radii.lg,
+      marginTop: spacing.lg,
+    },
+    header: {
+      marginTop: spacing.md,
+      gap: spacing.xs,
+    },
+    title: {
+      fontSize: 26,
+      fontWeight: '800',
+      letterSpacing: -0.4,
+      color: colors.textPrimary,
+    },
+    subtitle: {
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+    scrollContent: {
+      gap: spacing.lg,
+      paddingVertical: spacing.lg,
+    },
+    heroCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    heroIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: radii.sm,
+      backgroundColor: colors.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    heroTextGroup: {
+      flex: 1,
+      gap: 4,
+    },
+    heroGoal: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    heroDuration: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    section: {
+      gap: spacing.md,
+    },
+    sectionLabel: {
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+      color: colors.labelMuted,
+    },
+    objectiveList: {
+      gap: 14,
+    },
+    objectiveRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    objectiveText: {
+      flex: 1,
+      fontSize: 14,
+      color: colors.textPrimary,
+    },
+    objectiveTitle: {
+      fontWeight: '700',
+    },
+    footer: {
+      paddingVertical: spacing.lg,
+    },
+    ctaButton: {
+      height: 52,
+      borderRadius: radii.lg,
+    },
+  });
+}

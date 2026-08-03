@@ -1,9 +1,12 @@
 import { Flame } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatDisplayDate, isoDaysAgo, todayISODate } from '../../constants/dashboard';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import type { DayCompletion, DayCount } from '../../hooks/useMissionStreak';
+import { hexToRgba } from '../../lib/color';
 
 type StreakGridProps = {
   statusByDate: Record<string, DayCompletion>;
@@ -23,9 +26,9 @@ const LEGEND_ITEMS: { status: DayCompletion; label: string }[] = [
   { status: 'none', label: 'Aucune' },
 ];
 
-function statusColor(status: DayCompletion | undefined): string {
+function statusColor(colors: Colors, status: DayCompletion | undefined): string {
   if (status === 'full') return colors.accent;
-  if (status === 'partial') return 'rgba(198, 255, 58, 0.35)';
+  if (status === 'partial') return hexToRgba(colors.accent, 0.35);
   return colors.border;
 }
 
@@ -35,6 +38,8 @@ function dayDetailLabel(count: DayCount | undefined): string {
 }
 
 export default function StreakGrid({ statusByDate, countsByDate, streak, activeDays }: StreakGridProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [tooltipDate, setTooltipDate] = useState<string | null>(null);
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -83,7 +88,7 @@ export default function StreakGrid({ statusByDate, countsByDate, streak, activeD
                 onLongPress={() => showTooltip(date)}
                 style={[
                   styles.square,
-                  { backgroundColor: statusColor(statusByDate[date]) },
+                  { backgroundColor: statusColor(colors, statusByDate[date]) },
                   date === today && styles.squareToday,
                 ]}
               />
@@ -95,7 +100,7 @@ export default function StreakGrid({ statusByDate, countsByDate, streak, activeD
       <View style={styles.legendRow}>
         {LEGEND_ITEMS.map((item) => (
           <View key={item.status} style={styles.legendItem}>
-            <View style={[styles.legendSwatch, { backgroundColor: statusColor(item.status) }]} />
+            <View style={[styles.legendSwatch, { backgroundColor: statusColor(colors, item.status) }]} />
             <Text style={styles.legendLabel}>{item.label}</Text>
           </View>
         ))}
@@ -109,86 +114,88 @@ export default function StreakGrid({ statusByDate, countsByDate, streak, activeD
   );
 }
 
-const styles = StyleSheet.create({
-  explainer: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-  },
-  activeDaysRow: {
-    alignItems: 'flex-end',
-    marginBottom: spacing.sm,
-  },
-  activeDaysText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textSecondary,
-  },
-  tooltip: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  tooltipDate: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    textTransform: 'capitalize',
-  },
-  tooltipDetail: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  grid: {
-    gap: spacing.xs,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  square: {
-    width: SQUARE_SIZE,
-    height: SQUARE_SIZE,
-    borderRadius: 6,
-  },
-  squareToday: {
-    borderWidth: 1,
-    borderColor: colors.textPrimary,
-  },
-  legendRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-    marginTop: spacing.md,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  legendSwatch: {
-    width: 12,
-    height: 12,
-    borderRadius: 4,
-  },
-  legendLabel: {
-    fontSize: 10,
-    color: colors.textSecondary,
-  },
-  streakRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: spacing.md,
-  },
-  streakText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    explainer: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginBottom: spacing.sm,
+    },
+    activeDaysRow: {
+      alignItems: 'flex-end',
+      marginBottom: spacing.sm,
+    },
+    activeDaysText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.textSecondary,
+    },
+    tooltip: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.md,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      marginBottom: spacing.sm,
+    },
+    tooltipDate: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      textTransform: 'capitalize',
+    },
+    tooltipDetail: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    grid: {
+      gap: spacing.xs,
+    },
+    row: {
+      flexDirection: 'row',
+      gap: spacing.xs,
+    },
+    square: {
+      width: SQUARE_SIZE,
+      height: SQUARE_SIZE,
+      borderRadius: 6,
+    },
+    squareToday: {
+      borderWidth: 1,
+      borderColor: colors.textPrimary,
+    },
+    legendRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.md,
+      marginTop: spacing.md,
+    },
+    legendItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    legendSwatch: {
+      width: 12,
+      height: 12,
+      borderRadius: 4,
+    },
+    legendLabel: {
+      fontSize: 10,
+      color: colors.textSecondary,
+    },
+    streakRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: spacing.md,
+    },
+    streakText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+  });
+}
