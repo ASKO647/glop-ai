@@ -6,9 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from '../../../components/ui/Button';
 import ProgressBar from '../../../components/ui/ProgressBar';
 import { WORKOUT_SESSIONS, todayISODate } from '../../../constants/dashboard';
-import { colors, radii, spacing, typography } from '../../../constants/theme';
+import type { Colors } from '../../../constants/theme';
+import { radii, spacing, typography } from '../../../constants/theme';
 import { useAuth } from '../../../context/AuthContext';
 import { useProfile } from '../../../context/ProfileContext';
+import { useTheme } from '../../../context/ThemeContext';
 import { useDailyMissions } from '../../../hooks/useDailyMissions';
 
 const DEFAULT_REST_SECONDS = 60;
@@ -30,6 +32,8 @@ export default function WorkoutSessionScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = WORKOUT_SESSIONS.find((s) => s.id === id);
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
@@ -109,7 +113,7 @@ export default function WorkoutSessionScreen() {
         >
           <ArrowLeft color={colors.textPrimary} size={22} />
         </Pressable>
-        <Text style={typography.heading} numberOfLines={1}>
+        <Text style={styles.headerTitle} numberOfLines={1}>
           {session?.title ?? 'Séance'}
         </Text>
         <View style={styles.headerSpacer} />
@@ -195,128 +199,134 @@ export default function WorkoutSessionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.full,
-    backgroundColor: colors.surface,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  headerSpacer: {
-    width: 36,
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-    gap: spacing.lg,
-  },
-  progressLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  exerciseCard: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.xl,
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  exerciseName: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  setLabel: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.accent,
-  },
-  repsLabel: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  restCard: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  restTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-  },
-  restCountdown: {
-    fontSize: 40,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    letterSpacing: -0.5,
-  },
-  restControls: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  restStepButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.full,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  restStepText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  navRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: 'auto',
-  },
-  navButton: {
-    flex: 1,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.md,
+      gap: spacing.sm,
+    },
+    backButton: {
+      width: 36,
+      height: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: radii.full,
+      backgroundColor: colors.surface,
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+    headerSpacer: {
+      width: 36,
+    },
+    headerTitle: {
+      ...typography.heading,
+      color: colors.textPrimary,
+    },
+    centered: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.lg,
+    },
+    emptyText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.xl,
+      gap: spacing.lg,
+    },
+    progressLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    exerciseCard: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.lg,
+      paddingVertical: spacing.xl,
+      paddingHorizontal: spacing.lg,
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    exerciseName: {
+      fontSize: 22,
+      fontWeight: '800',
+      color: colors.textPrimary,
+      textAlign: 'center',
+    },
+    setLabel: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.accent,
+    },
+    repsLabel: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    restCard: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.lg,
+      paddingVertical: spacing.lg,
+      paddingHorizontal: spacing.lg,
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    restTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+    },
+    restCountdown: {
+      fontSize: 40,
+      fontWeight: '800',
+      color: colors.textPrimary,
+      letterSpacing: -0.5,
+    },
+    restControls: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    restStepButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.full,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+    },
+    restStepText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    navRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginTop: 'auto',
+    },
+    navButton: {
+      flex: 1,
+    },
+  });
+}

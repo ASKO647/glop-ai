@@ -1,6 +1,8 @@
-import { Children, Fragment, isValidElement, type ReactNode } from 'react';
+import { Children, Fragment, isValidElement, useMemo, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 type SettingsSectionProps = {
   title: string;
@@ -8,6 +10,8 @@ type SettingsSectionProps = {
 };
 
 export default function SettingsSection({ title, children }: SettingsSectionProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const rows = Children.toArray(children).filter(isValidElement);
 
   return (
@@ -25,28 +29,30 @@ export default function SettingsSection({ title, children }: SettingsSectionProp
   );
 }
 
-const styles = StyleSheet.create({
-  section: {
-    gap: spacing.sm,
-  },
-  title: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: colors.labelMuted,
-    paddingHorizontal: 2,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    overflow: 'hidden',
-  },
-  separator: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginLeft: 36 + spacing.md + spacing.sm,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    section: {
+      gap: spacing.sm,
+    },
+    title: {
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+      color: colors.labelMuted,
+      paddingHorizontal: 2,
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.lg,
+      overflow: 'hidden',
+    },
+    separator: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginLeft: 36 + spacing.md + spacing.sm,
+    },
+  });
+}

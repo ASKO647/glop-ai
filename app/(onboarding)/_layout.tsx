@@ -1,10 +1,11 @@
 import { Stack } from 'expo-router';
-import { colors } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { OnboardingProvider } from '../../context/OnboardingContext';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function OnboardingLayout() {
   const { isSubscribed } = useAuth();
+  const { colors } = useTheme();
   // A session with isSubscribed === false only happens once the root layout has
   // already resolved loading, so this can only be true when there IS a session.
   const initialRouteName = isSubscribed === false ? 'paywall' : 'welcome';

@@ -1,13 +1,19 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
+import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppImage from '../../components/ui/AppImage';
 import Button from '../../components/ui/Button';
 import { appImage } from '../../constants/images';
-import { colors, spacing, typography } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { spacing, typography } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function WelcomeScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
       <AppImage
@@ -24,8 +30,8 @@ export default function WelcomeScreen() {
 
       <View style={styles.hero}>
         <Text style={styles.brand}>GlowUp AI</Text>
-        <Text style={typography.title}>Ta transformation, guidée par l'IA.</Text>
-        <Text style={[typography.body, { color: colors.textSecondary }]}>
+        <Text style={styles.title}>Ta transformation, guidée par l'IA.</Text>
+        <Text style={styles.subtitle}>
           Coaching fitness personnalisé, suivi de progression et plan sur mesure.
         </Text>
       </View>
@@ -42,27 +48,45 @@ export default function WelcomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.lg,
-    justifyContent: 'space-between',
-  },
-  hero: {
-    marginTop: spacing['2xl'],
-    gap: spacing.sm,
-  },
-  brand: {
-    color: colors.accent,
-    fontSize: 15,
-    fontWeight: '800',
-    letterSpacing: -0.2,
-    marginBottom: spacing.md,
-    textTransform: 'uppercase',
-  },
-  actions: {
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingHorizontal: spacing.lg,
+      justifyContent: 'space-between',
+    },
+    hero: {
+      marginTop: spacing['2xl'],
+      gap: spacing.sm,
+    },
+    // Fixed brand lime, not `colors.accent`: this wordmark sits directly on the photo+scrim
+    // hero like a logo, so (per the brand-logo rule) it stays constant across themes — the
+    // light-mode accent is a dark green that would vanish against the dark photo scrim.
+    brand: {
+      color: '#c6ff3a',
+      fontSize: 15,
+      fontWeight: '800',
+      letterSpacing: -0.2,
+      marginBottom: spacing.md,
+      textTransform: 'uppercase',
+    },
+    // Fixed light color, not `colors.textPrimary`: this title is drawn over the photo+scrim
+    // hero, which is always dark regardless of theme, so the text must stay light regardless
+    // of theme too (`colors.white` is a fixed '#ffffff' in both palettes).
+    title: {
+      ...typography.title,
+      color: colors.white,
+    },
+    // Same reasoning as `title` above — over the photo scrim, so fixed light, not theme-reactive.
+    subtitle: {
+      ...typography.body,
+      color: colors.white,
+      opacity: 0.8,
+    },
+    actions: {
+      gap: spacing.sm,
+      marginBottom: spacing.lg,
+    },
+  });
+}

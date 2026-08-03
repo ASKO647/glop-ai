@@ -1,7 +1,10 @@
 import { Check } from 'lucide-react-native';
+import { useMemo } from 'react';
 import { StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { getCurrentWeekDays } from '../../constants/dashboard';
-import { colors, radii } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 type WeekHistoryStripProps = {
   completedByDate: Record<string, boolean>;
@@ -9,6 +12,8 @@ type WeekHistoryStripProps = {
 
 /** Read-only "did I train?" view of the current week — same 7-circle layout as the dashboard's WeekStrip, no taps. */
 export default function WeekHistoryStrip({ completedByDate }: WeekHistoryStripProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const days = getCurrentWeekDays();
 
   return (
@@ -31,7 +36,9 @@ export default function WeekHistoryStrip({ completedByDate }: WeekHistoryStripPr
           <View key={day.date} style={styles.item}>
             <View style={[styles.circle, circleStyle]}>
               {completed ? (
-                <Check color={colors.background} size={16} />
+                // Icon sits directly on the accent-colored completed circle — onAccent, not
+                // background (only worked by coincidence in the old dark-only palette).
+                <Check color={colors.onAccent} size={16} />
               ) : (
                 <Text
                   style={[
@@ -51,43 +58,45 @@ export default function WeekHistoryStrip({ completedByDate }: WeekHistoryStripPr
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  item: {
-    alignItems: 'center',
-  },
-  circle: {
-    width: 38,
-    height: 38,
-    borderRadius: radii.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textTertiary,
-  },
-  futureLabel: {
-    color: colors.borderMuted,
-  },
-  todayLabel: {
-    color: colors.textPrimary,
-  },
-  completed: {
-    backgroundColor: colors.accent,
-  },
-  todayOutline: {
-    borderWidth: 1.5,
-    borderColor: colors.accent,
-  },
-  missed: {
-    backgroundColor: colors.surface,
-  },
-  future: {
-    backgroundColor: colors.surface,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    item: {
+      alignItems: 'center',
+    },
+    circle: {
+      width: 38,
+      height: 38,
+      borderRadius: radii.full,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    label: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.textTertiary,
+    },
+    futureLabel: {
+      color: colors.borderMuted,
+    },
+    todayLabel: {
+      color: colors.textPrimary,
+    },
+    completed: {
+      backgroundColor: colors.accent,
+    },
+    todayOutline: {
+      borderWidth: 1.5,
+      borderColor: colors.accent,
+    },
+    missed: {
+      backgroundColor: colors.surface,
+    },
+    future: {
+      backgroundColor: colors.surface,
+    },
+  });
+}

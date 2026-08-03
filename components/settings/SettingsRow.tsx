@@ -1,8 +1,10 @@
 import type { LucideIcon } from 'lucide-react-native';
 import { ChevronRight } from 'lucide-react-native';
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 type SettingsRowProps = {
   icon: LucideIcon;
@@ -14,6 +16,9 @@ type SettingsRowProps = {
 };
 
 export default function SettingsRow({ icon: Icon, label, onPress, disabled = false, danger = false, right }: SettingsRowProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   const content = (
     <View style={[styles.row, disabled && styles.rowDisabled]}>
       <View style={styles.iconBox}>
@@ -42,6 +47,9 @@ export default function SettingsRow({ icon: Icon, label, onPress, disabled = fal
 }
 
 export function SettingsValue({ value }: { value: string }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <View style={styles.valueRow}>
       <Text style={styles.valueText} numberOfLines={1}>
@@ -61,6 +69,8 @@ export function SettingsSwitch({
   onValueChange: (value: boolean) => void;
   disabled?: boolean;
 }) {
+  const { colors } = useTheme();
+
   return (
     <Switch
       value={value}
@@ -73,49 +83,52 @@ export function SettingsSwitch({
 }
 
 export function SettingsRowSpinner() {
+  const { colors } = useTheme();
   return <ActivityIndicator color={colors.accent} size="small" />;
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    minHeight: 56,
-  },
-  rowDisabled: {
-    opacity: 0.5,
-  },
-  iconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: radii.md,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  label: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '500',
-    color: colors.textPrimary,
-  },
-  labelDanger: {
-    color: colors.warning,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  valueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    maxWidth: 160,
-  },
-  valueText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      minHeight: 56,
+    },
+    rowDisabled: {
+      opacity: 0.5,
+    },
+    iconBox: {
+      width: 36,
+      height: 36,
+      borderRadius: radii.md,
+      backgroundColor: colors.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    label: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: '500',
+      color: colors.textPrimary,
+    },
+    labelDanger: {
+      color: colors.warning,
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+    valueRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+      maxWidth: 160,
+    },
+    valueText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+  });
+}

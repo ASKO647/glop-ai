@@ -1,10 +1,12 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AnalysisStepRow from '../../components/onboarding/AnalysisStepRow';
 import ProgressRing from '../../components/onboarding/ProgressRing';
-import { colors, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { spacing } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 const TARGET_PROGRESS = 87;
 const DURATION = 4000;
@@ -21,6 +23,8 @@ const STEPS = [
 
 export default function AnalyseScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const progressAnim = useRef(new Animated.Value(0)).current;
   const [progress, setProgress] = useState(0);
 
@@ -72,28 +76,30 @@ export default function AnalyseScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.lg,
-  },
-  title: {
-    marginTop: spacing.lg,
-    fontSize: 20,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  centerBlock: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  ringWrapper: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  steps: {
-    gap: 16,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingHorizontal: spacing.lg,
+    },
+    title: {
+      marginTop: spacing.lg,
+      fontSize: 20,
+      fontWeight: '600',
+      color: colors.textPrimary,
+      textAlign: 'center',
+    },
+    centerBlock: {
+      flex: 1,
+      justifyContent: 'center',
+    },
+    ringWrapper: {
+      alignItems: 'center',
+      marginBottom: spacing.xl,
+    },
+    steps: {
+      gap: 16,
+    },
+  });
+}

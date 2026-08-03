@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { Circle, Defs, LinearGradient, Line, Path, Stop, Svg } from 'react-native-svg';
+import type { Colors } from '../../constants/theme';
+import { spacing } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import type { WeightLog } from '../../hooks/useWeightLogs';
-import { colors, spacing } from '../../constants/theme';
 
 type WeightChartProps = {
   logs: WeightLog[];
@@ -18,6 +20,8 @@ function formatAxisDate(iso: string): string {
 }
 
 export default function WeightChart({ logs, target }: WeightChartProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [width, setWidth] = useState(0);
 
   const handleLayout = (event: LayoutChangeEvent) => {
@@ -101,38 +105,40 @@ export default function WeightChart({ logs, target }: WeightChartProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  chartWrap: {
-    height: CHART_HEIGHT,
-    width: '100%',
-  },
-  targetLabel: {
-    position: 'absolute',
-    right: 0,
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textTertiary,
-    backgroundColor: colors.background,
-    paddingHorizontal: 4,
-  },
-  axisRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.xs,
-  },
-  axisLabel: {
-    fontSize: 10,
-    color: colors.textTertiary,
-  },
-  emptyState: {
-    height: CHART_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-  },
-  emptyText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    chartWrap: {
+      height: CHART_HEIGHT,
+      width: '100%',
+    },
+    targetLabel: {
+      position: 'absolute',
+      right: 0,
+      fontSize: 10,
+      fontWeight: '600',
+      color: colors.textTertiary,
+      backgroundColor: colors.background,
+      paddingHorizontal: 4,
+    },
+    axisRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: spacing.xs,
+    },
+    axisLabel: {
+      fontSize: 10,
+      color: colors.textTertiary,
+    },
+    emptyState: {
+      height: CHART_HEIGHT,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.lg,
+    },
+    emptyText: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+  });
+}

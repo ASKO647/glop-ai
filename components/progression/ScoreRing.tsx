@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Circle, Svg } from 'react-native-svg';
-import { colors } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 type ScoreRingProps = {
   score: number; // 0-100
@@ -9,6 +11,8 @@ type ScoreRingProps = {
 };
 
 export default function ScoreRing({ score, size = 96, strokeWidth = 10 }: ScoreRingProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const clamped = Math.min(100, Math.max(0, score));
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -40,26 +44,28 @@ export default function ScoreRing({ score, size = 96, strokeWidth = 10 }: ScoreR
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  labelContainer: {
-    position: 'absolute',
-    alignItems: 'baseline',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 2,
-  },
-  score: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
-  total: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    labelContainer: {
+      position: 'absolute',
+      alignItems: 'baseline',
+      justifyContent: 'center',
+      flexDirection: 'row',
+      gap: 2,
+    },
+    score: {
+      fontSize: 26,
+      fontWeight: '800',
+      color: colors.textPrimary,
+    },
+    total: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+  });
+}

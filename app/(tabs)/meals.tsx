@@ -1,13 +1,15 @@
 import { useRouter } from 'expo-router';
 import { ArrowLeft, UtensilsCrossed } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppImage from '../../components/ui/AppImage';
 import { isoDaysAgo, todayISODate } from '../../constants/dashboard';
 import { appImage } from '../../constants/images';
-import { colors, radii, spacing, typography } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
 
 const MEAL_BREAKFAST_IMAGE = appImage('meal-breakfast.jpg');
@@ -51,6 +53,8 @@ function formatDayLabel(iso: string): string {
 export default function MealsScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [groups, setGroups] = useState<DayGroup[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -104,7 +108,7 @@ export default function MealsScreen() {
         >
           <ArrowLeft color={colors.textPrimary} size={22} />
         </Pressable>
-        <Text style={typography.heading}>Mes repas</Text>
+        <Text style={styles.headerTitle}>Mes repas</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -145,7 +149,8 @@ export default function MealsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -156,6 +161,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
+  },
+  headerTitle: {
+    ...typography.heading,
+    color: colors.textPrimary,
   },
   backButton: {
     width: 36,
@@ -243,4 +252,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.accent,
   },
-});
+  });
+}

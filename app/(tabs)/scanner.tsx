@@ -1,7 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Camera as CameraIcon } from 'lucide-react-native';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppImage from '../../components/ui/AppImage';
@@ -9,8 +9,10 @@ import Button from '../../components/ui/Button';
 import ProgressBar from '../../components/ui/ProgressBar';
 import { todayISODate } from '../../constants/dashboard';
 import { appImage } from '../../constants/images';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { showAlert } from '../../lib/alert';
 import { analyzeMeal, compressImage, type MealAnalysis } from '../../lib/foodScanner';
 import { supabase } from '../../lib/supabase';
@@ -30,6 +32,8 @@ const LIBRARY_DENIED_MESSAGE =
 export default function ScannerScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const actionsBottomPadding = Math.max(TAB_BAR_BOTTOM_MIN, insets.bottom + 12) + TAB_BAR_HEIGHT + spacing.sm;
 
@@ -178,9 +182,9 @@ export default function ScannerScreen() {
             </View>
 
             <View style={styles.macros}>
-              <MacroLine label="Protéines" grams={analysis.proteines} max={maxMacro} />
-              <MacroLine label="Glucides" grams={analysis.glucides} max={maxMacro} />
-              <MacroLine label="Lipides" grams={analysis.lipides} max={maxMacro} />
+              <MacroLine label="Protéines" grams={analysis.proteines} max={maxMacro} styles={styles} />
+              <MacroLine label="Glucides" grams={analysis.glucides} max={maxMacro} styles={styles} />
+              <MacroLine label="Lipides" grams={analysis.lipides} max={maxMacro} styles={styles} />
             </View>
 
             {analysis.aliments.length > 0 && (
@@ -223,7 +227,17 @@ export default function ScannerScreen() {
   );
 }
 
-function MacroLine({ label, grams, max }: { label: string; grams: number; max: number }) {
+function MacroLine({
+  label,
+  grams,
+  max,
+  styles,
+}: {
+  label: string;
+  grams: number;
+  max: number;
+  styles: ReturnType<typeof makeStyles>;
+}) {
   return (
     <View style={styles.macroLine}>
       <View style={styles.macroLabelRow}>
@@ -235,7 +249,8 @@ function MacroLine({ label, grams, max }: { label: string; grams: number; max: n
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -269,15 +284,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.sm,
   },
+  // Fixed white, not theme-reactive: this text sits directly on the AppImage's
+  // always-dark photo scrim, which stays dark regardless of light/dark mode.
   title: {
     fontSize: 20,
     fontWeight: '800',
-    color: colors.textPrimary,
+    color: '#ffffff',
     textAlign: 'center',
   },
+  // Same fixed-color reasoning as `title` above.
   subtitle: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
     paddingHorizontal: spacing.lg,
   },
@@ -369,4 +387,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,
   },
-});
+  });
+}

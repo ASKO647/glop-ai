@@ -22,7 +22,7 @@ import {
   Target,
   Trash2,
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, Share, ScrollView, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ProfileHeader from '../../components/profil/ProfileHeader';
@@ -38,9 +38,11 @@ import NumberStepperModal from '../../components/ui/NumberStepperModal';
 import { getDisplayName, getProgramDay, PROGRAM_LENGTH_DAYS } from '../../constants/dashboard';
 import { formatWeight, QUICK_ADJUSTMENTS, WEIGHT_STEP } from '../../constants/progression';
 import { QUESTIONS, type SingleChoiceQuestion } from '../../constants/questionnaire';
-import { colors, spacing, typography } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/ProfileContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useAvatar } from '../../hooks/useAvatar';
 import { useBadges } from '../../hooks/useBadges';
 import { useMissionStreak } from '../../hooks/useMissionStreak';
@@ -73,6 +75,8 @@ type ActiveModal =
 export default function ProfilScreen() {
   const router = useRouter();
   const { user, isSubscribed, deleteAccount } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { profile, loading: profileLoading, refreshProfile } = useProfile();
   const { settings, loading: settingsLoading, update: updateSettings } = useSettings(user?.id);
   const { referredCount, loading: referralLoading, redeeming, redeemCode } = useReferral(
@@ -301,7 +305,7 @@ export default function ProfilScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={typography.title}>Profil</Text>
+        <Text style={styles.pageTitle}>Profil</Text>
 
         <ProfileHeader
           initial={initial}
@@ -523,7 +527,8 @@ export default function ProfilScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -540,9 +545,14 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
     gap: spacing.lg,
   },
+  pageTitle: {
+    ...typography.title,
+    color: colors.textPrimary,
+  },
   plainValue: {
     fontSize: 14,
     color: colors.textSecondary,
     maxWidth: 180,
   },
-});
+  });
+}

@@ -1,14 +1,16 @@
 import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import QuestionInput from '../../components/onboarding/QuestionInput';
 import Button from '../../components/ui/Button';
 import ProgressBar from '../../components/ui/ProgressBar';
 import { QUESTIONS, type Question } from '../../constants/questionnaire';
-import { colors, spacing, typography } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { spacing, typography } from '../../constants/theme';
 import { useOnboarding, type AnswerValue } from '../../context/OnboardingContext';
+import { useTheme } from '../../context/ThemeContext';
 
 const TOTAL = QUESTIONS.length;
 
@@ -20,6 +22,8 @@ function isAnswered(question: Question, value: AnswerValue | undefined): boolean
 
 export default function QuestionnaireScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { answers, setAnswer } = useOnboarding();
   const [index, setIndex] = useState(0);
 
@@ -84,46 +88,50 @@ export default function QuestionnaireScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.lg,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingTop: spacing.md,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progressRow: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  progressBar: {
-    flex: 1,
-  },
-  progressLabel: {
-    ...typography.caption,
-    minWidth: 44,
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: spacing.xl,
-  },
-  question: {
-    ...typography.title,
-  },
-  footer: {
-    paddingBottom: spacing.lg,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingHorizontal: spacing.lg,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingTop: spacing.md,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    progressRow: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    progressBar: {
+      flex: 1,
+    },
+    progressLabel: {
+      ...typography.caption,
+      color: colors.textSecondary,
+      minWidth: 44,
+    },
+    content: {
+      flex: 1,
+      justifyContent: 'center',
+      gap: spacing.xl,
+    },
+    question: {
+      ...typography.title,
+      color: colors.textPrimary,
+    },
+    footer: {
+      paddingBottom: spacing.lg,
+    },
+  });
+}

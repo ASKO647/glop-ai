@@ -1,6 +1,6 @@
 import { Link } from 'expo-router';
 import { Apple } from 'lucide-react-native';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import GoogleIcon from '../../components/onboarding/GoogleIcon';
@@ -8,9 +8,11 @@ import SocialButton from '../../components/onboarding/SocialButton';
 import Button from '../../components/ui/Button';
 import TextField from '../../components/ui/TextField';
 import { getOptionLabel } from '../../constants/questionnaire';
-import { colors, spacing, typography } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { asString, useOnboarding } from '../../context/OnboardingContext';
+import { useTheme } from '../../context/ThemeContext';
 import { mapAuthError } from '../../lib/authErrors';
 import { generateUniqueReferralCode } from '../../lib/referral';
 import { supabase } from '../../lib/supabase';
@@ -20,6 +22,8 @@ const MIN_PASSWORD_LENGTH = 6;
 export default function SignupScreen() {
   const { signUp, signInWithApple, signInWithGoogle } = useAuth();
   const { answers } = useOnboarding();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -102,7 +106,7 @@ export default function SignupScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.header}>
-          <Text style={typography.title}>Créer un compte</Text>
+          <Text style={[typography.title, { color: colors.textPrimary }]}>Créer un compte</Text>
           <Text style={[typography.body, { color: colors.textSecondary }]}>
             Sauvegarde ton plan et débloque ton coach IA.
           </Text>
@@ -112,7 +116,9 @@ export default function SignupScreen() {
           <View style={styles.socialButtons}>
             <SocialButton
               label="Continuer avec Apple"
-              icon={<Apple color={colors.background} size={18} fill={colors.background} />}
+              // The "white" SocialButton variant's background is a fixed white
+              // regardless of theme, so the Apple glyph must stay fixed dark too.
+              icon={<Apple color="#0a0d0c" size={18} fill="#0a0d0c" />}
               variant="white"
               onPress={signInWithApple}
             />
@@ -177,59 +183,61 @@ export default function SignupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.lg,
-  },
-  flex: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  header: {
-    marginTop: spacing.lg,
-    gap: spacing.xs,
-  },
-  middle: {
-    gap: spacing.lg,
-  },
-  socialButtons: {
-    gap: spacing.sm,
-  },
-  separatorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  separatorLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  separatorText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textTertiary,
-  },
-  form: {
-    gap: spacing.md,
-  },
-  formError: {
-    fontSize: 13,
-    color: colors.danger,
-  },
-  footer: {
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  loginLink: {
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
-  },
-  loginLinkText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.accent,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingHorizontal: spacing.lg,
+    },
+    flex: {
+      flex: 1,
+      justifyContent: 'space-between',
+    },
+    header: {
+      marginTop: spacing.lg,
+      gap: spacing.xs,
+    },
+    middle: {
+      gap: spacing.lg,
+    },
+    socialButtons: {
+      gap: spacing.sm,
+    },
+    separatorRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    separatorLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: colors.border,
+    },
+    separatorText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textTertiary,
+    },
+    form: {
+      gap: spacing.md,
+    },
+    formError: {
+      fontSize: 13,
+      color: colors.danger,
+    },
+    footer: {
+      gap: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    loginLink: {
+      alignItems: 'center',
+      paddingVertical: spacing.xs,
+    },
+    loginLinkText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.accent,
+    },
+  });
+}

@@ -12,9 +12,11 @@ import WeightChart from '../../components/progression/WeightChart';
 import WeightEntryModal from '../../components/progression/WeightEntryModal';
 import { isoDaysAgo } from '../../constants/dashboard';
 import { PERIOD_OPTIONS, computeProgressPercent, formatWeight, type PeriodId } from '../../constants/progression';
-import { colors, radii, spacing, typography } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/ProfileContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useMissionStreak } from '../../hooks/useMissionStreak';
 import { PHOTO_SLOTS, SLOT_LABELS, useProgressPhotos, type PhotoSlot, type ProgressPhoto } from '../../hooks/useProgressPhotos';
 import { useWeightLogs } from '../../hooks/useWeightLogs';
@@ -26,6 +28,8 @@ const PHOTOS_PERMISSION_DENIED_MESSAGE =
 
 export default function ProgressionScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { profile, loading: profileLoading } = useProfile();
   const { logs, loading: logsLoading, saving, saveTodayWeight } = useWeightLogs(user?.id);
   const { statusByDate, countsByDate, streak, activeDays, loading: streakLoading } = useMissionStreak(user?.id);
@@ -130,7 +134,7 @@ export default function ProgressionScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={typography.title}>Progression</Text>
+        <Text style={styles.pageTitle}>Progression</Text>
 
         <WeightCard
           currentWeight={currentWeight}
@@ -248,7 +252,8 @@ export default function ProgressionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -264,6 +269,10 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: 100,
     gap: spacing.lg,
+  },
+  pageTitle: {
+    ...typography.title,
+    color: colors.textPrimary,
   },
   section: {
     gap: spacing.md,
@@ -303,7 +312,8 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   periodLabelActive: {
-    color: colors.background,
+    // onAccent, not background: this label sits on the accent-colored active pill.
+    color: colors.onAccent,
   },
   chartLoading: {
     height: 180,
@@ -315,4 +325,5 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-});
+  });
+}

@@ -1,13 +1,15 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Clock, Flame, Gauge, Heart, Users } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from '../../components/ui/Button';
 import ProgressBar from '../../components/ui/ProgressBar';
 import { todayISODate } from '../../constants/dashboard';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { showAlert } from '../../lib/alert';
 import type { RecipeIngredient } from '../../lib/recipes';
 import { supabase } from '../../lib/supabase';
@@ -35,6 +37,8 @@ type DetailRecipe = {
 export default function RecipeDetailScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { id, recette: recetteParam, source: sourceParam, savedId: savedIdParam } = useLocalSearchParams<{
     id: string;
     recette?: string;
@@ -209,21 +213,21 @@ export default function RecipeDetailScreen() {
         </View>
 
         <View style={styles.metaCard}>
-          <MetaItem Icon={Flame} value={`${recipe.kcal}`} label="kcal" />
+          <MetaItem colors={colors} styles={styles} Icon={Flame} value={`${recipe.kcal}`} label="kcal" />
           <View style={styles.metaDivider} />
-          <MetaItem Icon={Clock} value={recipe.temps_preparation} label="Temps" />
+          <MetaItem colors={colors} styles={styles} Icon={Clock} value={recipe.temps_preparation} label="Temps" />
           <View style={styles.metaDivider} />
-          <MetaItem Icon={Gauge} value={recipe.difficulte} label="Difficulté" />
+          <MetaItem colors={colors} styles={styles} Icon={Gauge} value={recipe.difficulte} label="Difficulté" />
           <View style={styles.metaDivider} />
-          <MetaItem Icon={Users} value={`${portions}`} label="Portions" />
+          <MetaItem colors={colors} styles={styles} Icon={Users} value={`${portions}`} label="Portions" />
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Macronutriments</Text>
           <View style={styles.macroCard}>
-            <MacroRow label="Protéines" grams={recipe.proteines} max={macroMax} />
-            <MacroRow label="Glucides" grams={recipe.glucides} max={macroMax} />
-            <MacroRow label="Lipides" grams={recipe.lipides} max={macroMax} />
+            <MacroRow styles={styles} label="Protéines" grams={recipe.proteines} max={macroMax} />
+            <MacroRow styles={styles} label="Glucides" grams={recipe.glucides} max={macroMax} />
+            <MacroRow styles={styles} label="Lipides" grams={recipe.lipides} max={macroMax} />
           </View>
         </View>
 
@@ -261,7 +265,19 @@ export default function RecipeDetailScreen() {
   );
 }
 
-function MetaItem({ Icon, value, label }: { Icon: typeof Flame; value: string; label: string }) {
+function MetaItem({
+  colors,
+  styles,
+  Icon,
+  value,
+  label,
+}: {
+  colors: Colors;
+  styles: ReturnType<typeof makeStyles>;
+  Icon: typeof Flame;
+  value: string;
+  label: string;
+}) {
   return (
     <View style={styles.metaItem}>
       <Icon color={colors.accent} size={18} />
@@ -273,7 +289,17 @@ function MetaItem({ Icon, value, label }: { Icon: typeof Flame; value: string; l
   );
 }
 
-function MacroRow({ label, grams, max }: { label: string; grams: number; max: number }) {
+function MacroRow({
+  styles,
+  label,
+  grams,
+  max,
+}: {
+  styles: ReturnType<typeof makeStyles>;
+  label: string;
+  grams: number;
+  max: number;
+}) {
   return (
     <View style={styles.macroRow}>
       <View style={styles.macroLabelRow}>
@@ -285,181 +311,185 @@ function MacroRow({ label, grams, max }: { label: string; grams: number; max: nu
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  loadingScreen: {
-    flex: 1,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-    gap: spacing.md,
-  },
-  errorTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  errorButton: {
-    alignSelf: 'stretch',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
-  },
-  headerButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.full,
-    backgroundColor: colors.surface,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: 100,
-    gap: spacing.lg,
-  },
-  titleBlock: {
-    gap: spacing.sm,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
-  description: {
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  missingBlock: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    padding: spacing.sm,
-  },
-  missingText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.warning,
-  },
-  metaCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.md,
-  },
-  metaItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-  },
-  metaValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  metaLabel: {
-    fontSize: 10,
-    color: colors.labelMuted,
-  },
-  metaDivider: {
-    width: 1,
-    height: '60%',
-    backgroundColor: colors.border,
-  },
-  section: {
-    gap: spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  macroCard: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    gap: spacing.md,
-  },
-  macroRow: {
-    gap: 6,
-  },
-  macroLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  macroLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  macroValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textSecondary,
-  },
-  ingredientsList: {
-    gap: spacing.xs,
-  },
-  ingredientRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  bullet: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.accent,
-  },
-  ingredientText: {
-    fontSize: 14,
-    color: colors.textPrimary,
-    flex: 1,
-  },
-  stepsList: {
-    gap: spacing.md,
-  },
-  stepRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  stepCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: radii.full,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepNumber: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: colors.background,
-  },
-  stepText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.textPrimary,
-    lineHeight: 20,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    loadingScreen: {
+      flex: 1,
+      backgroundColor: colors.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.lg,
+      gap: spacing.md,
+    },
+    errorTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      textAlign: 'center',
+    },
+    errorButton: {
+      alignSelf: 'stretch',
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.md,
+    },
+    headerButton: {
+      width: 36,
+      height: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: radii.full,
+      backgroundColor: colors.surface,
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+    content: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: 100,
+      gap: spacing.lg,
+    },
+    titleBlock: {
+      gap: spacing.sm,
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: '800',
+      color: colors.textPrimary,
+    },
+    description: {
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+    missingBlock: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.md,
+      padding: spacing.sm,
+    },
+    missingText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.warning,
+    },
+    metaCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.lg,
+      paddingVertical: spacing.md,
+    },
+    metaItem: {
+      flex: 1,
+      alignItems: 'center',
+      gap: 4,
+    },
+    metaValue: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    metaLabel: {
+      fontSize: 10,
+      color: colors.labelMuted,
+    },
+    metaDivider: {
+      width: 1,
+      height: '60%',
+      backgroundColor: colors.border,
+    },
+    section: {
+      gap: spacing.sm,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    macroCard: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.lg,
+      padding: spacing.md,
+      gap: spacing.md,
+    },
+    macroRow: {
+      gap: 6,
+    },
+    macroLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    macroLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    macroValue: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.textSecondary,
+    },
+    ingredientsList: {
+      gap: spacing.xs,
+    },
+    ingredientRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    bullet: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.accent,
+    },
+    ingredientText: {
+      fontSize: 14,
+      color: colors.textPrimary,
+      flex: 1,
+    },
+    stepsList: {
+      gap: spacing.md,
+    },
+    stepRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    stepCircle: {
+      width: 28,
+      height: 28,
+      borderRadius: radii.full,
+      backgroundColor: colors.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    // Step number sits on an accent-colored circle — must use onAccent, not `background`
+    // (the old dark-only shortcut only worked because background happened to be dark).
+    stepNumber: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: colors.onAccent,
+    },
+    stepText: {
+      flex: 1,
+      fontSize: 14,
+      color: colors.textPrimary,
+      lineHeight: 20,
+    },
+  });
+}

@@ -10,9 +10,11 @@ import {
   Utensils,
   type LucideIcon,
 } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Modal, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radii, spacing } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { radii, spacing } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import { showAlert } from '../../lib/alert';
 
 type NavItem = {
@@ -53,6 +55,8 @@ type NavigationSheetProps = {
 
 export default function NavigationSheet({ visible, onClose }: NavigationSheetProps) {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [modalVisible, setModalVisible] = useState(visible);
   const translateY = useRef(new Animated.Value(SHEET_OFFSCREEN)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -147,82 +151,84 @@ export default function NavigationSheet({ visible, onClose }: NavigationSheetPro
   );
 }
 
-const styles = StyleSheet.create({
-  backdropWrap: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radii['2xl'],
-    borderTopRightRadius: radii['2xl'],
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-  },
-  header: {
-    alignItems: 'center',
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: radii.full,
-    backgroundColor: colors.border,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  grid: {
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  card: {
-    width: 110,
-    height: 110,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-  },
-  cardPressed: {
-    opacity: 0.7,
-  },
-  cardLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  cardLabelMuted: {
-    color: colors.textTertiary,
-  },
-  comingSoonBadge: {
-    position: 'absolute',
-    top: spacing.xs,
-    right: spacing.xs,
-    backgroundColor: colors.border,
-    borderRadius: radii.full,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-  },
-  comingSoonBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.labelMuted,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    backdropWrap: {
+      flex: 1,
+      justifyContent: 'flex-end',
+    },
+    backdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    },
+    sheet: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: radii['2xl'],
+      borderTopRightRadius: radii['2xl'],
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.xl,
+    },
+    header: {
+      alignItems: 'center',
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.md,
+      gap: spacing.sm,
+    },
+    handle: {
+      width: 40,
+      height: 4,
+      borderRadius: radii.full,
+      backgroundColor: colors.border,
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    grid: {
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    row: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    card: {
+      width: 110,
+      height: 110,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.lg,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.xs,
+    },
+    cardPressed: {
+      opacity: 0.7,
+    },
+    cardLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textPrimary,
+      textAlign: 'center',
+    },
+    cardLabelMuted: {
+      color: colors.textTertiary,
+    },
+    comingSoonBadge: {
+      position: 'absolute',
+      top: spacing.xs,
+      right: spacing.xs,
+      backgroundColor: colors.border,
+      borderRadius: radii.full,
+      paddingHorizontal: spacing.xs,
+      paddingVertical: 2,
+    },
+    comingSoonBadgeText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: colors.labelMuted,
+    },
+  });
+}

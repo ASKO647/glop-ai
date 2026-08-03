@@ -1,17 +1,21 @@
 import { Link } from 'expo-router';
 import { Apple } from 'lucide-react-native';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import GoogleIcon from '../../components/onboarding/GoogleIcon';
 import SocialButton from '../../components/onboarding/SocialButton';
 import Button from '../../components/ui/Button';
 import TextField from '../../components/ui/TextField';
-import { colors, spacing, typography } from '../../constants/theme';
+import type { Colors } from '../../constants/theme';
+import { spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { mapAuthError } from '../../lib/authErrors';
 
 export default function LoginScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { signIn, signInWithApple, signInWithGoogle } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -60,7 +64,7 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.header}>
-          <Text style={typography.title}>Content de te revoir</Text>
+          <Text style={styles.title}>Content de te revoir</Text>
           <Text style={[typography.body, { color: colors.textSecondary }]}>
             Connecte-toi pour retrouver ton plan.
           </Text>
@@ -70,7 +74,10 @@ export default function LoginScreen() {
           <View style={styles.socialButtons}>
             <SocialButton
               label="Continuer avec Apple"
-              icon={<Apple color={colors.background} size={18} fill={colors.background} />}
+              // The "white" SocialButton variant is a fixed white surface regardless of theme
+              // (see SocialButton.tsx), so this icon must stay a fixed dark color too —
+              // colors.background would turn near-white in light mode and vanish on it.
+              icon={<Apple color="#0a0d0c" size={18} fill="#0a0d0c" />}
               variant="white"
               onPress={signInWithApple}
             />
@@ -142,69 +149,75 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.lg,
-  },
-  flex: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  header: {
-    marginTop: spacing.lg,
-    gap: spacing.xs,
-  },
-  middle: {
-    gap: spacing.lg,
-  },
-  socialButtons: {
-    gap: spacing.sm,
-  },
-  separatorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  separatorLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  separatorText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textTertiary,
-  },
-  form: {
-    gap: spacing.md,
-  },
-  forgotPasswordLink: {
-    alignSelf: 'flex-end',
-    marginTop: spacing.xs,
-    paddingVertical: spacing.xs,
-  },
-  forgotPasswordText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  formError: {
-    fontSize: 13,
-    color: colors.danger,
-  },
-  footer: {
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  signupLink: {
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
-  },
-  signupLinkText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.accent,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingHorizontal: spacing.lg,
+    },
+    flex: {
+      flex: 1,
+      justifyContent: 'space-between',
+    },
+    header: {
+      marginTop: spacing.lg,
+      gap: spacing.xs,
+    },
+    title: {
+      ...typography.title,
+      color: colors.textPrimary,
+    },
+    middle: {
+      gap: spacing.lg,
+    },
+    socialButtons: {
+      gap: spacing.sm,
+    },
+    separatorRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    separatorLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: colors.border,
+    },
+    separatorText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textTertiary,
+    },
+    form: {
+      gap: spacing.md,
+    },
+    forgotPasswordLink: {
+      alignSelf: 'flex-end',
+      marginTop: spacing.xs,
+      paddingVertical: spacing.xs,
+    },
+    forgotPasswordText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    formError: {
+      fontSize: 13,
+      color: colors.danger,
+    },
+    footer: {
+      gap: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    signupLink: {
+      alignItems: 'center',
+      paddingVertical: spacing.xs,
+    },
+    signupLinkText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.accent,
+    },
+  });
+}
