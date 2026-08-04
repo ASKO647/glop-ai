@@ -14,6 +14,7 @@ import {
   Lock,
   LogOut,
   Mail,
+  Moon,
   RotateCcw,
   Scale,
   Shield,
@@ -42,7 +43,7 @@ import type { Colors } from '../../constants/theme';
 import { spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/ProfileContext';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme, type ThemeMode } from '../../context/ThemeContext';
 import { useAvatar } from '../../hooks/useAvatar';
 import { useBadges } from '../../hooks/useBadges';
 import { useMissionStreak } from '../../hooks/useMissionStreak';
@@ -61,6 +62,17 @@ const PACE_OPTIONS = (QUESTIONS.find((q) => q.id === 'pace') as SingleChoiceQues
 const WORKOUTS_OPTIONS = (QUESTIONS.find((q) => q.id === 'workouts_per_week') as SingleChoiceQuestion)
   .options as ChoiceOption[];
 
+const APPEARANCE_OPTIONS: (ChoiceOption & { id: ThemeMode })[] = [
+  { id: 'dark', label: 'Sombre' },
+  { id: 'light', label: 'Clair' },
+  { id: 'system', label: 'Automatique' },
+];
+const APPEARANCE_LABELS: Record<ThemeMode, string> = {
+  dark: 'Sombre',
+  light: 'Clair',
+  system: 'Automatique',
+};
+
 type ActiveModal =
   | 'goal'
   | 'targetWeight'
@@ -69,13 +81,14 @@ type ActiveModal =
   | 'referralCode'
   | 'morningReminder'
   | 'eveningReminder'
+  | 'appearance'
   | 'deleteAccount'
   | null;
 
 export default function ProfilScreen() {
   const router = useRouter();
   const { user, isSubscribed, deleteAccount } = useAuth();
-  const { colors } = useTheme();
+  const { colors, mode, setMode } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { profile, loading: profileLoading, refreshProfile } = useProfile();
   const { settings, loading: settingsLoading, update: updateSettings } = useSettings(user?.id);
@@ -413,6 +426,12 @@ export default function ProfilScreen() {
             right={<SettingsValue value={settings.unitePoids} />}
           />
           <SettingsRow icon={Globe} label="Langue" right={<Text style={styles.plainValue}>{settings.langue}</Text>} />
+          <SettingsRow
+            icon={Moon}
+            label="Apparence"
+            onPress={() => setActiveModal('appearance')}
+            right={<SettingsValue value={APPEARANCE_LABELS[mode]} />}
+          />
         </SettingsSection>
 
         <SettingsSection title="À propos">
@@ -486,6 +505,18 @@ export default function ProfilScreen() {
         selectedLabel={profile?.frequence_entrainement ?? null}
         onCancel={closeModal}
         onSelect={(option) => updateProfileField({ frequence_entrainement: option.label })}
+      />
+
+      <ChoiceModal
+        visible={activeModal === 'appearance'}
+        title="Apparence"
+        options={APPEARANCE_OPTIONS}
+        selectedLabel={APPEARANCE_LABELS[mode]}
+        onCancel={closeModal}
+        onSelect={(option) => {
+          setMode(option.id as ThemeMode);
+          closeModal();
+        }}
       />
 
       <ReferralCodeModal

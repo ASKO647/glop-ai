@@ -10,9 +10,11 @@ export type Colors = {
   surface: string;
   border: string;
   accent: string;
-  // Accent, alpha-blended — tinted background for selected pills/badges (10% alpha).
+  // Accent, alpha-blended — tinted background for selected pills/badges. Same 6% alpha as
+  // accentSurface below: a stronger tint measured ~4.5:1 or worse for `accent`-colored text
+  // stacked on top of an already-tinted `accentSurface` card (see PlanCard's trial pill).
   accentMuted: string;
-  // Accent, alpha-blended — tinted background for selected cards (6% alpha, more subtle).
+  // Accent, alpha-blended — tinted background for selected cards (6% alpha, subtle).
   accentSurface: string;
   // Text/icon color for content placed directly on an `accent`-colored surface (buttons, active
   // pills, badge circles). Never hardcode 'white'/'black' for this — the right choice flips
@@ -42,12 +44,12 @@ export const darkColors: Colors = {
   surface: '#101410',
   border: '#232a25',
   accent: '#c6ff3a',
-  accentMuted: 'rgba(198, 255, 58, 0.1)',
+  accentMuted: 'rgba(198, 255, 58, 0.06)',
   accentSurface: 'rgba(198, 255, 58, 0.06)',
   onAccent: '#0a0d0c',
   textPrimary: '#ffffff',
   textSecondary: '#8a9691',
-  textTertiary: '#5e6a63',
+  textTertiary: '#828d87',
   borderMuted: '#3a423c',
   stepTextDone: '#d5ddd8',
   labelMuted: '#7c8781',
@@ -69,12 +71,12 @@ export const lightColors: Colors = {
   surface: '#ffffff',
   border: '#e3e6df',
   accent: '#437000',
-  accentMuted: 'rgba(67, 112, 0, 0.1)',
+  accentMuted: 'rgba(67, 112, 0, 0.06)',
   accentSurface: 'rgba(67, 112, 0, 0.06)',
   onAccent: '#ffffff',
   textPrimary: '#0a0d0c',
   textSecondary: '#5f6b62',
-  textTertiary: '#66716a',
+  textTertiary: '#5c665f',
   borderMuted: '#c8ccc3',
   stepTextDone: '#1a211c',
   labelMuted: '#546056',

@@ -80,7 +80,7 @@ function makeStyles(colors: Colors) {
       color: colors.textTertiary,
     },
     futureLabel: {
-      color: colors.borderMuted,
+      color: colors.textTertiary,
     },
     todayLabel: {
       color: colors.textPrimary,

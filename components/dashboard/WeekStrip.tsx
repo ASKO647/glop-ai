@@ -102,7 +102,7 @@ function makeStyles(colors: Colors) {
       backgroundColor: colors.surface,
     },
     futureText: {
-      color: colors.borderMuted,
+      color: colors.textTertiary,
     },
     futureDisabled: {
       opacity: 0.5,
