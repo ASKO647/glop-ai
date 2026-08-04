@@ -8,6 +8,7 @@ import BadgeUnlockModal from '../../components/badges/BadgeUnlockModal';
 import CalorieCard from '../../components/dashboard/CalorieCard';
 import CategoryChip from '../../components/dashboard/CategoryChip';
 import DashboardHeader from '../../components/dashboard/DashboardHeader';
+import HydrationCard from '../../components/dashboard/HydrationCard';
 import MealTypeCard from '../../components/dashboard/MealTypeCard';
 import MissionCard from '../../components/dashboard/MissionCard';
 import PastDateBanner from '../../components/dashboard/PastDateBanner';
@@ -19,6 +20,7 @@ import AddFoodModal from '../../components/journal/AddFoodModal';
 import EditMealModal from '../../components/journal/EditMealModal';
 import MealItemMenuModal from '../../components/journal/MealItemMenuModal';
 import ChoiceModal, { type ChoiceOption } from '../../components/settings/ChoiceModal';
+import NumberStepperModal from '../../components/ui/NumberStepperModal';
 import {
   MEAL_TYPES,
   WORKOUT_CATEGORIES,
@@ -37,6 +39,7 @@ import {
   type MealType,
   type WorkoutCategoryId,
 } from '../../constants/dashboard';
+import { WATER_GOAL_MAX_ML, WATER_GOAL_MIN_ML, WATER_GOAL_STEP_ML } from '../../constants/hydration';
 import type { Colors } from '../../constants/theme';
 import { spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
@@ -45,6 +48,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { useBadges } from '../../hooks/useBadges';
 import { useDailyMissions } from '../../hooks/useDailyMissions';
 import { useMeals, type Meal } from '../../hooks/useMeals';
+import { useSettings } from '../../hooks/useSettings';
+import { useWaterLogs } from '../../hooks/useWaterLogs';
 import { useWeightLogs } from '../../hooks/useWeightLogs';
 import { showAlert, showConfirm } from '../../lib/alert';
 
@@ -78,7 +83,11 @@ export default function DashboardScreen() {
   } = useMeals(user?.id, selectedDate);
   const { logs: weightLogs, refetch: refetchWeightLogs } = useWeightLogs(user?.id);
   const { badges, pendingUnlock, dismissPendingUnlock } = useBadges();
+  const { totalToday: waterTotalToday, addWater, removeWater, refetch: refetchWater } = useWaterLogs(user?.id);
+  const { settings, update: updateSettings } = useSettings(user?.id);
   const [category, setCategory] = useState<WorkoutCategoryId>('all');
+  const [waterGoalModalVisible, setWaterGoalModalVisible] = useState(false);
+  const [savingWaterGoal, setSavingWaterGoal] = useState(false);
 
   const [expandedMealTypes, setExpandedMealTypes] = useState(defaultExpandedMealTypes());
   const [addFoodMealType, setAddFoodMealType] = useState<MealType | null>(null);
@@ -129,11 +138,31 @@ export default function DashboardScreen() {
     setMoveMealTarget(null);
   };
 
+  const handleQuickAddWater = async (ml: number) => {
+    const ok = await addWater(ml);
+    if (!ok) showAlert('Erreur', "Impossible d'ajouter cette quantité d'eau. Réessaie.");
+  };
+
+  const handleSetWaterTotal = async (targetMl: number) => {
+    const delta = targetMl - waterTotalToday;
+    const ok = delta > 0 ? await addWater(delta) : delta < 0 ? await removeWater(-delta) : true;
+    if (!ok) showAlert('Erreur', "Impossible de mettre à jour l'hydratation. Réessaie.");
+  };
+
+  const handleSaveWaterGoal = async (value: number) => {
+    setSavingWaterGoal(true);
+    const ok = await updateSettings({ objectifEauMl: value });
+    setSavingWaterGoal(false);
+    if (ok) setWaterGoalModalVisible(false);
+    else showAlert('Erreur', "Impossible d'enregistrer l'objectif. Réessaie.");
+  };
+
   useFocusEffect(
     useCallback(() => {
       refetchWeightLogs();
       refetchMeals();
-    }, [refetchWeightLogs, refetchMeals])
+      refetchWater();
+    }, [refetchWeightLogs, refetchMeals, refetchWater])
   );
 
   const displayName = getDisplayName(profile?.email ?? user?.email ?? null);
@@ -284,6 +313,14 @@ export default function DashboardScreen() {
           )}
         </View>
 
+        <HydrationCard
+          totalMl={waterTotalToday}
+          goalMl={settings.objectifEauMl}
+          onSetTotal={handleSetWaterTotal}
+          onQuickAdd={handleQuickAddWater}
+          onLongPressHeader={() => setWaterGoalModalVisible(true)}
+        />
+
         <View style={styles.section}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
             {WORKOUT_CATEGORIES.map((c) => (
@@ -376,6 +413,20 @@ export default function DashboardScreen() {
         selectedLabel={moveMealTarget ? getMealTypeInfo(moveMealTarget.mealType).label : null}
         onCancel={() => setMoveMealTarget(null)}
         onSelect={handleMoveMeal}
+      />
+
+      <NumberStepperModal
+        visible={waterGoalModalVisible}
+        title="Objectif quotidien"
+        initialValue={settings.objectifEauMl}
+        unit="ml"
+        step={WATER_GOAL_STEP_ML}
+        min={WATER_GOAL_MIN_ML}
+        max={WATER_GOAL_MAX_ML}
+        quickAdjustments={[-500, -250, 250, 500]}
+        saving={savingWaterGoal}
+        onCancel={() => setWaterGoalModalVisible(false)}
+        onSave={handleSaveWaterGoal}
       />
     </SafeAreaView>
   );

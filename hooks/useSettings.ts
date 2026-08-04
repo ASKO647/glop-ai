@@ -11,6 +11,7 @@ export type UserSettings = {
   unitePoids: WeightUnit;
   langue: string;
   themeMode: ThemeMode;
+  objectifEauMl: number;
 };
 
 // 'system' (not a hardcoded scheme) so screens rendered before a settings row is loaded —
@@ -23,6 +24,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   unitePoids: 'kg',
   langue: 'Français',
   themeMode: 'system',
+  objectifEauMl: 2000,
 };
 
 type SettingsRow = {
@@ -32,9 +34,11 @@ type SettingsRow = {
   unite_poids: WeightUnit;
   langue: string;
   theme_mode: ThemeMode;
+  objectif_eau_ml: number;
 };
 
-const SETTINGS_COLUMNS = 'notifications_actives, rappel_matin, rappel_soir, unite_poids, langue, theme_mode';
+const SETTINGS_COLUMNS =
+  'notifications_actives, rappel_matin, rappel_soir, unite_poids, langue, theme_mode, objectif_eau_ml';
 
 function fromRow(row: SettingsRow): UserSettings {
   return {
@@ -44,6 +48,7 @@ function fromRow(row: SettingsRow): UserSettings {
     unitePoids: row.unite_poids,
     langue: row.langue,
     themeMode: row.theme_mode,
+    objectifEauMl: row.objectif_eau_ml,
   };
 }
 
@@ -55,6 +60,7 @@ function toRow(settings: UserSettings): SettingsRow {
     unite_poids: settings.unitePoids,
     langue: settings.langue,
     theme_mode: settings.themeMode,
+    objectif_eau_ml: settings.objectifEauMl,
   };
 }
 
