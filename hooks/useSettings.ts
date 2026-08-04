@@ -12,6 +12,7 @@ export type UserSettings = {
   langue: string;
   themeMode: ThemeMode;
   objectifEauMl: number;
+  programmeJeune: string;
 };
 
 // 'system' (not a hardcoded scheme) so screens rendered before a settings row is loaded —
@@ -25,6 +26,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   langue: 'Français',
   themeMode: 'system',
   objectifEauMl: 2000,
+  programmeJeune: '16:8',
 };
 
 type SettingsRow = {
@@ -35,10 +37,11 @@ type SettingsRow = {
   langue: string;
   theme_mode: ThemeMode;
   objectif_eau_ml: number;
+  programme_jeune: string;
 };
 
 const SETTINGS_COLUMNS =
-  'notifications_actives, rappel_matin, rappel_soir, unite_poids, langue, theme_mode, objectif_eau_ml';
+  'notifications_actives, rappel_matin, rappel_soir, unite_poids, langue, theme_mode, objectif_eau_ml, programme_jeune';
 
 function fromRow(row: SettingsRow): UserSettings {
   return {
@@ -49,6 +52,7 @@ function fromRow(row: SettingsRow): UserSettings {
     langue: row.langue,
     themeMode: row.theme_mode,
     objectifEauMl: row.objectif_eau_ml,
+    programmeJeune: row.programme_jeune,
   };
 }
 
@@ -61,6 +65,7 @@ function toRow(settings: UserSettings): SettingsRow {
     langue: settings.langue,
     theme_mode: settings.themeMode,
     objectif_eau_ml: settings.objectifEauMl,
+    programme_jeune: settings.programmeJeune,
   };
 }
 
