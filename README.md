@@ -221,9 +221,10 @@ app/
                               notifications), semaine, carte calories (+ CTA "Continuer" → scanner),
                               missions du jour, Journal alimentaire (4 `MealTypeCard` empilées,
                               lien "Voir le journal" → `journal.tsx`), carte Hydratation (verres +
-                              objectif, appui long pour le modifier), catégories de séances, séances
-                              recommandées (→ workout/[id]), stats rapides (→ progression), astuce —
-                              poids/repas/eau rechargés via `useFocusEffect` à chaque retour sur l'onglet
+                              objectif, appui long pour le modifier), carte IMC (tap → modale
+                              explicative), catégories de séances, séances recommandées
+                              (→ workout/[id]), stats rapides (→ progression), astuce — poids/repas/eau
+                              rechargés via `useFocusEffect` à chaque retour sur l'onglet
     meals.tsx                 Historique complet des repas, groupé par jour avec total kcal
                               (onglet caché — `href: null`, atteint via "Mes repas" dans le menu Explorer)
     coach.tsx                  Conversation avec le coach IA (Anthropic) — historique persisté
@@ -232,9 +233,9 @@ app/
     scanner.tsx                Scan photo d'un repas (Anthropic vision) — aperçu, analyse, carte
                               résultat (kcal/macros/aliments), enregistrement dans `meals`
     progression.tsx            Poids (carte + stepper sans clavier + courbe SVG), 4 stats, carte
-                              Hydratation (moyenne 7 jours + mini-barres), régularité 30 jours
-                              (`daily_missions`), photos avant/après (`progress_photos`
-                              + bucket Storage privé)
+                              IMC compacte, carte Hydratation (moyenne 7 jours + mini-barres),
+                              régularité 30 jours (`daily_missions`), photos avant/après
+                              (`progress_photos` + bucket Storage privé)
     profil.tsx                 En-tête (avatar/badge/stats) + abonnement + parrainage + tous les
                               anciens "Paramètres" (objectifs, compte, notifications, préférences,
                               à propos, mes données, zone de danger) — voir "Écran Profil"
@@ -821,6 +822,8 @@ create policy "Users can delete their own water logs"
 ```
 
 `water_logs` est un journal d'événements plutôt qu'une ligne par jour : chaque ajout ("+ 250 ml", "+ 500 ml", un tap sur un verre) insère une ligne avec une `quantite_ml` positive, chaque retrait (décocher un verre déjà rempli) insère une ligne négative — le total du jour est simplement la somme des lignes de `date = aujourd'hui` (`hooks/useWaterLogs.ts`). Ça évite toute logique d'upsert/concurrence et donne un historique déjà prêt pour les 30 derniers jours sans requête supplémentaire.
+
+**IMC.** Pas de nouvelle table : `constants/bmi.ts` calcule l'indice à partir du poids (dernière ligne de `weight_logs`, repli sur `profiles.poids_actuel` — même logique déjà utilisée pour "Poids actuel"/"Écart restant") et de `profiles.taille`. Si la taille est absente, `components/dashboard/BmiCard.tsx` affiche un état invitant à compléter le profil plutôt qu'un calcul erroné. Les quatre catégories (insuffisance pondérale / corpulence normale / surpoids / obésité) ont chacune une couleur dédiée et volontairement désaturée (`bmiCategoryColor`, distincte de `colors.warning`/`colors.danger` qui sont réservées aux vraies alertes) — seule "normale" reprend `colors.accent`. La barre de classification a une largeur de segment proportionnelle aux plages réelles, sur un domaine visuel borné à [15, 40] (`BMI_DOMAIN_MIN/MAX`) : l'obésité n'a pas de borne haute réelle, elle est juste épinglée au bord droit au-delà de 40. Le texte d'explication est rédigé sans jugement ("Ta corpulence est dans la plage recommandée" plutôt que "Tu es en surpoids"), et la modale déclenchée par un tap rappelle explicitement que l'IMC ne tient compte ni de la masse musculaire ni de la répartition des graisses et ne remplace pas un avis médical. `components/progression/BmiSummaryCard.tsx` réutilise les mêmes fonctions dans un format compact (valeur, statut, mini-barre) sans le tap explicatif.
 
 ```sql
 create table referrals (
