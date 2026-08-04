@@ -220,9 +220,10 @@ app/
     index.tsx                Dashboard : logo "GLOWUP AI" en tête, header (avatar → profil, cloche →
                               notifications), semaine, carte calories (+ CTA "Continuer" → scanner),
                               missions du jour, Journal alimentaire (4 `MealTypeCard` empilées,
-                              lien "Voir le journal" → `journal.tsx`), catégories de séances, séances
+                              lien "Voir le journal" → `journal.tsx`), carte Hydratation (verres +
+                              objectif, appui long pour le modifier), catégories de séances, séances
                               recommandées (→ workout/[id]), stats rapides (→ progression), astuce —
-                              poids/repas rechargés via `useFocusEffect` à chaque retour sur l'onglet
+                              poids/repas/eau rechargés via `useFocusEffect` à chaque retour sur l'onglet
     meals.tsx                 Historique complet des repas, groupé par jour avec total kcal
                               (onglet caché — `href: null`, atteint via "Mes repas" dans le menu Explorer)
     coach.tsx                  Conversation avec le coach IA (Anthropic) — historique persisté
@@ -230,8 +231,9 @@ app/
                               bulle système en cas d'erreur réseau
     scanner.tsx                Scan photo d'un repas (Anthropic vision) — aperçu, analyse, carte
                               résultat (kcal/macros/aliments), enregistrement dans `meals`
-    progression.tsx            Poids (carte + stepper sans clavier + courbe SVG), 4 stats, régularité
-                              30 jours (`daily_missions`), photos avant/après (`progress_photos`
+    progression.tsx            Poids (carte + stepper sans clavier + courbe SVG), 4 stats, carte
+                              Hydratation (moyenne 7 jours + mini-barres), régularité 30 jours
+                              (`daily_missions`), photos avant/après (`progress_photos`
                               + bucket Storage privé)
     profil.tsx                 En-tête (avatar/badge/stats) + abonnement + parrainage + tous les
                               anciens "Paramètres" (objectifs, compte, notifications, préférences,
@@ -751,6 +753,7 @@ create table user_settings (
   unite_poids text not null default 'kg',
   langue text not null default 'Français',
   theme_mode text not null default 'dark',
+  objectif_eau_ml integer not null default 2000,
   updated_at timestamptz not null default now()
 );
 
@@ -779,6 +782,45 @@ If `user_settings` already exists from before the theme toggle, add the column r
 ```sql
 alter table user_settings add column theme_mode text not null default 'dark';
 ```
+
+If `user_settings` already exists from before the hydration tracker, add the daily water goal column the same way:
+
+```sql
+alter table user_settings add column objectif_eau_ml integer default 2000;
+```
+
+Table à créer pour le suivi de l'hydratation :
+
+```sql
+create table water_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  date date not null,
+  quantite_ml int not null,
+  created_at timestamptz not null default now()
+);
+
+alter table water_logs enable row level security;
+
+create policy "Users can insert their own water logs"
+  on water_logs for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can read their own water logs"
+  on water_logs for select
+  using (auth.uid() = user_id);
+
+create policy "Users can update their own water logs"
+  on water_logs for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Users can delete their own water logs"
+  on water_logs for delete
+  using (auth.uid() = user_id);
+```
+
+`water_logs` est un journal d'événements plutôt qu'une ligne par jour : chaque ajout ("+ 250 ml", "+ 500 ml", un tap sur un verre) insère une ligne avec une `quantite_ml` positive, chaque retrait (décocher un verre déjà rempli) insère une ligne négative — le total du jour est simplement la somme des lignes de `date = aujourd'hui` (`hooks/useWaterLogs.ts`). Ça évite toute logique d'upsert/concurrence et donne un historique déjà prêt pour les 30 derniers jours sans requête supplémentaire.
 
 ```sql
 create table referrals (

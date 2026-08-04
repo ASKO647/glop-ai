@@ -3,6 +3,7 @@ import { Flag, Ruler, Target, TrendingUp } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import HydrationSummaryCard from '../../components/progression/HydrationSummaryCard';
 import PhotosCard from '../../components/progression/PhotosCard';
 import ProgressAnalysisCard from '../../components/progression/ProgressAnalysisCard';
 import StatTile from '../../components/progression/StatTile';
@@ -19,6 +20,8 @@ import { useProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useMissionStreak } from '../../hooks/useMissionStreak';
 import { PHOTO_SLOTS, SLOT_LABELS, useProgressPhotos, type PhotoSlot, type ProgressPhoto } from '../../hooks/useProgressPhotos';
+import { useSettings } from '../../hooks/useSettings';
+import { useWaterLogs } from '../../hooks/useWaterLogs';
 import { useWeightLogs } from '../../hooks/useWeightLogs';
 import { showAlert } from '../../lib/alert';
 import { analyzeProgress, type ProgressAnalysis } from '../../lib/progressAnalysis';
@@ -34,6 +37,9 @@ export default function ProgressionScreen() {
   const { logs, loading: logsLoading, saving, saveTodayWeight } = useWeightLogs(user?.id);
   const { statusByDate, countsByDate, streak, activeDays, loading: streakLoading } = useMissionStreak(user?.id);
   const { photosBySlot, loading: photosLoading, addPhoto, deletePhoto } = useProgressPhotos(user?.id);
+  const { history: waterHistory } = useWaterLogs(user?.id);
+  const { settings } = useSettings(user?.id);
+  const weeklyWaterHistory = useMemo(() => waterHistory.slice(-7), [waterHistory]);
 
   const [period, setPeriod] = useState<PeriodId>('30');
   const [modalVisible, setModalVisible] = useState(false);
@@ -206,6 +212,11 @@ export default function ProgressionScreen() {
               />
             </View>
           )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Hydratation</Text>
+          <HydrationSummaryCard history={weeklyWaterHistory} goalMl={settings.objectifEauMl} />
         </View>
 
         <View style={styles.section}>

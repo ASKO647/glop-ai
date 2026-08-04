@@ -19,6 +19,7 @@ export type NumberStepperModalProps = {
   /** Quick-adjustment shortcut pills (e.g. [-1, -0.5, 0.5, 1]). Omit to hide the row. */
   quickAdjustments?: number[];
   min?: number;
+  max?: number;
   saving?: boolean;
   onCancel: () => void;
   onSave: (value: number) => void;
@@ -42,6 +43,7 @@ export default function NumberStepperModal({
   step = 0.1,
   quickAdjustments,
   min = 0,
+  max,
   saving = false,
   onCancel,
   onSave,
@@ -79,7 +81,10 @@ export default function NumberStepperModal({
   };
 
   const adjust = (delta: number) => {
-    setValue((prev) => Math.max(min, roundToStep(prev + delta)));
+    setValue((prev) => {
+      const next = Math.max(min, roundToStep(prev + delta));
+      return max !== undefined ? Math.min(max, next) : next;
+    });
   };
 
   const handlePressIn = (delta: number) => {
