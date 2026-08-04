@@ -1,5 +1,5 @@
 import { forwardRef, useMemo } from 'react';
-import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { StyleSheet, Text, TextInput, View, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
@@ -7,14 +7,16 @@ import { useTheme } from '../../context/ThemeContext';
 type TextFieldProps = TextInputProps & {
   label?: string;
   error?: string;
+  /** Extra style for the outer wrapper (e.g. `flex: 1` to lay several fields out in a row). */
+  containerStyle?: StyleProp<ViewStyle>;
 };
 
-const TextField = forwardRef<TextInput, TextFieldProps>(({ label, error, style, ...rest }, ref) => {
+const TextField = forwardRef<TextInput, TextFieldProps>(({ label, error, style, containerStyle, ...rest }, ref) => {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
         ref={ref}

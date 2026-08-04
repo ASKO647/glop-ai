@@ -3,9 +3,10 @@ import { ArrowLeft, Clock, Flame, Gauge, Heart, Users } from 'lucide-react-nativ
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import MealTypePills from '../../components/dashboard/MealTypePills';
 import Button from '../../components/ui/Button';
 import ProgressBar from '../../components/ui/ProgressBar';
-import { todayISODate } from '../../constants/dashboard';
+import { guessMealTypeNow, todayISODate, type MealType } from '../../constants/dashboard';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
@@ -52,6 +53,7 @@ export default function RecipeDetailScreen() {
   const [savedId, setSavedId] = useState<string | null>(savedIdParam || null);
   const [favoriting, setFavoriting] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [mealType, setMealType] = useState<MealType>(guessMealTypeNow());
 
   const isFavorite = !!savedId;
 
@@ -143,6 +145,7 @@ export default function RecipeDetailScreen() {
       proteines: recipe.proteines,
       glucides: recipe.glucides,
       lipides: recipe.lipides,
+      meal_type: mealType,
     });
     setAdding(false);
 
@@ -257,6 +260,11 @@ export default function RecipeDetailScreen() {
               </View>
             ))}
           </View>
+        </View>
+
+        <View style={styles.mealTypeBlock}>
+          <Text style={styles.mealTypeLabel}>Ajouter à</Text>
+          <MealTypePills value={mealType} onChange={setMealType} />
         </View>
 
         <Button label="Ajouter à mes repas" onPress={handleAddToMeals} loading={adding} />
@@ -417,6 +425,14 @@ function makeStyles(colors: Colors) {
       fontSize: 16,
       fontWeight: '700',
       color: colors.textPrimary,
+    },
+    mealTypeBlock: {
+      gap: spacing.sm,
+    },
+    mealTypeLabel: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.textSecondary,
     },
     macroCard: {
       backgroundColor: colors.surface,

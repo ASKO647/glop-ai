@@ -1,3 +1,4 @@
+import { Apple, Moon, Sun, Sunrise, type LucideIcon } from 'lucide-react-native';
 import type { ImageSourcePropType } from 'react-native';
 import type { Profile } from '../context/ProfileContext';
 import { appImage } from './images';
@@ -57,6 +58,13 @@ export function todayISODate(): string {
 export function isoDaysAgo(days: number): string {
   const date = new Date();
   date.setDate(date.getDate() - days);
+  return toISODate(date);
+}
+
+/** `iso` shifted by `days` (negative to go back) — unlike `isoDaysAgo`, works from any date, not just today. */
+export function shiftISODate(iso: string, days: number): string {
+  const date = new Date(`${iso}T00:00:00`);
+  date.setDate(date.getDate() + days);
   return toISODate(date);
 }
 
@@ -179,6 +187,41 @@ export function formatMissionValue(key: MissionKey, value: number): string {
   if (key === 'steps') return value.toLocaleString('fr-FR');
   if (key === 'water') return formatLiters(value);
   return String(value);
+}
+
+// ---------------------------------------------------------------------------
+// Meal journal (petit-déjeuner / déjeuner / dîner / collation)
+// ---------------------------------------------------------------------------
+
+export type MealType = 'petit-dejeuner' | 'dejeuner' | 'diner' | 'collation';
+
+export type MealTypeInfo = { id: MealType; label: string; Icon: LucideIcon };
+
+export const MEAL_TYPES: MealTypeInfo[] = [
+  { id: 'petit-dejeuner', label: 'Petit-déjeuner', Icon: Sunrise },
+  { id: 'dejeuner', label: 'Déjeuner', Icon: Sun },
+  { id: 'diner', label: 'Dîner', Icon: Moon },
+  { id: 'collation', label: 'Collation', Icon: Apple },
+];
+
+export function getMealTypeInfo(mealType: MealType): MealTypeInfo {
+  return MEAL_TYPES.find((m) => m.id === mealType) ?? MEAL_TYPES[0];
+}
+
+/** Best-effort guess of which meal a given hour belongs to, for preselecting the scanner/recipe pill. */
+export function guessMealTypeFromHour(hour: number): MealType {
+  if (hour < 11) return 'petit-dejeuner';
+  if (hour < 15) return 'dejeuner';
+  if (hour < 18) return 'collation';
+  return 'diner';
+}
+
+export function guessMealTypeNow(): MealType {
+  return guessMealTypeFromHour(new Date().getHours());
+}
+
+export function defaultExpandedMealTypes(): Record<MealType, boolean> {
+  return { 'petit-dejeuner': true, dejeuner: true, diner: true, collation: true };
 }
 
 // ---------------------------------------------------------------------------

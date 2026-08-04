@@ -99,10 +99,12 @@ Cette base contient la **structure de navigation**, des **écrans vides** (titre
      user_id uuid not null references auth.users(id) on delete cascade,
      date date not null,
      name text not null,
+     portion text,
      kcal int not null,
      proteines int not null default 0,
      glucides int not null default 0,
      lipides int not null default 0,
+     meal_type text not null default 'dejeuner' check (meal_type in ('petit-dejeuner','dejeuner','diner','collation')),
      created_at timestamptz not null default now()
    );
 
@@ -126,7 +128,15 @@ Cette base contient la **structure de navigation**, des **écrans vides** (titre
      using (auth.uid() = user_id);
    ```
 
-   `daily_missions` a une ligne par jour et par mission (`date` + `mission_key`) — le dashboard en insère 4 par défaut (eau, pas, séance, skincare) dès qu'aucune ligne n'existe encore pour la date du jour, donc les missions se "réinitialisent" naturellement chaque jour sans job planifié. `meals` alimente à la fois le récapitulatif calorique du dashboard (repas du jour) et l'historique complet (`meals.tsx`, groupé par `date`).
+   Sur un projet existant, applique plutôt cette migration (le journal alimentaire à 4 repas ajoute `meal_type`, et l'ajout manuel d'aliment ajoute `portion`) :
+
+   ```sql
+   alter table meals add column meal_type text default 'dejeuner';
+   alter table meals add constraint meals_type_check check (meal_type in ('petit-dejeuner','dejeuner','diner','collation'));
+   alter table meals add column portion text;
+   ```
+
+   `daily_missions` a une ligne par jour et par mission (`date` + `mission_key`) — le dashboard en insère 4 par défaut (eau, pas, séance, skincare) dès qu'aucune ligne n'existe encore pour la date du jour, donc les missions se "réinitialisent" naturellement chaque jour sans job planifié. `meals` alimente le récapitulatif calorique du dashboard, le journal détaillé à 4 repas (`app/journal.tsx`, groupé par `meal_type` — voir `hooks/useMeals.ts`) et l'historique complet (`meals.tsx`, groupé par `date`). `portion` est optionnel : rempli pour les ajouts manuels, laissé `null` pour les repas ajoutés via le scanner ou une recette.
 
 4. Crée la table `messages` (historique du coach IA) et ajoute ta clé Anthropic :
 
@@ -209,12 +219,12 @@ app/
                               dans un cercle plein #c6ff3a de 44px)
     index.tsx                Dashboard : logo "GLOWUP AI" en tête, header (avatar → profil, cloche →
                               notifications), semaine, carte calories (+ CTA "Continuer" → scanner),
-                              missions du jour, repas du jour (ou état vide → scanner), catégories de
-                              séances, séances recommandées (→ workout/[id]), stats rapides (→
-                              progression), astuce — poids/repas rechargés via `useFocusEffect` à
-                              chaque retour sur l'onglet
+                              missions du jour, Journal alimentaire (4 `MealTypeCard` empilées,
+                              lien "Voir le journal" → `journal.tsx`), catégories de séances, séances
+                              recommandées (→ workout/[id]), stats rapides (→ progression), astuce —
+                              poids/repas rechargés via `useFocusEffect` à chaque retour sur l'onglet
     meals.tsx                 Historique complet des repas, groupé par jour avec total kcal
-                              (onglet caché — `href: null`, atteint via "Voir tout"/carte repas)
+                              (onglet caché — `href: null`, atteint via "Mes repas" dans le menu Explorer)
     coach.tsx                  Conversation avec le coach IA (Anthropic) — historique persisté
                               (50 derniers messages), suggestions en pilules au premier lancement,
                               bulle système en cas d'erreur réseau
@@ -235,6 +245,10 @@ app/
                               de reps, minuteur de repos (60s ±15s), barre de progression globale,
                               navigation Précédent/Suivant, CTA "Terminer" sur le dernier exercice
                               (marque la mission "workout" du jour comme accomplie)
+  journal.tsx                 Journal alimentaire complet d'une journée : sélecteur de date
+                              (précédent/suivant/Aujourd'hui), résumé (anneau calorique + 3 barres de
+                              macros), 4 `MealTypeCard` détaillées, total du jour — écran racine
+                              (hors tabs), atteint via "Voir le journal" depuis le dashboard
   notifications.tsx           Liste des notifications, état vide propre — écran racine (hors tabs)
   legal/
     terms.tsx                  Conditions d'utilisation — texte placeholder

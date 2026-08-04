@@ -4,10 +4,11 @@ import { Camera as CameraIcon } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import MealTypePills from '../../components/dashboard/MealTypePills';
 import AppImage from '../../components/ui/AppImage';
 import Button from '../../components/ui/Button';
 import ProgressBar from '../../components/ui/ProgressBar';
-import { todayISODate } from '../../constants/dashboard';
+import { guessMealTypeNow, todayISODate, type MealType } from '../../constants/dashboard';
 import { appImage } from '../../constants/images';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
@@ -43,6 +44,7 @@ export default function ScannerScreen() {
   const [analysis, setAnalysis] = useState<MealAnalysis | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [mealType, setMealType] = useState<MealType>(guessMealTypeNow());
 
   const busy = screenState === 'analyzing' || saving;
 
@@ -115,6 +117,7 @@ export default function ScannerScreen() {
     setPhotoWidth(0);
     setAnalysis(null);
     setErrorMessage(null);
+    setMealType(guessMealTypeNow());
   };
 
   const handleSave = async () => {
@@ -128,6 +131,7 @@ export default function ScannerScreen() {
       proteines: analysis.proteines,
       glucides: analysis.glucides,
       lipides: analysis.lipides,
+      meal_type: mealType,
     });
     setSaving(false);
 
@@ -196,6 +200,13 @@ export default function ScannerScreen() {
                 ))}
               </View>
             )}
+          </View>
+        )}
+
+        {screenState === 'result' && (
+          <View style={styles.mealTypeBlock}>
+            <Text style={styles.mealTypeLabel}>Ajouter à</Text>
+            <MealTypePills value={mealType} onChange={setMealType} />
           </View>
         )}
       </ScrollView>
@@ -381,6 +392,14 @@ function makeStyles(colors: Colors) {
   },
   foodLine: {
     fontSize: 13,
+    color: colors.textSecondary,
+  },
+  mealTypeBlock: {
+    gap: spacing.sm,
+  },
+  mealTypeLabel: {
+    fontSize: 13,
+    fontWeight: '700',
     color: colors.textSecondary,
   },
   actions: {

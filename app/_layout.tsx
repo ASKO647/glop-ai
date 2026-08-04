@@ -46,6 +46,7 @@ function RootNavigator() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="workout/[id]" />
           <Stack.Screen name="workout/session/[id]" />
+          <Stack.Screen name="journal" />
           <Stack.Screen name="notifications" />
           <Stack.Screen name="badges" />
           <Stack.Screen name="recipes" />
