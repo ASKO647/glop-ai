@@ -24,7 +24,7 @@ export default function BadgeMedal({ Icon, unlocked, size, iconSize }: BadgeMeda
         unlocked ? styles.circleUnlocked : styles.circleLocked,
       ]}
     >
-      <Icon color={unlocked ? colors.onAccent : colors.borderMuted} size={iconSize} />
+      <Icon color={unlocked ? colors.onAccent : colors.textTertiary} size={iconSize} />
     </View>
   );
 }

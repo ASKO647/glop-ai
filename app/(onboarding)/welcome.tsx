@@ -20,6 +20,7 @@ export default function WelcomeScreen() {
         source={appImage('welcome-bg.jpg')}
         style={StyleSheet.absoluteFill}
         resizeMode="cover"
+        darkPlaceholder
       />
       <LinearGradient
         colors={['rgba(10,13,12,0.25)', 'rgba(10,13,12,0.7)', colors.background]}

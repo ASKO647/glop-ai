@@ -13,13 +13,16 @@ export type UserSettings = {
   themeMode: ThemeMode;
 };
 
+// 'system' (not a hardcoded scheme) so screens rendered before a settings row is loaded —
+// pre-login onboarding, or the brief window while an authenticated user's row is still
+// fetching — follow the OS preference instead of flashing dark on a light-mode device.
 const DEFAULT_SETTINGS: UserSettings = {
   notificationsActives: true,
   rappelMatin: '08:00',
   rappelSoir: '20:00',
   unitePoids: 'kg',
   langue: 'Français',
-  themeMode: 'dark',
+  themeMode: 'system',
 };
 
 type SettingsRow = {
