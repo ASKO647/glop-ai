@@ -1,34 +1,40 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Camera } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Button from '../../components/ui/Button';
 import Logo from '../../components/ui/Logo';
 import BadgeMedal from '../../components/badges/BadgeMedal';
 import BadgeUnlockModal from '../../components/badges/BadgeUnlockModal';
 import CalorieCard from '../../components/dashboard/CalorieCard';
 import CategoryChip from '../../components/dashboard/CategoryChip';
 import DashboardHeader from '../../components/dashboard/DashboardHeader';
-import MealRow from '../../components/dashboard/MealRow';
+import MealTypeCard from '../../components/dashboard/MealTypeCard';
 import MissionCard from '../../components/dashboard/MissionCard';
 import PastDateBanner from '../../components/dashboard/PastDateBanner';
 import StatCard from '../../components/dashboard/StatCard';
 import TipCard from '../../components/dashboard/TipCard';
 import WeekStrip from '../../components/dashboard/WeekStrip';
 import WorkoutCard from '../../components/dashboard/WorkoutCard';
+import AddFoodModal from '../../components/journal/AddFoodModal';
+import EditMealModal from '../../components/journal/EditMealModal';
+import MealItemMenuModal from '../../components/journal/MealItemMenuModal';
+import ChoiceModal, { type ChoiceOption } from '../../components/settings/ChoiceModal';
 import {
+  MEAL_TYPES,
   WORKOUT_CATEGORIES,
   WORKOUT_SESSIONS,
   computeCalorieTarget,
   computeMacroTargets,
   computeStreak,
+  defaultExpandedMealTypes,
   formatDisplayDate,
   getDisplayName,
+  getMealTypeInfo,
   getProgramDay,
   getTipOfTheDay,
   PROGRAM_LENGTH_DAYS,
   todayISODate,
+  type MealType,
   type WorkoutCategoryId,
 } from '../../constants/dashboard';
 import type { Colors } from '../../constants/theme';
@@ -38,10 +44,12 @@ import { useProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useBadges } from '../../hooks/useBadges';
 import { useDailyMissions } from '../../hooks/useDailyMissions';
-import { useMeals } from '../../hooks/useMeals';
+import { useMeals, type Meal } from '../../hooks/useMeals';
 import { useWeightLogs } from '../../hooks/useWeightLogs';
+import { showAlert, showConfirm } from '../../lib/alert';
 
 const RECOMMENDED_COUNT = 3;
+const MOVE_TO_OPTIONS: ChoiceOption[] = MEAL_TYPES.map((m) => ({ id: m.id, label: m.label }));
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -57,10 +65,69 @@ export default function DashboardScreen() {
     profileLoading,
     selectedDate
   );
-  const { meals, totals, loading: mealsLoading, refetch: refetchMeals } = useMeals(user?.id, selectedDate);
+  const {
+    mealsByType,
+    totalsByType,
+    totals,
+    loading: mealsLoading,
+    refetch: refetchMeals,
+    addMeal,
+    updateMeal,
+    deleteMeal,
+    moveMeal,
+  } = useMeals(user?.id, selectedDate);
   const { logs: weightLogs, refetch: refetchWeightLogs } = useWeightLogs(user?.id);
   const { badges, pendingUnlock, dismissPendingUnlock } = useBadges();
   const [category, setCategory] = useState<WorkoutCategoryId>('all');
+
+  const [expandedMealTypes, setExpandedMealTypes] = useState(defaultExpandedMealTypes());
+  const [addFoodMealType, setAddFoodMealType] = useState<MealType | null>(null);
+  const [addingFood, setAddingFood] = useState(false);
+  const [menuMeal, setMenuMeal] = useState<Meal | null>(null);
+  const [editMeal, setEditMeal] = useState<Meal | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [moveMealTarget, setMoveMealTarget] = useState<Meal | null>(null);
+
+  const toggleMealType = (mealType: MealType) =>
+    setExpandedMealTypes((prev) => ({ ...prev, [mealType]: !prev[mealType] }));
+
+  const handleAddFood = async (input: {
+    name: string;
+    portion: string;
+    kcal: number;
+    proteines: number;
+    glucides: number;
+    lipides: number;
+  }) => {
+    if (!addFoodMealType) return;
+    setAddingFood(true);
+    const ok = await addMeal({ ...input, mealType: addFoodMealType });
+    setAddingFood(false);
+    if (ok) setAddFoodMealType(null);
+    else showAlert('Erreur', "Impossible d'ajouter cet aliment. Réessaie.");
+  };
+
+  const handleEditSave = async (patch: { portion: string; kcal: number }) => {
+    if (!editMeal) return;
+    setSavingEdit(true);
+    const ok = await updateMeal(editMeal.id, patch);
+    setSavingEdit(false);
+    if (ok) setEditMeal(null);
+    else showAlert('Erreur', 'Impossible de modifier cet aliment. Réessaie.');
+  };
+
+  const handleDeleteMeal = (meal: Meal) => {
+    showConfirm('Supprimer cet aliment ?', `"${meal.name}" sera retiré de ton journal.`, 'Supprimer', async () => {
+      const ok = await deleteMeal(meal.id);
+      if (!ok) showAlert('Erreur', 'Impossible de supprimer cet aliment. Réessaie.');
+    });
+  };
+
+  const handleMoveMeal = async (option: ChoiceOption) => {
+    if (!moveMealTarget) return;
+    await moveMeal(moveMealTarget.id, option.id as MealType);
+    setMoveMealTarget(null);
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -189,33 +256,28 @@ export default function DashboardScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Repas d'aujourd'hui</Text>
-            <Pressable accessibilityRole="button" onPress={() => router.push('/meals')} hitSlop={8}>
+            <Text style={styles.sectionTitle}>Journal alimentaire</Text>
+            <Pressable accessibilityRole="button" onPress={() => router.push('/journal')} hitSlop={8}>
               {({ pressed }) => (
-                <Text style={[styles.link, pressed && styles.linkPressed]}>Voir tout</Text>
+                <Text style={[styles.link, pressed && styles.linkPressed]}>Voir le journal</Text>
               )}
             </Pressable>
           </View>
 
           {mealsLoading ? (
             <ActivityIndicator color={colors.accent} />
-          ) : meals.length === 0 ? (
-            <View style={styles.emptyMeals}>
-              <Camera color={colors.textTertiary} size={28} />
-              <Text style={styles.emptyMealsTitle}>Scanne ton premier repas</Text>
-              <Button label="Scanner" onPress={() => router.push('/scanner')} style={styles.emptyMealsButton} />
-            </View>
           ) : (
             <View style={styles.mealsList}>
-              {meals.map((meal) => (
-                <MealRow
-                  key={meal.id}
-                  name={meal.name}
-                  kcal={meal.kcal}
-                  time={new Date(meal.created_at).toLocaleTimeString('fr-FR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
+              {MEAL_TYPES.map((mealTypeInfo) => (
+                <MealTypeCard
+                  key={mealTypeInfo.id}
+                  mealType={mealTypeInfo.id}
+                  meals={mealsByType[mealTypeInfo.id]}
+                  totalKcal={totalsByType[mealTypeInfo.id].kcal}
+                  expanded={expandedMealTypes[mealTypeInfo.id]}
+                  onToggleExpand={() => toggleMealType(mealTypeInfo.id)}
+                  onAddFood={() => setAddFoodMealType(mealTypeInfo.id)}
+                  onLongPressFood={setMenuMeal}
                 />
               ))}
             </View>
@@ -272,6 +334,49 @@ export default function DashboardScreen() {
       </ScrollView>
 
       <BadgeUnlockModal badge={pendingUnlock} onDismiss={dismissPendingUnlock} />
+
+      <AddFoodModal
+        visible={addFoodMealType !== null}
+        mealType={addFoodMealType}
+        saving={addingFood}
+        onCancel={() => setAddFoodMealType(null)}
+        onSave={handleAddFood}
+      />
+
+      <MealItemMenuModal
+        visible={menuMeal !== null}
+        mealName={menuMeal?.name ?? null}
+        onCancel={() => setMenuMeal(null)}
+        onEdit={() => {
+          setEditMeal(menuMeal);
+          setMenuMeal(null);
+        }}
+        onMove={() => {
+          setMoveMealTarget(menuMeal);
+          setMenuMeal(null);
+        }}
+        onDelete={() => {
+          if (menuMeal) handleDeleteMeal(menuMeal);
+          setMenuMeal(null);
+        }}
+      />
+
+      <EditMealModal
+        visible={editMeal !== null}
+        meal={editMeal}
+        saving={savingEdit}
+        onCancel={() => setEditMeal(null)}
+        onSave={handleEditSave}
+      />
+
+      <ChoiceModal
+        visible={moveMealTarget !== null}
+        title="Déplacer vers"
+        options={MOVE_TO_OPTIONS}
+        selectedLabel={moveMealTarget ? getMealTypeInfo(moveMealTarget.mealType).label : null}
+        onCancel={() => setMoveMealTarget(null)}
+        onSelect={handleMoveMeal}
+      />
     </SafeAreaView>
   );
 }
@@ -346,22 +451,10 @@ function makeStyles(colors: Colors) {
   mealsList: {
     gap: spacing.sm,
   },
-  emptyMeals: {
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.border,
-    borderRadius: 16,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
   emptyMealsTitle: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.textSecondary,
-  },
-  emptyMealsButton: {
-    paddingHorizontal: spacing.lg,
   },
   chipsRow: {
     flexDirection: 'row',
