@@ -9,6 +9,8 @@ import CalorieCard from '../../components/dashboard/CalorieCard';
 import CategoryChip from '../../components/dashboard/CategoryChip';
 import DashboardHeader from '../../components/dashboard/DashboardHeader';
 import BmiCard from '../../components/dashboard/BmiCard';
+import FastingCard from '../../components/dashboard/FastingCard';
+import FastingStartModal from '../../components/dashboard/FastingStartModal';
 import HydrationCard from '../../components/dashboard/HydrationCard';
 import MealTypeCard from '../../components/dashboard/MealTypeCard';
 import MissionCard from '../../components/dashboard/MissionCard';
@@ -40,6 +42,12 @@ import {
   type MealType,
   type WorkoutCategoryId,
 } from '../../constants/dashboard';
+import {
+  CUSTOM_FASTING_MAX_HOURS,
+  CUSTOM_FASTING_MIN_HOURS,
+  FASTING_PROGRAMS,
+  resolveProgramSetting,
+} from '../../constants/fasting';
 import { WATER_GOAL_MAX_ML, WATER_GOAL_MIN_ML, WATER_GOAL_STEP_ML } from '../../constants/hydration';
 import type { Colors } from '../../constants/theme';
 import { spacing } from '../../constants/theme';
@@ -48,6 +56,7 @@ import { useProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useBadges } from '../../hooks/useBadges';
 import { useDailyMissions } from '../../hooks/useDailyMissions';
+import { useFasting } from '../../hooks/useFasting';
 import { useMeals, type Meal } from '../../hooks/useMeals';
 import { useSettings } from '../../hooks/useSettings';
 import { useWaterLogs } from '../../hooks/useWaterLogs';
@@ -56,6 +65,7 @@ import { showAlert, showConfirm } from '../../lib/alert';
 
 const RECOMMENDED_COUNT = 3;
 const MOVE_TO_OPTIONS: ChoiceOption[] = MEAL_TYPES.map((m) => ({ id: m.id, label: m.label }));
+const FASTING_PROGRAM_OPTIONS: ChoiceOption[] = FASTING_PROGRAMS.map((p) => ({ id: p.id, label: p.label }));
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -86,9 +96,22 @@ export default function DashboardScreen() {
   const { badges, pendingUnlock, dismissPendingUnlock } = useBadges();
   const { totalToday: waterTotalToday, addWater, removeWater, refetch: refetchWater } = useWaterLogs(user?.id);
   const { settings, update: updateSettings } = useSettings(user?.id);
+  const {
+    activeSession: activeFastingSession,
+    elapsedMs: fastingElapsedMs,
+    lastCompletedTodayMs,
+    startFasting,
+    stopFasting,
+    refetch: refetchFasting,
+  } = useFasting(user?.id);
   const [category, setCategory] = useState<WorkoutCategoryId>('all');
   const [waterGoalModalVisible, setWaterGoalModalVisible] = useState(false);
   const [savingWaterGoal, setSavingWaterGoal] = useState(false);
+  const [fastingStartModalVisible, setFastingStartModalVisible] = useState(false);
+  const [savingFastingStart, setSavingFastingStart] = useState(false);
+  const [fastingProgramModalVisible, setFastingProgramModalVisible] = useState(false);
+  const [customFastingHoursModalVisible, setCustomFastingHoursModalVisible] = useState(false);
+  const [savingFastingProgram, setSavingFastingProgram] = useState(false);
 
   const [expandedMealTypes, setExpandedMealTypes] = useState(defaultExpandedMealTypes());
   const [addFoodMealType, setAddFoodMealType] = useState<MealType | null>(null);
@@ -158,12 +181,49 @@ export default function DashboardScreen() {
     else showAlert('Erreur', "Impossible d'enregistrer l'objectif. Réessaie.");
   };
 
+  const resolvedFastingProgram = resolveProgramSetting(settings.programmeJeune);
+
+  const handleStartFasting = async (startAt: Date) => {
+    setSavingFastingStart(true);
+    const ok = await startFasting(startAt, settings.programmeJeune);
+    setSavingFastingStart(false);
+    if (ok) setFastingStartModalVisible(false);
+    else showAlert('Erreur', 'Impossible de démarrer ce jeûne. Réessaie.');
+  };
+
+  const handleStopFasting = () => {
+    showConfirm('Terminer ce jeûne ?', 'Cette session sera enregistrée dans ton historique.', 'Terminer', async () => {
+      const ok = await stopFasting();
+      if (!ok) showAlert('Erreur', 'Impossible de terminer ce jeûne. Réessaie.');
+    });
+  };
+
+  const handleSelectFastingProgram = async (option: ChoiceOption) => {
+    if (option.id === 'custom') {
+      setFastingProgramModalVisible(false);
+      setCustomFastingHoursModalVisible(true);
+      return;
+    }
+    setFastingProgramModalVisible(false);
+    const ok = await updateSettings({ programmeJeune: option.id });
+    if (!ok) showAlert('Erreur', 'Impossible d\'enregistrer ce programme. Réessaie.');
+  };
+
+  const handleSaveCustomFastingHours = async (value: number) => {
+    setSavingFastingProgram(true);
+    const ok = await updateSettings({ programmeJeune: String(Math.round(value)) });
+    setSavingFastingProgram(false);
+    if (ok) setCustomFastingHoursModalVisible(false);
+    else showAlert('Erreur', 'Impossible d\'enregistrer ce programme. Réessaie.');
+  };
+
   useFocusEffect(
     useCallback(() => {
       refetchWeightLogs();
       refetchMeals();
       refetchWater();
-    }, [refetchWeightLogs, refetchMeals, refetchWater])
+      refetchFasting();
+    }, [refetchWeightLogs, refetchMeals, refetchWater, refetchFasting])
   );
 
   const displayName = getDisplayName(profile?.email ?? user?.email ?? null);
@@ -324,6 +384,21 @@ export default function DashboardScreen() {
 
         <BmiCard weightKg={poidsActuel} heightCm={profile.taille} />
 
+        <FastingCard
+          activeSession={
+            activeFastingSession
+              ? { debut: activeFastingSession.debut, targetHours: activeFastingSession.duree_cible_heures }
+              : null
+          }
+          elapsedMs={fastingElapsedMs}
+          currentProgramLabel={resolvedFastingProgram.label}
+          lastCompletedTodayMs={lastCompletedTodayMs}
+          onStart={() => setFastingStartModalVisible(true)}
+          onStop={handleStopFasting}
+          onLongPressHeader={() => setFastingProgramModalVisible(true)}
+          onHistoryPress={() => router.push('/fasting')}
+        />
+
         <View style={styles.section}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
             {WORKOUT_CATEGORIES.map((c) => (
@@ -430,6 +505,36 @@ export default function DashboardScreen() {
         saving={savingWaterGoal}
         onCancel={() => setWaterGoalModalVisible(false)}
         onSave={handleSaveWaterGoal}
+      />
+
+      <FastingStartModal
+        visible={fastingStartModalVisible}
+        targetHours={resolvedFastingProgram.targetHours}
+        saving={savingFastingStart}
+        onCancel={() => setFastingStartModalVisible(false)}
+        onStart={handleStartFasting}
+      />
+
+      <ChoiceModal
+        visible={fastingProgramModalVisible}
+        title="Programme de jeûne"
+        options={FASTING_PROGRAM_OPTIONS}
+        selectedLabel={resolvedFastingProgram.programId === 'custom' ? 'Personnalisé' : resolvedFastingProgram.label}
+        onCancel={() => setFastingProgramModalVisible(false)}
+        onSelect={handleSelectFastingProgram}
+      />
+
+      <NumberStepperModal
+        visible={customFastingHoursModalVisible}
+        title="Durée personnalisée"
+        initialValue={resolvedFastingProgram.targetHours}
+        unit="h"
+        step={1}
+        min={CUSTOM_FASTING_MIN_HOURS}
+        max={CUSTOM_FASTING_MAX_HOURS}
+        saving={savingFastingProgram}
+        onCancel={() => setCustomFastingHoursModalVisible(false)}
+        onSave={handleSaveCustomFastingHours}
       />
     </SafeAreaView>
   );

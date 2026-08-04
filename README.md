@@ -222,9 +222,11 @@ app/
                               missions du jour, Journal alimentaire (4 `MealTypeCard` empilées,
                               lien "Voir le journal" → `journal.tsx`), carte Hydratation (verres +
                               objectif, appui long pour le modifier), carte IMC (tap → modale
-                              explicative), catégories de séances, séances recommandées
-                              (→ workout/[id]), stats rapides (→ progression), astuce — poids/repas/eau
-                              rechargés via `useFocusEffect` à chaque retour sur l'onglet
+                              explicative), carte Jeûne intermittent (état actif ou repos, appui
+                              long pour changer de programme, lien "Historique" → `fasting.tsx`),
+                              catégories de séances, séances recommandées (→ workout/[id]), stats
+                              rapides (→ progression), astuce — poids/repas/eau/jeûne rechargés via
+                              `useFocusEffect` à chaque retour sur l'onglet
     meals.tsx                 Historique complet des repas, groupé par jour avec total kcal
                               (onglet caché — `href: null`, atteint via "Mes repas" dans le menu Explorer)
     coach.tsx                  Conversation avec le coach IA (Anthropic) — historique persisté
@@ -252,6 +254,12 @@ app/
                               (précédent/suivant/Aujourd'hui), résumé (anneau calorique + 3 barres de
                               macros), 4 `MealTypeCard` détaillées, total du jour — écran racine
                               (hors tabs), atteint via "Voir le journal" depuis le dashboard
+  fasting.tsx                 Historique du jeûne intermittent : 4 statistiques (`StatTile` — jeûnes
+                              réalisés, durée moyenne, plus long jeûne, série en cours), liste des
+                              sessions par ordre décroissant (date, durée réalisée, programme visé,
+                              coche accent si la cible a été atteinte), appui long pour supprimer —
+                              écran racine (hors tabs), atteint via "Historique" depuis la carte
+                              Jeûne intermittent du dashboard
   notifications.tsx           Liste des notifications, état vide propre — écran racine (hors tabs)
   legal/
     terms.tsx                  Conditions d'utilisation — texte placeholder
@@ -276,6 +284,11 @@ components/
     WorkoutCard.tsx                  Carte séance recommandée (→ workout/[id])
     StatCard.tsx                      Carte stat rapide (poids actuel / objectif / écart) (→ progression)
     TipCard.tsx                        Astuce du jour, non tapable
+    FastingCard.tsx                    Carte Jeûne intermittent — état actif (fond accent, anneau
+                              `CalorieRing` 72px, barre de progression, bouton "Terminer") ou repos
+                              (pilule programme, bouton "Démarrer un jeûne", appui long → programme)
+    FastingStartModal.tsx              Modale de démarrage : ± 15 min jusqu'à 12h en arrière, heure
+                              de début et fin prévue calculées en direct
   coach/
     MessageBubble.tsx             Bulle coach (gauche, #101410) / utilisateur (droite, #c6ff3a) / système (erreur)
     TypingIndicator.tsx             3 points animés (Animated.loop déphasé) pendant la réponse
@@ -332,6 +345,10 @@ constants/
                               d'activité + ajustement objectif/vitesse), catégories et séances de
                               sport (données statiques), calcul de série (streak), semaine courante,
                               astuce du jour
+  fasting.ts                   5 programmes de jeûne (16:8, 18:6, 20:4, 14:10, Personnalisé),
+                              `resolveProgramSetting` (décode `user_settings.programme_jeune`),
+                              formatage de durée/heure, calcul de pourcentage et de fin prévue,
+                              `computeFastingStats` (total/moyenne/record/série en cours)
 
 context/
   OnboardingContext.tsx       State React des réponses du questionnaire (pas de persistance)
@@ -353,6 +370,10 @@ hooks/
   useCoachMessages.ts             Charge les 50 derniers messages, persiste chaque échange dans
                               `messages`, appelle `lib/coach.ts` et ajoute une bulle système
                               (non persistée) si l'appel échoue
+  useFasting.ts                    Session en cours (`activeSession`, `fin` nul), démarrage/arrêt,
+                              historique 90 jours, statistiques (`computeFastingStats`) — le temps
+                              écoulé est recalculé depuis `debut` à chaque tick de 60s, jamais
+                              accumulé en mémoire
 
 lib/
   supabase.ts                 Client Supabase (AsyncStorage, autoRefreshToken, persistSession)
@@ -824,6 +845,47 @@ create policy "Users can delete their own water logs"
 `water_logs` est un journal d'événements plutôt qu'une ligne par jour : chaque ajout ("+ 250 ml", "+ 500 ml", un tap sur un verre) insère une ligne avec une `quantite_ml` positive, chaque retrait (décocher un verre déjà rempli) insère une ligne négative — le total du jour est simplement la somme des lignes de `date = aujourd'hui` (`hooks/useWaterLogs.ts`). Ça évite toute logique d'upsert/concurrence et donne un historique déjà prêt pour les 30 derniers jours sans requête supplémentaire.
 
 **IMC.** Pas de nouvelle table : `constants/bmi.ts` calcule l'indice à partir du poids (dernière ligne de `weight_logs`, repli sur `profiles.poids_actuel` — même logique déjà utilisée pour "Poids actuel"/"Écart restant") et de `profiles.taille`. Si la taille est absente, `components/dashboard/BmiCard.tsx` affiche un état invitant à compléter le profil plutôt qu'un calcul erroné. Les quatre catégories (insuffisance pondérale / corpulence normale / surpoids / obésité) ont chacune une couleur dédiée et volontairement désaturée (`bmiCategoryColor`, distincte de `colors.warning`/`colors.danger` qui sont réservées aux vraies alertes) — seule "normale" reprend `colors.accent`. La barre de classification a une largeur de segment proportionnelle aux plages réelles, sur un domaine visuel borné à [15, 40] (`BMI_DOMAIN_MIN/MAX`) : l'obésité n'a pas de borne haute réelle, elle est juste épinglée au bord droit au-delà de 40. Le texte d'explication est rédigé sans jugement ("Ta corpulence est dans la plage recommandée" plutôt que "Tu es en surpoids"), et la modale déclenchée par un tap rappelle explicitement que l'IMC ne tient compte ni de la masse musculaire ni de la répartition des graisses et ne remplace pas un avis médical. `components/progression/BmiSummaryCard.tsx` réutilise les mêmes fonctions dans un format compact (valeur, statut, mini-barre) sans le tap explicatif.
+
+If `user_settings` already exists from before the fasting tracker, add the current-program column the same way:
+
+```sql
+alter table user_settings add column programme_jeune text default '16:8';
+```
+
+Table à créer pour le suivi du jeûne intermittent :
+
+```sql
+create table fasting_sessions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  debut timestamptz not null,
+  fin timestamptz,
+  duree_cible_heures integer not null,
+  programme text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table fasting_sessions enable row level security;
+
+create policy "Users can insert their own fasting sessions"
+  on fasting_sessions for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can read their own fasting sessions"
+  on fasting_sessions for select
+  using (auth.uid() = user_id);
+
+create policy "Users can update their own fasting sessions"
+  on fasting_sessions for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Users can delete their own fasting sessions"
+  on fasting_sessions for delete
+  using (auth.uid() = user_id);
+```
+
+**Jeûne intermittent.** `fin` reste `null` tant que le jeûne est en cours (`hooks/useFasting.ts` dérive `activeSession` de la première ligne où `fin` est `null` — la RLS empêche déjà d'en avoir plus d'une par utilisateur en pratique, l'app elle-même refuse de démarrer un nouveau jeûne tant qu'un autre est en cours). `user_settings.programme_jeune` n'a qu'une seule colonne texte pour retenir le programme actuel, ce qui pose un problème pour "Personnalisé" (durée libre 12-24h, pas de valeur fixe) : `resolveProgramSetting` (`constants/fasting.ts`) résout donc cette colonne en acceptant soit un id de préréglage (`'16:8'`, `'18:6'`, `'20:4'`, `'14:10'`), soit, pour une durée personnalisée, le nombre d'heures encodé directement comme chaîne numérique (ex. `"15"`) — repli sur 16:8 si la valeur ne correspond à aucun des deux cas. `fasting_sessions.duree_cible_heures` et `.programme` sont eux résolus et figés au moment du démarrage (`startFasting`), donc modifier le programme par défaut ensuite ne change jamais l'historique déjà enregistré. Le minuteur de la carte (`components/dashboard/FastingCard.tsx`) se met à jour toutes les 60 secondes via `setInterval`, mais le temps écoulé affiché est systématiquement recalculé depuis `debut` (`Date.now() - new Date(activeSession.debut).getTime()`) plutôt qu'accumulé en mémoire — rouvrir l'app longtemps après un démarrage affiche donc immédiatement la bonne durée, sans dérive. Les statistiques de l'écran historique (`app/fasting.tsx`, `computeFastingStats`) ne comptent la durée moyenne/le plus long jeûne que sur les sessions terminées (`fin` non nul), mais la série en cours ("streak") compte tout jour calendaire local ayant au moins une session démarrée — active ou terminée — pour que démarrer le jeûne du jour prolonge immédiatement la série sans attendre qu'il se termine, même logique que `computeStreak` sur le dashboard.
 
 ```sql
 create table referrals (
