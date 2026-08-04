@@ -3,6 +3,7 @@ import { Flag, Ruler, Target, TrendingUp } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import BmiSummaryCard from '../../components/progression/BmiSummaryCard';
 import HydrationSummaryCard from '../../components/progression/HydrationSummaryCard';
 import PhotosCard from '../../components/progression/PhotosCard';
 import ProgressAnalysisCard from '../../components/progression/ProgressAnalysisCard';
@@ -212,6 +213,11 @@ export default function ProgressionScreen() {
               />
             </View>
           )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>IMC</Text>
+          <BmiSummaryCard weightKg={currentWeight} heightCm={profile?.taille ?? null} />
         </View>
 
         <View style={styles.section}>

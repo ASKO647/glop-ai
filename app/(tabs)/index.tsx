@@ -8,6 +8,7 @@ import BadgeUnlockModal from '../../components/badges/BadgeUnlockModal';
 import CalorieCard from '../../components/dashboard/CalorieCard';
 import CategoryChip from '../../components/dashboard/CategoryChip';
 import DashboardHeader from '../../components/dashboard/DashboardHeader';
+import BmiCard from '../../components/dashboard/BmiCard';
 import HydrationCard from '../../components/dashboard/HydrationCard';
 import MealTypeCard from '../../components/dashboard/MealTypeCard';
 import MissionCard from '../../components/dashboard/MissionCard';
@@ -320,6 +321,8 @@ export default function DashboardScreen() {
           onQuickAdd={handleQuickAddWater}
           onLongPressHeader={() => setWaterGoalModalVisible(true)}
         />
+
+        <BmiCard weightKg={poidsActuel} heightCm={profile.taille} />
 
         <View style={styles.section}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
