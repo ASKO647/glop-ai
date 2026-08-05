@@ -11,6 +11,7 @@ import { getOptionLabel } from '../../constants/questionnaire';
 import type { Colors } from '../../constants/theme';
 import { spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { asString, useOnboarding } from '../../context/OnboardingContext';
 import { useTheme } from '../../context/ThemeContext';
 import { mapAuthError } from '../../lib/authErrors';
@@ -24,6 +25,7 @@ export default function SignupScreen() {
   const { signUp, signInWithApple, signInWithGoogle } = useAuth();
   const { answers } = useOnboarding();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [email, setEmail] = useState('');
@@ -41,11 +43,11 @@ export default function SignupScreen() {
     setFormError(undefined);
 
     if (!email.trim()) {
-      setEmailError("L'email est requis.");
+      setEmailError(t('onboarding.auth.emailRequired'));
       return;
     }
     if (password.length < MIN_PASSWORD_LENGTH) {
-      setPasswordError(`Le mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caractères.`);
+      setPasswordError(t('errors.auth.passwordTooShort'));
       return;
     }
 
@@ -53,7 +55,7 @@ export default function SignupScreen() {
     const { error, userId } = await signUp(email.trim(), password);
 
     if (error || !userId) {
-      const mapped = mapAuthError(error);
+      const mapped = mapAuthError(t, error);
       if (mapped.field === 'email') setEmailError(mapped.message);
       else if (mapped.field === 'password') setPasswordError(mapped.message);
       else setFormError(mapped.message);
@@ -111,16 +113,16 @@ export default function SignupScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.header}>
-          <Text style={[typography.title, { color: colors.textPrimary }]}>Créer un compte</Text>
+          <Text style={[typography.title, { color: colors.textPrimary }]}>{t('onboarding.signup.title')}</Text>
           <Text style={[typography.body, { color: colors.textSecondary }]}>
-            Sauvegarde ton plan et débloque ton coach IA.
+            {t('onboarding.signup.subtitle')}
           </Text>
         </View>
 
         <View style={styles.middle}>
           <View style={styles.socialButtons}>
             <SocialButton
-              label="Continuer avec Apple"
+              label={t('onboarding.auth.continueWithApple')}
               // The "white" SocialButton variant's background is a fixed white
               // regardless of theme, so the Apple glyph must stay fixed dark too.
               icon={<Apple color="#0a0d0c" size={18} fill="#0a0d0c" />}
@@ -128,7 +130,7 @@ export default function SignupScreen() {
               onPress={signInWithApple}
             />
             <SocialButton
-              label="Continuer avec Google"
+              label={t('onboarding.auth.continueWithGoogle')}
               icon={<GoogleIcon size={18} />}
               variant="outline"
               onPress={signInWithGoogle}
@@ -137,17 +139,17 @@ export default function SignupScreen() {
 
           <View style={styles.separatorRow}>
             <View style={styles.separatorLine} />
-            <Text style={styles.separatorText}>ou</Text>
+            <Text style={styles.separatorText}>{t('onboarding.auth.or')}</Text>
             <View style={styles.separatorLine} />
           </View>
 
           <View style={styles.form}>
             <TextField
-              label="Email"
+              label={t('onboarding.auth.emailLabel')}
               value={email}
               onChangeText={setEmail}
               error={emailError}
-              placeholder="toi@exemple.com"
+              placeholder={t('onboarding.auth.emailPlaceholder')}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -155,11 +157,11 @@ export default function SignupScreen() {
               autoComplete="email"
             />
             <TextField
-              label="Mot de passe"
+              label={t('onboarding.auth.passwordLabel')}
               value={password}
               onChangeText={setPassword}
               error={passwordError}
-              placeholder="6 caractères minimum"
+              placeholder={t('onboarding.signup.passwordPlaceholder')}
               secureTextEntry
               autoCapitalize="none"
               textContentType="newPassword"
@@ -171,7 +173,7 @@ export default function SignupScreen() {
 
         <View style={styles.footer}>
           <Button
-            label="Créer mon compte"
+            label={t('onboarding.signup.submit')}
             variant="primary"
             disabled={isDisabled}
             loading={submitting}
@@ -179,7 +181,7 @@ export default function SignupScreen() {
           />
           <Link href="/login" asChild>
             <Pressable style={styles.loginLink}>
-              <Text style={styles.loginLinkText}>J'ai déjà un compte</Text>
+              <Text style={styles.loginLinkText}>{t('onboarding.signup.haveAccount')}</Text>
             </Pressable>
           </Link>
         </View>

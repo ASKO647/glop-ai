@@ -7,9 +7,10 @@ import AppImage from '../../components/ui/AppImage';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import { appImage } from '../../constants/images';
-import { getOptionLabel } from '../../constants/questionnaire';
+import { getOptionLabelKey } from '../../constants/questionnaire';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { asString, useOnboarding } from '../../context/OnboardingContext';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -25,47 +26,41 @@ const FALLBACK_TARGET_WEIGHT = 65;
 const FALLBACK_DURATION_DAYS = 90;
 
 // Every phrase below is a forward-looking promise, never a readout of the raw answer.
-const WORKOUT_PROGRAM_BY_FREQUENCY: Record<string, string> = {
-  '1_2': 'Programme efficace en 1 à 2 séances par semaine',
-  '3_4': 'Programme structuré sur 3 à 4 séances par semaine',
-  '5_6': 'Programme intensif sur 5 à 6 séances par semaine',
-  daily: 'Routine quotidienne pour progresser sans relâche',
+const WORKOUT_PROGRAM_KEY_BY_FREQUENCY: Record<string, string> = {
+  '1_2': 'onboarding.plan.training.base.oneTwo',
+  '3_4': 'onboarding.plan.training.base.threeFour',
+  '5_6': 'onboarding.plan.training.base.fiveSix',
+  daily: 'onboarding.plan.training.base.daily',
 };
-const FALLBACK_WORKOUT_PROGRAM = 'Programme structuré adapté à ton rythme';
+const FALLBACK_WORKOUT_PROGRAM_KEY = 'onboarding.plan.training.base.default';
 
-const TRAINING_LOCATION_SUFFIX: Record<string, string> = {
-  gym: ', en salle',
-  home: ', à la maison',
-  both: ', entre salle et maison',
-};
-
-const RESTRICTION_ADJECTIVE: Record<string, string> = {
-  vegetarian: 'végétarien',
-  vegan: 'végan',
-  gluten_free: 'sans gluten',
-  lactose_free: 'sans lactose',
+const TRAINING_LOCATION_SUFFIX_KEY: Record<string, string> = {
+  gym: 'onboarding.plan.training.location.gym',
+  home: 'onboarding.plan.training.location.home',
+  both: 'onboarding.plan.training.location.both',
 };
 
-const SLEEP_PROMISE_BY_ANSWER: Record<string, string> = {
-  under_5: 'Routine pour gagner 2h de récupération chaque nuit',
-  '5_6': 'Routine pour gagner 1h de récupération chaque nuit',
-  '7_8': 'Routine pour consolider ton rythme de sommeil actuel',
-  over_8: 'Routine pour optimiser la qualité de ton sommeil',
+const RESTRICTION_ADJECTIVE_KEY: Record<string, string> = {
+  vegetarian: 'onboarding.plan.nutrition.adjectives.vegetarian',
+  vegan: 'onboarding.plan.nutrition.adjectives.vegan',
+  gluten_free: 'onboarding.plan.nutrition.adjectives.glutenFree',
+  lactose_free: 'onboarding.plan.nutrition.adjectives.lactoseFree',
 };
-const FALLBACK_SLEEP_PROMISE = 'Routine de sommeil optimisée pour ta récupération';
 
-function getDisciplinePromise(blockerId: string | undefined, durationDays: number): string {
-  switch (blockerId) {
-    case 'time':
-      return `Routine express pour avancer même avec un planning chargé, sur ${durationDays} jours`;
-    case 'direction':
-      return `Feuille de route claire, étape par étape, sur ${durationDays} jours`;
-    case 'consistency':
-      return `Suivi quotidien pour rester régulier sur ${durationDays} jours`;
-    default:
-      return `Missions quotidiennes pour tenir sur ${durationDays} jours`;
-  }
-}
+const SLEEP_PROMISE_KEY_BY_ANSWER: Record<string, string> = {
+  under_5: 'onboarding.plan.sleep.under5',
+  '5_6': 'onboarding.plan.sleep.fiveSix',
+  '7_8': 'onboarding.plan.sleep.sevenEight',
+  over_8: 'onboarding.plan.sleep.over8',
+};
+const FALLBACK_SLEEP_PROMISE_KEY = 'onboarding.plan.sleep.default';
+
+const DISCIPLINE_PROMISE_KEY_BY_BLOCKER: Record<string, string> = {
+  time: 'onboarding.plan.discipline.time',
+  direction: 'onboarding.plan.discipline.direction',
+  consistency: 'onboarding.plan.discipline.consistency',
+};
+const FALLBACK_DISCIPLINE_PROMISE_KEY = 'onboarding.plan.discipline.default';
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -73,10 +68,12 @@ function clamp(value: number, min: number, max: number): number {
 
 export default function PlanScreen() {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { answers } = useOnboarding();
 
-  const goalLabel = getOptionLabel('goal', asString(answers.goal)) ?? 'Transformation personnalisée';
+  const goalLabelKey = getOptionLabelKey('goal', asString(answers.goal));
+  const goalLabel = goalLabelKey ? t(goalLabelKey) : t('onboarding.plan.defaultGoal');
 
   const currentWeight =
     typeof answers.current_weight === 'number' ? answers.current_weight : FALLBACK_CURRENT_WEIGHT;
@@ -90,34 +87,49 @@ export default function PlanScreen() {
       ? FALLBACK_DURATION_DAYS
       : clamp(Math.round((Math.abs(weightDiff) / weeklyRate) * 7), 30, 365);
 
-  const weightLabel = weightDiff === 0 ? 'Poids stable' : `${weightDiff > 0 ? '-' : '+'}${Math.abs(weightDiff)} kg`;
-  const durationLabel = `${weightLabel} en ${durationDays} jours`;
+  const weightLabel =
+    weightDiff === 0
+      ? t('onboarding.plan.weightStable')
+      : t('onboarding.plan.weightChange', { sign: weightDiff > 0 ? '-' : '+', amount: Math.abs(weightDiff) });
+  const durationLabel = t('onboarding.plan.duration', { weight: weightLabel, days: durationDays });
 
-  const trainingDescription =
-    (WORKOUT_PROGRAM_BY_FREQUENCY[asString(answers.workouts_per_week) ?? ''] ?? FALLBACK_WORKOUT_PROGRAM) +
-    (TRAINING_LOCATION_SUFFIX[asString(answers.training_location) ?? ''] ?? '') +
-    '.';
+  const trainingBase = t(
+    WORKOUT_PROGRAM_KEY_BY_FREQUENCY[asString(answers.workouts_per_week) ?? ''] ?? FALLBACK_WORKOUT_PROGRAM_KEY
+  );
+  const trainingLocationKey = TRAINING_LOCATION_SUFFIX_KEY[asString(answers.training_location) ?? ''];
+  const trainingLocationSuffix = trainingLocationKey ? t(trainingLocationKey) : '';
+  const trainingDescription = t('onboarding.plan.training.sentence', {
+    base: trainingBase,
+    location: trainingLocationSuffix,
+  });
 
   const restrictionIds = Array.isArray(answers.dietary_restrictions) ? answers.dietary_restrictions : [];
   const restrictionAdjectives = restrictionIds
     .filter((id) => id !== 'none')
-    .map((id) => RESTRICTION_ADJECTIVE[id])
-    .filter((adjective): adjective is string => Boolean(adjective));
+    .map((id) => RESTRICTION_ADJECTIVE_KEY[id])
+    .filter((key): key is string => Boolean(key))
+    .map((key) => t(key));
   const nutritionDescription =
     restrictionAdjectives.length > 0
-      ? `Plan ${restrictionAdjectives.join(' et ')} structuré, adapté à ton objectif.`
-      : 'Plan alimentaire structuré, adapté à ton objectif.';
+      ? t('onboarding.plan.nutrition.withRestrictions', {
+          adjectives: restrictionAdjectives.join(t('onboarding.plan.nutrition.adjectiveSeparator')),
+        })
+      : t('onboarding.plan.nutrition.default');
 
-  const sleepDescription =
-    (SLEEP_PROMISE_BY_ANSWER[asString(answers.sleep_hours) ?? ''] ?? FALLBACK_SLEEP_PROMISE) + '.';
+  const sleepDescription = t(
+    SLEEP_PROMISE_KEY_BY_ANSWER[asString(answers.sleep_hours) ?? ''] ?? FALLBACK_SLEEP_PROMISE_KEY
+  );
 
-  const disciplineDescription = getDisciplinePromise(asString(answers.blocker), durationDays) + '.';
+  const disciplineDescription = t(
+    DISCIPLINE_PROMISE_KEY_BY_BLOCKER[asString(answers.blocker) ?? ''] ?? FALLBACK_DISCIPLINE_PROMISE_KEY,
+    { days: durationDays }
+  );
 
   const objectives = [
-    { title: 'Entraînement', description: trainingDescription },
-    { title: 'Nutrition', description: nutritionDescription },
-    { title: 'Sommeil', description: sleepDescription },
-    { title: 'Discipline', description: disciplineDescription },
+    { title: t('onboarding.plan.objectiveTitles.training'), description: trainingDescription },
+    { title: t('onboarding.plan.objectiveTitles.nutrition'), description: nutritionDescription },
+    { title: t('onboarding.plan.objectiveTitles.sleep'), description: sleepDescription },
+    { title: t('onboarding.plan.objectiveTitles.discipline'), description: disciplineDescription },
   ];
 
   return (
@@ -125,8 +137,8 @@ export default function PlanScreen() {
       <AppImage source={appImage('plan-hero.jpg')} style={styles.heroBanner} overlay={0.45} />
 
       <View style={styles.header}>
-        <Text style={styles.title}>Ton plan est prêt 🎉</Text>
-        <Text style={styles.subtitle}>Ta transformation commence maintenant.</Text>
+        <Text style={styles.title}>{t('onboarding.plan.title')}</Text>
+        <Text style={styles.subtitle}>{t('onboarding.plan.subtitle')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -143,7 +155,7 @@ export default function PlanScreen() {
         </Card>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Objectifs principaux</Text>
+          <Text style={styles.sectionLabel}>{t('onboarding.plan.sectionLabel')}</Text>
           <View style={styles.objectiveList}>
             {objectives.map((objective) => (
               <View key={objective.title} style={styles.objectiveRow}>
@@ -160,7 +172,7 @@ export default function PlanScreen() {
 
       <View style={styles.footer}>
         <Link href="/signup" asChild>
-          <Button label="Voir mon plan" variant="primary" style={styles.ctaButton} />
+          <Button label={t('onboarding.plan.cta')} variant="primary" style={styles.ctaButton} />
         </Link>
       </View>
     </SafeAreaView>

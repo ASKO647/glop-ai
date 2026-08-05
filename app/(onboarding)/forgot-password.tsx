@@ -6,12 +6,14 @@ import Button from '../../components/ui/Button';
 import TextField from '../../components/ui/TextField';
 import type { Colors } from '../../constants/theme';
 import { spacing, typography } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import { mapAuthError } from '../../lib/authErrors';
 import { supabase } from '../../lib/supabase';
 
 export default function ForgotPasswordScreen() {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState<string | undefined>();
@@ -26,7 +28,7 @@ export default function ForgotPasswordScreen() {
     setFormError(undefined);
 
     if (!email.trim()) {
-      setEmailError("L'email est requis.");
+      setEmailError(t('onboarding.auth.emailRequired'));
       return;
     }
 
@@ -35,7 +37,7 @@ export default function ForgotPasswordScreen() {
     setSubmitting(false);
 
     if (error) {
-      const mapped = mapAuthError(error.message);
+      const mapped = mapAuthError(t, error.message);
       if (mapped.field === 'email') setEmailError(mapped.message);
       else setFormError(mapped.message);
       return;
@@ -51,26 +53,23 @@ export default function ForgotPasswordScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.header}>
-          <Text style={[typography.title, { color: colors.textPrimary }]}>Mot de passe oublié</Text>
+          <Text style={[typography.title, { color: colors.textPrimary }]}>{t('onboarding.forgotPassword.title')}</Text>
           <Text style={[typography.body, { color: colors.textSecondary }]}>
-            Indique ton email, on t'envoie un lien pour le réinitialiser.
+            {t('onboarding.forgotPassword.subtitle')}
           </Text>
         </View>
 
         <View style={styles.form}>
           {sent ? (
-            <Text style={styles.confirmation}>
-              Si un compte existe avec cet email, un lien de réinitialisation vient d'être envoyé.
-              Vérifie ta boîte de réception.
-            </Text>
+            <Text style={styles.confirmation}>{t('onboarding.forgotPassword.confirmation')}</Text>
           ) : (
             <>
               <TextField
-                label="Email"
+                label={t('onboarding.auth.emailLabel')}
                 value={email}
                 onChangeText={setEmail}
                 error={emailError}
-                placeholder="toi@exemple.com"
+                placeholder={t('onboarding.auth.emailPlaceholder')}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -85,7 +84,7 @@ export default function ForgotPasswordScreen() {
         <View style={styles.footer}>
           {!sent && (
             <Button
-              label="Envoyer le lien"
+              label={t('onboarding.forgotPassword.submit')}
               variant="primary"
               disabled={isDisabled}
               loading={submitting}
@@ -94,7 +93,7 @@ export default function ForgotPasswordScreen() {
           )}
           <Link href="/login" asChild>
             <Pressable style={styles.backLink}>
-              <Text style={styles.backLinkText}>Retour à la connexion</Text>
+              <Text style={styles.backLinkText}>{t('onboarding.forgotPassword.backToLogin')}</Text>
             </Pressable>
           </Link>
         </View>

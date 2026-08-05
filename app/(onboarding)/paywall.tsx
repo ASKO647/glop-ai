@@ -10,14 +10,15 @@ import { appImage } from '../../constants/images';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
 
-const BENEFITS = [
-  { label: 'Coach IA illimité, chat & vocal', image: appImage('benefit-coach.jpg') },
-  { label: 'Scanner de repas par photo', image: appImage('benefit-scanner.jpg') },
-  { label: 'Programmes muscu personnalisés', image: appImage('benefit-workout.jpg') },
-  { label: 'Suivi de progression & statistiques', image: appImage('benefit-progress.jpg') },
+const BENEFIT_KEYS = [
+  { labelKey: 'onboarding.paywall.benefits.coach', image: appImage('benefit-coach.jpg') },
+  { labelKey: 'onboarding.paywall.benefits.scanner', image: appImage('benefit-scanner.jpg') },
+  { labelKey: 'onboarding.paywall.benefits.workout', image: appImage('benefit-workout.jpg') },
+  { labelKey: 'onboarding.paywall.benefits.progress', image: appImage('benefit-progress.jpg') },
 ];
 
 type PlanId = 'annual' | 'monthly';
@@ -25,6 +26,7 @@ type PlanId = 'annual' | 'monthly';
 export default function PaywallScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user, signOut, refreshSubscription } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<PlanId>('annual');
@@ -50,7 +52,7 @@ export default function PaywallScreen() {
       .eq('id', user.id);
 
     if (updateError) {
-      setError('Une erreur est survenue. Réessaie.');
+      setError(t('errors.generic'));
       setSubmitting(false);
       return;
     }
@@ -64,7 +66,7 @@ export default function PaywallScreen() {
     <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Fermer"
+        accessibilityLabel={t('common.close')}
         onPress={handleClose}
         hitSlop={12}
         style={styles.closeButton}
@@ -73,35 +75,35 @@ export default function PaywallScreen() {
       </Pressable>
 
       <View style={styles.header}>
-        <Text style={styles.title}>Choisis ton plan</Text>
+        <Text style={styles.title}>{t('onboarding.paywall.title')}</Text>
         <Text style={styles.subtitle} numberOfLines={2}>
-          Débloque ton coach IA et commence ta transformation dès aujourd'hui.
+          {t('onboarding.paywall.subtitle')}
         </Text>
       </View>
 
       <View style={styles.benefits}>
-        {BENEFITS.map((benefit) => (
-          <BenefitRow key={benefit.label} label={benefit.label} image={benefit.image} />
+        {BENEFIT_KEYS.map((benefit) => (
+          <BenefitRow key={benefit.labelKey} label={t(benefit.labelKey)} image={benefit.image} />
         ))}
       </View>
 
       <View style={styles.plans}>
         <PlanCard
-          badge="MEILLEURE OFFRE"
-          name="Annuel"
-          price="59,99€ / an"
-          originalPrice="180€"
-          trialLabel="3 jours offerts"
-          subline="Soit 4,99€ / mois. Puis 59,99€ par an. Annulable à tout moment."
+          badge={t('onboarding.paywall.plans.annualBadge')}
+          name={t('onboarding.paywall.plans.annualName')}
+          price={t('onboarding.paywall.plans.annualPrice')}
+          originalPrice={t('onboarding.paywall.plans.annualOriginalPrice')}
+          trialLabel={t('onboarding.paywall.plans.trial')}
+          subline={t('onboarding.paywall.plans.annualSubline')}
           selected={selectedPlan === 'annual'}
           onPress={() => setSelectedPlan('annual')}
         />
         <PlanCard
-          name="Mensuel"
-          price="9,99€ / mois"
-          originalPrice="35€"
-          trialLabel="3 jours offerts"
-          subline="Puis 9,99€ par mois. Annulable à tout moment."
+          name={t('onboarding.paywall.plans.monthlyName')}
+          price={t('onboarding.paywall.plans.monthlyPrice')}
+          originalPrice={t('onboarding.paywall.plans.monthlyOriginalPrice')}
+          trialLabel={t('onboarding.paywall.plans.trial')}
+          subline={t('onboarding.paywall.plans.monthlySubline')}
           selected={selectedPlan === 'monthly'}
           onPress={() => setSelectedPlan('monthly')}
         />
@@ -110,18 +112,18 @@ export default function PaywallScreen() {
       <View style={styles.footer}>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <Button
-          label="Commencer mon essai gratuit"
+          label={t('onboarding.paywall.cta')}
           variant="primary"
           style={styles.ctaButton}
           loading={submitting}
           onPress={handleSubscribe}
         />
         <View style={styles.linksRow}>
-          <Text style={styles.link}>Restaurer</Text>
+          <Text style={styles.link}>{t('onboarding.paywall.restore')}</Text>
           <Text style={styles.link}>·</Text>
-          <Text style={styles.link}>Conditions</Text>
+          <Text style={styles.link}>{t('onboarding.paywall.terms')}</Text>
           <Text style={styles.link}>·</Text>
-          <Text style={styles.link}>Confidentialité</Text>
+          <Text style={styles.link}>{t('onboarding.paywall.privacy')}</Text>
         </View>
       </View>
     </SafeAreaView>

@@ -9,6 +9,7 @@ import ProgressBar from '../../components/ui/ProgressBar';
 import { QUESTIONS, type Question } from '../../constants/questionnaire';
 import type { Colors } from '../../constants/theme';
 import { spacing, typography } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useOnboarding, type AnswerValue } from '../../context/OnboardingContext';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -23,6 +24,7 @@ function isAnswered(question: Question, value: AnswerValue | undefined): boolean
 export default function QuestionnaireScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { answers, setAnswer } = useOnboarding();
   const [index, setIndex] = useState(0);
@@ -67,13 +69,13 @@ export default function QuestionnaireScreen() {
         <View style={styles.progressRow}>
           <ProgressBar progress={(index + 1) / TOTAL} style={styles.progressBar} />
           <Text style={styles.progressLabel}>
-            {index + 1} / {TOTAL}
+            {t('onboarding.questionnaire.progress', { current: index + 1, total: TOTAL })}
           </Text>
         </View>
       </View>
 
       <Animated.View style={[styles.content, { opacity, transform: [{ translateY }] }]}>
-        <Text style={styles.question}>{question.question}</Text>
+        <Text style={styles.question}>{t(question.titleKey)}</Text>
         <QuestionInput
           question={question}
           value={answers[question.id]}
@@ -82,7 +84,7 @@ export default function QuestionnaireScreen() {
       </Animated.View>
 
       <View style={styles.footer}>
-        <Button label="Continuer" variant="primary" disabled={!answered} onPress={handleContinue} />
+        <Button label={t('onboarding.common.continue')} variant="primary" disabled={!answered} onPress={handleContinue} />
       </View>
     </SafeAreaView>
   );

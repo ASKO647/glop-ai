@@ -6,6 +6,7 @@ import AnalysisStepRow from '../../components/onboarding/AnalysisStepRow';
 import ProgressRing from '../../components/onboarding/ProgressRing';
 import type { Colors } from '../../constants/theme';
 import { spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 const TARGET_PROGRESS = 87;
@@ -13,17 +14,18 @@ const DURATION = 4000;
 const RING_SIZE = 170;
 const RING_STROKE_WIDTH = 10;
 
-const STEPS = [
-  'Analyse de ton profil',
-  'Évaluation de ton mode de vie',
-  'Analyse de tes habitudes',
-  "Identification de tes axes d'amélioration",
-  'Création de ton plan perso',
+const STEP_KEYS = [
+  'onboarding.analysis.steps.profile',
+  'onboarding.analysis.steps.lifestyle',
+  'onboarding.analysis.steps.habits',
+  'onboarding.analysis.steps.improvementAreas',
+  'onboarding.analysis.steps.planCreation',
 ];
 
 export default function AnalyseScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const progressAnim = useRef(new Animated.Value(0)).current;
   const [progress, setProgress] = useState(0);
@@ -50,11 +52,11 @@ export default function AnalyseScreen() {
     };
   }, [progressAnim, router]);
 
-  const checkedCount = Math.min(STEPS.length, Math.floor((progress / TARGET_PROGRESS) * STEPS.length));
+  const checkedCount = Math.min(STEP_KEYS.length, Math.floor((progress / TARGET_PROGRESS) * STEP_KEYS.length));
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
-      <Text style={styles.title}>Analyse en cours...</Text>
+      <Text style={styles.title}>{t('onboarding.analysis.title')}</Text>
 
       <View style={styles.centerBlock}>
         <View style={styles.ringWrapper}>
@@ -67,8 +69,8 @@ export default function AnalyseScreen() {
         </View>
 
         <View style={styles.steps}>
-          {STEPS.map((label, index) => (
-            <AnalysisStepRow key={label} label={label} checked={index < checkedCount} />
+          {STEP_KEYS.map((key, index) => (
+            <AnalysisStepRow key={key} label={t(key)} checked={index < checkedCount} />
           ))}
         </View>
       </View>
