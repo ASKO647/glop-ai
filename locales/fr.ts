@@ -668,6 +668,10 @@ const fr = {
       empty: 'Ajoute au moins deux pesées pour voir ta courbe',
       target: 'Objectif',
     },
+    hydration: {
+      title: 'Hydratation',
+      subtitle: 'Moyenne sur 7 jours',
+    },
     calorieAverage: {
       average7: 'Moy. 7 jours',
       average30: 'Moy. 30 jours',

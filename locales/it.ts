@@ -664,6 +664,10 @@ const it: TranslationSchema = {
       empty: 'Aggiungi almeno due pesate per vedere il tuo grafico',
       target: 'Obiettivo',
     },
+    hydration: {
+      title: 'Idratazione',
+      subtitle: 'Media su 7 giorni',
+    },
     calorieAverage: {
       average7: 'Media 7 giorni',
       average30: 'Media 30 giorni',

@@ -48,6 +48,7 @@ import {
   resolveProgramSetting,
 } from '../../constants/fasting';
 import { WATER_GOAL_MAX_ML, WATER_GOAL_MIN_ML, WATER_GOAL_STEP_ML } from '../../constants/hydration';
+import { TAB_BAR_CLEARANCE } from '../../constants/layout';
 import { getDisplayName } from '../../constants/profile';
 import type { Colors } from '../../constants/theme';
 import { spacing } from '../../constants/theme';
@@ -592,7 +593,7 @@ function makeStyles(colors: Colors) {
   content: {
     paddingHorizontal: 20,
     paddingTop: spacing.md,
-    paddingBottom: 100,
+    paddingBottom: TAB_BAR_CLEARANCE,
     gap: 24,
   },
   loadingScreen: {

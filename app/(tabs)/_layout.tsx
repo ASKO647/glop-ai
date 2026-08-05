@@ -6,14 +6,13 @@ import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import NavigationSheet from '../../components/ui/NavigationSheet';
+import { TAB_BAR_BOTTOM_MARGIN_MIN, TAB_BAR_HEIGHT } from '../../constants/layout';
 import type { Colors } from '../../constants/theme';
 import { radii } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 const TAB_BAR_MARGIN = 20;
-const TAB_BAR_BOTTOM_MIN = 24;
-const TAB_BAR_HEIGHT = 68;
 
 // The + button sits outside the pill, to its right, same height as the bar —
 // diameter equal to TAB_BAR_HEIGHT so both share the exact same top/bottom edges.
@@ -72,7 +71,7 @@ export default function TabsLayout() {
   // On devices with a home indicator, keep the bar (and the + button) clear of
   // the safe-area/system-gesture zone instead of sitting at a fixed 24px from
   // the raw screen edge.
-  const barBottom = Math.max(TAB_BAR_BOTTOM_MIN, insets.bottom + 12);
+  const barBottom = Math.max(TAB_BAR_BOTTOM_MARGIN_MIN, insets.bottom + 12);
 
   const [sheetVisible, setSheetVisible] = useState(false);
 

@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View, type TextInputProps } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type TextInputProps,
+} from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
@@ -80,29 +90,31 @@ export default function TextInputModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleCancel}>
-      <View style={styles.backdrop}>
+      <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={handleCancel} />
 
-        <View style={styles.sheet}>
-          <Text style={styles.title}>{title}</Text>
-          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <View style={styles.sheet}>
+            <Text style={styles.title}>{title}</Text>
+            {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
 
-          <TextField
-            value={value}
-            onChangeText={handleChangeText}
-            error={error}
-            placeholder={placeholder}
-            autoCapitalize={autoCapitalize}
-            autoCorrect={false}
-            autoFocus
-          />
+            <TextField
+              value={value}
+              onChangeText={handleChangeText}
+              error={error}
+              placeholder={placeholder}
+              autoCapitalize={autoCapitalize}
+              autoCorrect={false}
+              autoFocus
+            />
 
-          <View style={styles.actions}>
-            <Button label={t('common.cancel')} variant="secondary" onPress={handleCancel} disabled={submitting} style={styles.actionButton} />
-            <Button label={t('common.save')} onPress={handleSave} loading={submitting} style={styles.actionButton} />
+            <View style={styles.actions}>
+              <Button label={t('common.cancel')} variant="secondary" onPress={handleCancel} disabled={submitting} style={styles.actionButton} />
+              <Button label={t('common.save')} onPress={handleSave} loading={submitting} style={styles.actionButton} />
+            </View>
           </View>
-        </View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -111,8 +123,11 @@ function makeStyles(colors: Colors) {
   return StyleSheet.create({
     backdrop: {
       flex: 1,
-      justifyContent: 'flex-end',
       backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    },
+    scrollContent: {
+      flexGrow: 1,
+      justifyContent: 'flex-end',
     },
     sheet: {
       backgroundColor: colors.surface,

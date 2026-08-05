@@ -664,6 +664,10 @@ const de: TranslationSchema = {
       empty: 'Füge mindestens zwei Gewichtsmessungen hinzu, um deine Kurve zu sehen',
       target: 'Ziel',
     },
+    hydration: {
+      title: 'Flüssigkeitszufuhr',
+      subtitle: '7-Tage-Durchschnitt',
+    },
     calorieAverage: {
       average7: 'Durchschn. 7 Tage',
       average30: 'Durchschn. 30 Tage',

@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
@@ -28,39 +38,41 @@ export default function DeleteAccountModal({ visible, deleting, onCancel, onConf
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
-      <View style={styles.backdrop}>
+      <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={onCancel} />
 
-        <View style={styles.sheet}>
-          <Text style={styles.title}>{t('profile.deleteAccountModal.title')}</Text>
-          <Text style={styles.description}>
-            {t('profile.deleteAccountModal.description', { word: confirmWord })}
-          </Text>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <View style={styles.sheet}>
+            <Text style={styles.title}>{t('profile.deleteAccountModal.title')}</Text>
+            <Text style={styles.description}>
+              {t('profile.deleteAccountModal.description', { word: confirmWord })}
+            </Text>
 
-          <TextInput
-            value={input}
-            onChangeText={setInput}
-            placeholder={confirmWord}
-            placeholderTextColor={colors.textTertiary}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            textAlign="center"
-            style={styles.input}
-          />
-
-          <View style={styles.actions}>
-            <Button label={t('common.cancel')} variant="secondary" onPress={onCancel} disabled={deleting} style={styles.actionButton} />
-            <Button
-              label={t('common.delete')}
-              variant="danger"
-              onPress={onConfirm}
-              loading={deleting}
-              disabled={!matches}
-              style={styles.actionButton}
+            <TextInput
+              value={input}
+              onChangeText={setInput}
+              placeholder={confirmWord}
+              placeholderTextColor={colors.textTertiary}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              textAlign="center"
+              style={styles.input}
             />
+
+            <View style={styles.actions}>
+              <Button label={t('common.cancel')} variant="secondary" onPress={onCancel} disabled={deleting} style={styles.actionButton} />
+              <Button
+                label={t('common.delete')}
+                variant="danger"
+                onPress={onConfirm}
+                loading={deleting}
+                disabled={!matches}
+                style={styles.actionButton}
+              />
+            </View>
           </View>
-        </View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -69,8 +81,11 @@ function makeStyles(colors: Colors) {
   return StyleSheet.create({
     backdrop: {
       flex: 1,
-      justifyContent: 'flex-end',
       backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    },
+    scrollContent: {
+      flexGrow: 1,
+      justifyContent: 'flex-end',
     },
     sheet: {
       backgroundColor: colors.surface,

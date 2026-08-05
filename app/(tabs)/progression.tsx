@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Flag, Ruler, Target, TrendingUp } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BadgesSummaryCard from '../../components/progression/BadgesSummaryCard';
@@ -18,6 +18,7 @@ import WeightCard from '../../components/progression/WeightCard';
 import WeightChart from '../../components/progression/WeightChart';
 import WeightEntryModal from '../../components/progression/WeightEntryModal';
 import { computeCalorieTarget, getCurrentWeekDays, isoDaysAgo } from '../../constants/dashboard';
+import { TAB_BAR_CLEARANCE } from '../../constants/layout';
 import { PERIOD_OPTIONS, computeProgressPercent, formatWeight, type PeriodId } from '../../constants/progression';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing, typography } from '../../constants/theme';
@@ -51,6 +52,7 @@ export default function ProgressionScreen() {
   const weeklyWaterHistory = useMemo(() => waterHistory.slice(-7), [waterHistory]);
 
   const [period, setPeriod] = useState<PeriodId>('30');
+  const hasAutoSelectedPeriod = useRef(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [uploadingSlot, setUploadingSlot] = useState<PhotoSlot | null>(null);
   const [analysis, setAnalysis] = useState<ProgressAnalysis | null>(null);
@@ -67,6 +69,32 @@ export default function ProgressionScreen() {
     const since = isoDaysAgo(periodOption.days - 1);
     return logs.filter((log) => log.date >= since);
   }, [logs, periodOption.days]);
+
+  // The default period (30j) can legitimately have fewer than 2 weigh-ins in it even when
+  // `logs` overall has plenty — e.g. entries older than 30 days, or spaced further apart than
+  // that. Rather than leave the user stuck on a false "add at least two weigh-ins" empty state
+  // when a wider period would actually show a real curve, jump straight to the narrowest period
+  // that does. Runs once, only after the data has actually loaded, and never overrides a period
+  // the user picked themselves afterward.
+  useEffect(() => {
+    if (logsLoading || hasAutoSelectedPeriod.current) return;
+    hasAutoSelectedPeriod.current = true;
+    const bestOption = PERIOD_OPTIONS.find((option) => {
+      const since = isoDaysAgo(option.days - 1);
+      return logs.filter((log) => log.date >= since).length >= 2;
+    });
+    if (bestOption && bestOption.id !== period) {
+      setPeriod(bestOption.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [logsLoading, logs]);
+
+  if (__DEV__) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `[progression] weight logs: ${logs.length} total, ${filteredLogs.length} in the ${periodOption.days}j period`
+    );
+  }
 
   const gapRemaining =
     currentWeight != null && targetWeight != null ? Math.abs(currentWeight - targetWeight) : null;
@@ -334,7 +362,7 @@ function makeStyles(colors: Colors) {
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    paddingBottom: 100,
+    paddingBottom: TAB_BAR_CLEARANCE,
     gap: spacing.lg,
   },
   pageTitle: {
