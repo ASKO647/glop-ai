@@ -53,6 +53,9 @@ function RootNavigator() {
           <Stack.Screen name="badges" />
           <Stack.Screen name="recipes" />
           <Stack.Screen name="recipe/[id]" />
+          <Stack.Screen name="groups" />
+          <Stack.Screen name="group/[id]" />
+          <Stack.Screen name="group/[id]/info" />
           <Stack.Screen name="legal/terms" />
           <Stack.Screen name="legal/privacy" />
         </Stack.Protected>

@@ -33,7 +33,7 @@ const GRID_ITEMS: NavItem[] = [
   { key: 'meals', labelKey: 'common.navItems.meals', Icon: Utensils, route: '/meals' },
   { key: 'notifications', labelKey: 'common.navItems.notifications', Icon: Bell, route: '/notifications' },
   { key: 'badges', labelKey: 'common.navItems.badges', Icon: Award, route: '/badges' },
-  { key: 'groups', labelKey: 'common.navItems.groups', Icon: Users, comingSoon: true },
+  { key: 'groups', labelKey: 'common.navItems.groups', Icon: Users, route: '/groups' },
   { key: 'widgets', labelKey: 'common.navItems.widgets', Icon: LayoutGrid, comingSoon: true },
   { key: 'recipes', labelKey: 'common.navItems.recipes', Icon: ChefHat, route: '/recipes' },
 ];
