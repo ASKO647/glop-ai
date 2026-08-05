@@ -3,22 +3,29 @@ import { Flag, Ruler, Target, TrendingUp } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import BadgesSummaryCard from '../../components/progression/BadgesSummaryCard';
 import BmiSummaryCard from '../../components/progression/BmiSummaryCard';
+import CalorieAverageCard from '../../components/progression/CalorieAverageCard';
+import EnergyExpenditureCard from '../../components/progression/EnergyExpenditureCard';
+import GoalEstimateCard from '../../components/progression/GoalEstimateCard';
 import HydrationSummaryCard from '../../components/progression/HydrationSummaryCard';
 import PhotosCard from '../../components/progression/PhotosCard';
 import ProgressAnalysisCard from '../../components/progression/ProgressAnalysisCard';
 import StatTile from '../../components/progression/StatTile';
 import StreakGrid from '../../components/progression/StreakGrid';
+import WeeklyEnergyCard from '../../components/progression/WeeklyEnergyCard';
 import WeightCard from '../../components/progression/WeightCard';
 import WeightChart from '../../components/progression/WeightChart';
 import WeightEntryModal from '../../components/progression/WeightEntryModal';
-import { isoDaysAgo } from '../../constants/dashboard';
+import { computeCalorieTarget, getCurrentWeekDays, isoDaysAgo } from '../../constants/dashboard';
 import { PERIOD_OPTIONS, computeProgressPercent, formatWeight, type PeriodId } from '../../constants/progression';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBadges } from '../../hooks/useBadges';
+import { useMealStats } from '../../hooks/useMealStats';
 import { useMissionStreak } from '../../hooks/useMissionStreak';
 import { PHOTO_SLOTS, SLOT_LABELS, useProgressPhotos, type PhotoSlot, type ProgressPhoto } from '../../hooks/useProgressPhotos';
 import { useSettings } from '../../hooks/useSettings';
@@ -40,6 +47,8 @@ export default function ProgressionScreen() {
   const { photosBySlot, loading: photosLoading, addPhoto, deletePhoto } = useProgressPhotos(user?.id);
   const { history: waterHistory } = useWaterLogs(user?.id);
   const { settings } = useSettings(user?.id);
+  const { average7: kcalAverage7, average30: kcalAverage30, todayKcal, kcalByDate } = useMealStats(user?.id);
+  const { badges, earnedCount, totalCount } = useBadges();
   const weeklyWaterHistory = useMemo(() => waterHistory.slice(-7), [waterHistory]);
 
   const [period, setPeriod] = useState<PeriodId>('30');
@@ -66,6 +75,12 @@ export default function ProgressionScreen() {
     startWeight != null && currentWeight != null && targetWeight != null
       ? computeProgressPercent(startWeight, currentWeight, targetWeight)
       : null;
+
+  const calorieTarget = computeCalorieTarget(profile);
+  const weekDays = useMemo(
+    () => getCurrentWeekDays().map((day) => ({ ...day, kcal: kcalByDate[day.date] ?? 0 })),
+    [kcalByDate]
+  );
 
   const handleSaveWeight = async (poids: number) => {
     const ok = await saveTodayWeight(poids);
@@ -152,6 +167,8 @@ export default function ProgressionScreen() {
           onAddPress={() => setModalVisible(true)}
         />
 
+        <GoalEstimateCard logs={logs} targetWeight={targetWeight} />
+
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Évolution</Text>
@@ -181,7 +198,7 @@ export default function ProgressionScreen() {
               <ActivityIndicator color={colors.accent} />
             </View>
           ) : (
-            <WeightChart logs={filteredLogs} target={targetWeight} />
+            <WeightChart logs={filteredLogs} target={targetWeight} periodDays={periodOption.days} />
           )}
         </View>
 
@@ -226,6 +243,29 @@ export default function ProgressionScreen() {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Moyenne calorique</Text>
+          <CalorieAverageCard average7={kcalAverage7} average30={kcalAverage30} target={calorieTarget} />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Énergie hebdomadaire</Text>
+          <WeeklyEnergyCard days={weekDays} target={calorieTarget} />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Dépenses énergétiques</Text>
+          <EnergyExpenditureCard
+            poidsKg={currentWeight}
+            tailleCm={profile?.taille ?? null}
+            age={profile?.age ?? null}
+            sexe={profile?.sexe ?? null}
+            niveauActivite={profile?.niveau_activite ?? null}
+            objectif={profile?.objectif ?? null}
+            consumedToday={todayKcal}
+          />
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Régularité</Text>
           {streakLoading ? (
             <ActivityIndicator color={colors.accent} />
@@ -238,6 +278,12 @@ export default function ProgressionScreen() {
             />
           )}
         </View>
+
+        {earnedCount > 0 && (
+          <View style={styles.section}>
+            <BadgesSummaryCard badges={badges} earnedCount={earnedCount} totalCount={totalCount} />
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Photos</Text>

@@ -1,6 +1,7 @@
 import { Apple, Moon, Sun, Sunrise, type LucideIcon } from 'lucide-react-native';
 import type { ImageSourcePropType } from 'react-native';
 import type { Profile } from '../context/ProfileContext';
+import { computeBmr, computeTdee } from './energy';
 import { appImage } from './images';
 
 // ---------------------------------------------------------------------------
@@ -228,14 +229,6 @@ export function defaultExpandedMealTypes(): Record<MealType, boolean> {
 // Calories & macros
 // ---------------------------------------------------------------------------
 
-const ACTIVITY_MULTIPLIER: Record<string, number> = {
-  Sédentaire: 1.2,
-  Léger: 1.375,
-  Modéré: 1.55,
-  'Très actif': 1.725,
-};
-const DEFAULT_ACTIVITY_MULTIPLIER = 1.4;
-
 const GOAL_CALORIE_ADJUSTMENT: Record<string, Record<string, number>> = {
   'Perte de poids': { Progressif: -300, Modéré: -500, Rapide: -750 },
   'Prise de muscle': { Progressif: 200, Modéré: 350, Rapide: 500 },
@@ -253,11 +246,8 @@ export function computeCalorieTarget(profile: Profile | null): number {
 
   if (!weight || !height || !age) return DEFAULT_CALORIE_TARGET;
 
-  const base = 10 * weight + 6.25 * height - 5 * age;
-  const bmr = profile?.sexe === 'Homme' ? base + 5 : profile?.sexe === 'Femme' ? base - 161 : base - 78;
-
-  const multiplier = ACTIVITY_MULTIPLIER[profile?.niveau_activite ?? ''] ?? DEFAULT_ACTIVITY_MULTIPLIER;
-  const tdee = bmr * multiplier;
+  const bmr = computeBmr(weight, height, age, profile?.sexe ?? null);
+  const tdee = computeTdee(bmr, profile?.niveau_activite ?? null);
 
   const adjustment = GOAL_CALORIE_ADJUSTMENT[profile?.objectif ?? '']?.[profile?.vitesse ?? ''] ?? 0;
 

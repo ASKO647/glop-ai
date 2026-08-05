@@ -9,6 +9,8 @@ import type { WeightLog } from '../../hooks/useWeightLogs';
 type WeightChartProps = {
   logs: WeightLog[];
   target: number | null;
+  /** Selected period's span in days — denser periods (3j/7j) show more axis labels, sparser ones (90j) show fewer. */
+  periodDays: number;
 };
 
 const CHART_HEIGHT = 180;
@@ -19,7 +21,23 @@ function formatAxisDate(iso: string): string {
   return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 }
 
-export default function WeightChart({ logs, target }: WeightChartProps) {
+/** How many axis labels to show for a given period — short periods have room for one per log, longer ones need to stay sparse. */
+function pickAxisLabelCount(periodDays: number): number {
+  if (periodDays <= 7) return 7;
+  if (periodDays <= 30) return 3;
+  return 5;
+}
+
+/** `count` indices spread evenly across `[0, total - 1]`, always including both ends. */
+function evenIndices(total: number, count: number): number[] {
+  if (total <= 0) return [];
+  if (count >= total) return Array.from({ length: total }, (_, i) => i);
+  if (count <= 1) return [0];
+  const step = (total - 1) / (count - 1);
+  return Array.from(new Set(Array.from({ length: count }, (_, i) => Math.round(i * step))));
+}
+
+export default function WeightChart({ logs, target, periodDays }: WeightChartProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [width, setWidth] = useState(0);
@@ -53,9 +71,7 @@ export default function WeightChart({ logs, target }: WeightChartProps) {
 
   const targetY = target != null && target >= domainMin && target <= domainMax ? y(target) : null;
 
-  const firstLabel = formatAxisDate(logs[0].date);
-  const lastLabel = formatAxisDate(logs[logs.length - 1].date);
-  const midLabel = logs.length > 2 ? formatAxisDate(logs[Math.floor((logs.length - 1) / 2)].date) : null;
+  const labelIndices = evenIndices(logs.length, pickAxisLabelCount(periodDays));
 
   return (
     <View>
@@ -97,9 +113,11 @@ export default function WeightChart({ logs, target }: WeightChartProps) {
       </View>
 
       <View style={styles.axisRow}>
-        <Text style={styles.axisLabel}>{firstLabel}</Text>
-        {midLabel && <Text style={styles.axisLabel}>{midLabel}</Text>}
-        <Text style={styles.axisLabel}>{lastLabel}</Text>
+        {labelIndices.map((index) => (
+          <Text key={logs[index].id} style={styles.axisLabel}>
+            {formatAxisDate(logs[index].date)}
+          </Text>
+        ))}
       </View>
     </View>
   );
