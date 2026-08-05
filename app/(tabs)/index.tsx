@@ -33,7 +33,6 @@ import {
   computeStreak,
   defaultExpandedMealTypes,
   formatDisplayDate,
-  getDisplayName,
   getMealTypeInfo,
   getProgramDay,
   getTipOfTheDay,
@@ -49,6 +48,7 @@ import {
   resolveProgramSetting,
 } from '../../constants/fasting';
 import { WATER_GOAL_MAX_ML, WATER_GOAL_MIN_ML, WATER_GOAL_STEP_ML } from '../../constants/hydration';
+import { getDisplayName } from '../../constants/profile';
 import type { Colors } from '../../constants/theme';
 import { spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
@@ -226,7 +226,7 @@ export default function DashboardScreen() {
     }, [refetchWeightLogs, refetchMeals, refetchWater, refetchFasting])
   );
 
-  const displayName = getDisplayName(profile?.email ?? user?.email ?? null);
+  const displayName = getDisplayName(profile, user);
   const initial = (displayName ?? '?').charAt(0).toUpperCase();
   const greeting = displayName ? `Salut, ${displayName}` : 'Salut !';
   const programDay = getProgramDay(profile?.created_at ?? null);

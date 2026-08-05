@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import {
+  AtSign,
   Award,
   Bell,
   Download,
@@ -10,6 +11,7 @@ import {
   Gauge,
   Gift,
   Globe,
+  IdCard,
   Info,
   Lock,
   LogOut,
@@ -22,6 +24,7 @@ import {
   Sunset,
   Target,
   Trash2,
+  User,
 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, Share, ScrollView, StyleSheet, Text } from 'react-native';
@@ -30,13 +33,16 @@ import ProfileHeader from '../../components/profil/ProfileHeader';
 import SubscriptionCard from '../../components/profil/SubscriptionCard';
 import ChoiceModal, { type ChoiceOption } from '../../components/settings/ChoiceModal';
 import DeleteAccountModal from '../../components/settings/DeleteAccountModal';
+import EmailChangeModal from '../../components/settings/EmailChangeModal';
 import ReferralCard from '../../components/settings/ReferralCard';
 import ReferralCodeModal from '../../components/settings/ReferralCodeModal';
 import SettingsRow, { SettingsSwitch, SettingsValue } from '../../components/settings/SettingsRow';
 import SettingsSection from '../../components/settings/SettingsSection';
 import TimePickerModal from '../../components/settings/TimePickerModal';
 import NumberStepperModal from '../../components/ui/NumberStepperModal';
-import { getDisplayName, getProgramDay, PROGRAM_LENGTH_DAYS } from '../../constants/dashboard';
+import TextInputModal from '../../components/ui/TextInputModal';
+import { getProgramDay, PROGRAM_LENGTH_DAYS } from '../../constants/dashboard';
+import { getDisplayName } from '../../constants/profile';
 import { formatWeight, QUICK_ADJUSTMENTS, WEIGHT_STEP } from '../../constants/progression';
 import { QUESTIONS, type SingleChoiceQuestion } from '../../constants/questionnaire';
 import type { Colors } from '../../constants/theme';
@@ -52,6 +58,22 @@ import { useSettings } from '../../hooks/useSettings';
 import { useWeightLogs } from '../../hooks/useWeightLogs';
 import { showAlert, showConfirm } from '../../lib/alert';
 import { supabase } from '../../lib/supabase';
+
+// 2-30 chars, Unicode letters (accents included) plus spaces/hyphens/apostrophes.
+const NAME_PATTERN = /^[\p{L}\s'-]+$/u;
+function validateName(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (trimmed.length < 2 || trimmed.length > 30) return 'Doit contenir entre 2 et 30 caractères.';
+  if (!NAME_PATTERN.test(trimmed)) return 'Lettres, espaces, tirets et apostrophes uniquement.';
+  return undefined;
+}
+
+const USERNAME_PATTERN = /^[a-z0-9_]+$/;
+function validateUsername(value: string): string | undefined {
+  if (value.length < 3 || value.length > 20) return 'Doit contenir entre 3 et 20 caractères.';
+  if (!USERNAME_PATTERN.test(value)) return 'Lettres minuscules, chiffres et underscore uniquement.';
+  return undefined;
+}
 
 const CONTACT_EMAIL = 'contact@glowupai.app';
 const PHOTOS_PERMISSION_DENIED_MESSAGE =
@@ -83,6 +105,10 @@ type ActiveModal =
   | 'eveningReminder'
   | 'appearance'
   | 'deleteAccount'
+  | 'prenom'
+  | 'nom'
+  | 'username'
+  | 'email'
   | null;
 
 export default function ProfilScreen() {
@@ -111,6 +137,7 @@ export default function ProfilScreen() {
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [resettingProgress, setResettingProgress] = useState(false);
+  const [emailChangeSent, setEmailChangeSent] = useState(false);
 
   const closeModal = () => setActiveModal(null);
 
@@ -125,6 +152,34 @@ export default function ProfilScreen() {
     }
     await refreshProfile();
     closeModal();
+  };
+
+  const handleSaveName = async (field: 'prenom' | 'nom', rawValue: string): Promise<string | undefined> => {
+    if (!user) return 'Utilisateur introuvable.';
+    const { error } = await supabase.from('profiles').update({ [field]: rawValue.trim() }).eq('id', user.id);
+    if (error) return "Impossible d'enregistrer ce changement. Réessaie.";
+    await refreshProfile();
+    return undefined;
+  };
+
+  const handleSaveUsername = async (value: string): Promise<string | undefined> => {
+    if (!user) return 'Utilisateur introuvable.';
+    const { data: existing } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('username', value)
+      .neq('id', user.id)
+      .maybeSingle();
+    if (existing) return "Ce nom d'utilisateur est déjà pris";
+
+    const { error } = await supabase.from('profiles').update({ username: value }).eq('id', user.id);
+    if (error) {
+      // A concurrent signup/edit could still win the race between the check above and this write.
+      if ((error as { code?: string }).code === '23505') return "Ce nom d'utilisateur est déjà pris";
+      return "Impossible d'enregistrer ce changement. Réessaie.";
+    }
+    await refreshProfile();
+    return undefined;
   };
 
   const handlePressAvatar = async () => {
@@ -308,7 +363,7 @@ export default function ProfilScreen() {
     );
   }
 
-  const displayName = getDisplayName(profile?.email ?? user?.email ?? null);
+  const displayName = getDisplayName(profile, user);
   const initial = (displayName ?? profile?.email ?? user?.email ?? '?').charAt(0).toUpperCase();
   const programDay = getProgramDay(profile?.created_at ?? null);
   const startWeight = profile?.poids_actuel ?? null;
@@ -334,6 +389,36 @@ export default function ProfilScreen() {
           onPressAvatar={handlePressAvatar}
           onLongPressAvatar={handleLongPressAvatar}
         />
+
+        <SettingsSection title="Informations personnelles">
+          <SettingsRow
+            icon={User}
+            label="Prénom"
+            onPress={() => setActiveModal('prenom')}
+            right={<SettingsValue value={profile?.prenom ?? '-'} />}
+          />
+          <SettingsRow
+            icon={IdCard}
+            label="Nom"
+            onPress={() => setActiveModal('nom')}
+            right={<SettingsValue value={profile?.nom ?? '-'} />}
+          />
+          <SettingsRow
+            icon={AtSign}
+            label="Nom d'utilisateur"
+            onPress={() => setActiveModal('username')}
+            right={<SettingsValue value={profile?.username ? `@${profile.username}` : '-'} />}
+          />
+          <SettingsRow
+            icon={Mail}
+            label="Email"
+            onPress={() => {
+              setEmailChangeSent(false);
+              setActiveModal('email');
+            }}
+            right={<SettingsValue value={user?.email ?? '-'} />}
+          />
+        </SettingsSection>
 
         <SubscriptionCard isSubscribed={!!isSubscribed} />
 
@@ -373,7 +458,6 @@ export default function ProfilScreen() {
         </SettingsSection>
 
         <SettingsSection title="Compte">
-          <SettingsRow icon={Mail} label="Email" right={<Text style={styles.plainValue}>{user?.email ?? '-'}</Text>} />
           <SettingsRow
             icon={Lock}
             label="Modifier mon mot de passe"
@@ -553,6 +637,49 @@ export default function ProfilScreen() {
         deleting={deleting}
         onCancel={closeModal}
         onConfirm={handleConfirmDelete}
+      />
+
+      <TextInputModal
+        visible={activeModal === 'prenom'}
+        title="Prénom"
+        initialValue={profile?.prenom ?? ''}
+        placeholder="Ton prénom"
+        autoCapitalize="words"
+        validate={validateName}
+        onCancel={closeModal}
+        onSave={(value) => handleSaveName('prenom', value)}
+      />
+
+      <TextInputModal
+        visible={activeModal === 'nom'}
+        title="Nom"
+        initialValue={profile?.nom ?? ''}
+        placeholder="Ton nom"
+        autoCapitalize="words"
+        validate={validateName}
+        onCancel={closeModal}
+        onSave={(value) => handleSaveName('nom', value)}
+      />
+
+      <TextInputModal
+        visible={activeModal === 'username'}
+        title="Nom d'utilisateur"
+        subtitle="Lettres minuscules, chiffres et underscore uniquement."
+        initialValue={profile?.username ?? ''}
+        placeholder="tonpseudo"
+        autoCapitalize="none"
+        transform={(value) => value.toLowerCase()}
+        validate={validateUsername}
+        onCancel={closeModal}
+        onSave={handleSaveUsername}
+      />
+
+      <EmailChangeModal
+        visible={activeModal === 'email'}
+        currentEmail={user?.email ?? null}
+        sent={emailChangeSent}
+        onSent={() => setEmailChangeSent(true)}
+        onCancel={closeModal}
       />
     </SafeAreaView>
   );

@@ -5,23 +5,6 @@ import { computeBmr, computeTdee } from './energy';
 import { appImage } from './images';
 
 // ---------------------------------------------------------------------------
-// Display name
-// ---------------------------------------------------------------------------
-
-/**
- * There's no first-name field on `profiles` yet, so the greeting derives a
- * display name from the email's local part (e.g. "arnold.35@x.com" -> "Arnold").
- */
-export function getDisplayName(email: string | null | undefined): string | null {
-  if (!email) return null;
-  const local = email.split('@')[0];
-  const match = local.match(/^[a-zA-Z]+/);
-  const name = match ? match[0] : local;
-  if (!name) return null;
-  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-}
-
-// ---------------------------------------------------------------------------
 // Program day count
 // ---------------------------------------------------------------------------
 
