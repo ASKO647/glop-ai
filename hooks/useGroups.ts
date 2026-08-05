@@ -36,7 +36,7 @@ type MemberRow = {
   last_read_at: string;
 };
 
-type ActionResult = { ok: boolean; error?: string; groupId?: string };
+type ActionResult = { ok: boolean; error?: string; groupId?: string; codeInvitation?: string };
 
 /** A group's most recent (non-deleted) message plus its author's first name and whether it carries an image. */
 async function fetchLastMessage(groupId: string): Promise<GroupSummary['lastMessage']> {
@@ -197,7 +197,7 @@ export function useGroups(userId: string | undefined) {
     if (memberError) return { ok: false, error: t('groups.errors.createFailed') };
 
     await load();
-    return { ok: true, groupId: group.id };
+    return { ok: true, groupId: group.id, codeInvitation: code };
   };
 
   return { groups, loading, refetch: load, joinByCode, createGroup };
