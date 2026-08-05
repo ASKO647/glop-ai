@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { computeGoalEstimate, formatEstimateDate, type WeightLogLike } from '../../constants/progression';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 type GoalEstimateCardProps = {
@@ -13,6 +14,7 @@ type GoalEstimateCardProps = {
 
 export default function GoalEstimateCard({ logs, targetWeight }: GoalEstimateCardProps) {
   const { colors } = useTheme();
+  const { t, locale } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const estimate = computeGoalEstimate(logs, targetWeight);
 
@@ -20,17 +22,17 @@ export default function GoalEstimateCard({ logs, targetWeight }: GoalEstimateCar
     <View style={styles.card}>
       <View style={styles.header}>
         <Target color={colors.accent} size={18} />
-        <Text style={styles.title}>Objectif estimé</Text>
+        <Text style={styles.title}>{t('progression.goalEstimate.title')}</Text>
       </View>
 
       {estimate.status === 'not-enough-data' ? (
-        <Text style={styles.message}>Pèse-toi plus régulièrement pour voir une estimation.</Text>
+        <Text style={styles.message}>{t('progression.goalEstimate.notEnoughData')}</Text>
       ) : estimate.status === 'no-trend' ? (
-        <Text style={styles.message}>Continue tes efforts pour voir une estimation.</Text>
+        <Text style={styles.message}>{t('progression.goalEstimate.noTrend')}</Text>
       ) : (
         <>
-          <Text style={styles.date}>{formatEstimateDate(estimate.date)}</Text>
-          <Text style={styles.daysAway}>dans {estimate.daysAway} jours</Text>
+          <Text style={styles.date}>{formatEstimateDate(estimate.date, locale)}</Text>
+          <Text style={styles.daysAway}>{t('progression.goalEstimate.daysAway', { count: estimate.daysAway })}</Text>
         </>
       )}
     </View>

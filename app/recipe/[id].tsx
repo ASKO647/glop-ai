@@ -10,6 +10,7 @@ import { guessMealTypeNow, todayISODate, type MealType } from '../../constants/d
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import { showAlert } from '../../lib/alert';
 import type { RecipeIngredient } from '../../lib/recipes';
@@ -39,6 +40,7 @@ export default function RecipeDetailScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { id, recette: recetteParam, source: sourceParam, savedId: savedIdParam } = useLocalSearchParams<{
     id: string;
@@ -62,14 +64,14 @@ export default function RecipeDetailScreen() {
       try {
         setRecipe(JSON.parse(recetteParam) as DetailRecipe);
       } catch {
-        setLoadError('Impossible de charger cette recette.');
+        setLoadError(t('recipes.detail.loadError'));
       }
       setLoading(false);
       return;
     }
 
     if (!id || id === 'preview') {
-      setLoadError('Recette introuvable.');
+      setLoadError(t('recipes.detail.notFound'));
       setLoading(false);
       return;
     }
@@ -79,7 +81,7 @@ export default function RecipeDetailScreen() {
       const { data, error } = await supabase.from('saved_recipes').select('*').eq('id', id).maybeSingle();
       if (cancelled) return;
       if (error || !data) {
-        setLoadError('Recette introuvable.');
+        setLoadError(t('recipes.detail.notFound'));
       } else {
         setRecipe(data as DetailRecipe);
         setSavedId(data.id as string);
@@ -101,7 +103,7 @@ export default function RecipeDetailScreen() {
       const { error } = await supabase.from('saved_recipes').delete().eq('id', savedId);
       setFavoriting(false);
       if (error) {
-        showAlert('Erreur', 'Impossible de retirer ce favori. Réessaie.');
+        showAlert(t('common.error'), t('recipes.detail.removeFavoriteError'));
         return;
       }
       setSavedId(null);
@@ -128,7 +130,7 @@ export default function RecipeDetailScreen() {
       .single();
     setFavoriting(false);
     if (error || !data) {
-      showAlert('Erreur', "Impossible d'ajouter aux favoris. Réessaie.");
+      showAlert(t('common.error'), t('recipes.addFavoriteError'));
       return;
     }
     setSavedId(data.id as string);
@@ -150,11 +152,11 @@ export default function RecipeDetailScreen() {
     setAdding(false);
 
     if (error) {
-      showAlert('Erreur', "Impossible d'ajouter cette recette à tes repas. Réessaie.");
+      showAlert(t('common.error'), t('recipes.detail.addToMealsError'));
       return;
     }
 
-    showAlert('Ajouté', `${recipe.titre} a été ajouté à ton suivi du jour.`);
+    showAlert(t('recipes.detail.addedAlertTitle'), t('recipes.detail.addedAlertMessage', { title: recipe.titre }));
     router.replace('/');
   };
 
@@ -169,8 +171,8 @@ export default function RecipeDetailScreen() {
   if (loadError || !recipe) {
     return (
       <SafeAreaView style={styles.loadingScreen} edges={['top']}>
-        <Text style={styles.errorTitle}>{loadError ?? 'Recette introuvable.'}</Text>
-        <Button label="Retour" variant="secondary" onPress={() => router.back()} style={styles.errorButton} />
+        <Text style={styles.errorTitle}>{loadError ?? t('recipes.detail.notFound')}</Text>
+        <Button label={t('recipes.detail.back')} variant="secondary" onPress={() => router.back()} style={styles.errorButton} />
       </SafeAreaView>
     );
   }
@@ -191,7 +193,7 @@ export default function RecipeDetailScreen() {
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+          accessibilityLabel={isFavorite ? t('recipes.favoriteToggle.remove') : t('recipes.favoriteToggle.add')}
           onPress={handleToggleFavorite}
           disabled={favoriting}
           hitSlop={12}
@@ -209,33 +211,33 @@ export default function RecipeDetailScreen() {
           {recipe.ingredients_manquants && recipe.ingredients_manquants.length > 0 && (
             <View style={styles.missingBlock}>
               <Text style={styles.missingText}>
-                Ingrédients manquants : {recipe.ingredients_manquants.join(', ')}
+                {t('recipes.missingIngredients', { list: recipe.ingredients_manquants.join(', ') })}
               </Text>
             </View>
           )}
         </View>
 
         <View style={styles.metaCard}>
-          <MetaItem colors={colors} styles={styles} Icon={Flame} value={`${recipe.kcal}`} label="kcal" />
+          <MetaItem colors={colors} styles={styles} Icon={Flame} value={`${recipe.kcal}`} label={t('recipes.detail.kcal')} />
           <View style={styles.metaDivider} />
-          <MetaItem colors={colors} styles={styles} Icon={Clock} value={recipe.temps_preparation} label="Temps" />
+          <MetaItem colors={colors} styles={styles} Icon={Clock} value={recipe.temps_preparation} label={t('recipes.detail.time')} />
           <View style={styles.metaDivider} />
-          <MetaItem colors={colors} styles={styles} Icon={Gauge} value={recipe.difficulte} label="Difficulté" />
+          <MetaItem colors={colors} styles={styles} Icon={Gauge} value={recipe.difficulte} label={t('recipes.detail.difficulty')} />
           <View style={styles.metaDivider} />
-          <MetaItem colors={colors} styles={styles} Icon={Users} value={`${portions}`} label="Portions" />
+          <MetaItem colors={colors} styles={styles} Icon={Users} value={`${portions}`} label={t('recipes.detail.portions')} />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Macronutriments</Text>
+          <Text style={styles.sectionTitle}>{t('recipes.detail.macrosTitle')}</Text>
           <View style={styles.macroCard}>
-            <MacroRow styles={styles} label="Protéines" grams={recipe.proteines} max={macroMax} />
-            <MacroRow styles={styles} label="Glucides" grams={recipe.glucides} max={macroMax} />
-            <MacroRow styles={styles} label="Lipides" grams={recipe.lipides} max={macroMax} />
+            <MacroRow styles={styles} label={t('recipes.detail.proteins')} grams={recipe.proteines} max={macroMax} />
+            <MacroRow styles={styles} label={t('recipes.detail.carbs')} grams={recipe.glucides} max={macroMax} />
+            <MacroRow styles={styles} label={t('recipes.detail.fats')} grams={recipe.lipides} max={macroMax} />
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ingrédients</Text>
+          <Text style={styles.sectionTitle}>{t('recipes.detail.ingredientsTitle')}</Text>
           <View style={styles.ingredientsList}>
             {recipe.ingredients.map((ingredient, index) => (
               <View key={index} style={styles.ingredientRow}>
@@ -249,7 +251,7 @@ export default function RecipeDetailScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Préparation</Text>
+          <Text style={styles.sectionTitle}>{t('recipes.detail.preparationTitle')}</Text>
           <View style={styles.stepsList}>
             {recipe.etapes.map((etape, index) => (
               <View key={index} style={styles.stepRow}>
@@ -263,11 +265,11 @@ export default function RecipeDetailScreen() {
         </View>
 
         <View style={styles.mealTypeBlock}>
-          <Text style={styles.mealTypeLabel}>Ajouter à</Text>
+          <Text style={styles.mealTypeLabel}>{t('recipes.detail.addTo')}</Text>
           <MealTypePills value={mealType} onChange={setMealType} />
         </View>
 
-        <Button label="Ajouter à mes repas" onPress={handleAddToMeals} loading={adding} />
+        <Button label={t('recipes.detail.addToMealsButton')} onPress={handleAddToMeals} loading={adding} />
       </ScrollView>
     </SafeAreaView>
   );

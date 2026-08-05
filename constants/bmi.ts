@@ -1,3 +1,5 @@
+import type { Locale } from '../context/LocaleContext';
+import { formatDecimal } from '../lib/format';
 import type { Colors } from './theme';
 
 export type BmiCategoryId = 'insuffisance' | 'normal' | 'surpoids' | 'obesite';
@@ -12,6 +14,8 @@ export type BmiCategoryInfo = {
   detail: string;
 };
 
+type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
+
 export const BMI_THRESHOLDS = { underweight: 18.5, overweight: 25, obese: 30 } as const;
 
 // Visual domain for the classification bar. "Obésité" has no real upper bound, so it's capped
@@ -25,54 +29,35 @@ export function computeBmi(weightKg: number, heightCm: number): number {
   return weightKg / (heightM * heightM);
 }
 
-export function formatBmi(bmi: number): string {
-  return bmi.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+export function formatBmi(bmi: number, locale: Locale = 'fr'): string {
+  return formatDecimal(bmi, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
-export const BMI_CATEGORIES: BmiCategoryInfo[] = [
-  {
-    id: 'insuffisance',
-    label: 'Insuffisance pondérale',
-    rangeLabel: 'Moins de 18,5',
-    explanation: 'Ton poids est en dessous de la plage habituelle pour ta taille.',
-    detail:
-      "Un IMC inférieur à 18,5 est classé comme une insuffisance pondérale. De nombreux facteurs peuvent l'expliquer — ça vaut la peine d'en parler avec un professionnel de santé si ce n'est pas intentionnel.",
-  },
-  {
-    id: 'normal',
-    label: 'Corpulence normale',
-    rangeLabel: '18,5 à 25',
-    explanation: 'Ta corpulence est dans la plage recommandée.',
-    detail:
-      "Un IMC entre 18,5 et 25 correspond, à l'échelle d'une population, à la plage généralement associée au risque le plus faible pour la santé.",
-  },
-  {
-    id: 'surpoids',
-    label: 'Surpoids',
-    rangeLabel: '25 à 30',
-    explanation: 'Ton poids est au-dessus de la plage habituelle pour ta taille.',
-    detail:
-      "Un IMC entre 25 et 30 est classé comme surpoids. C'est un repère parmi d'autres : il ne dit rien de ta condition physique ni de tes habitudes.",
-  },
-  {
-    id: 'obesite',
-    label: 'Obésité',
-    rangeLabel: 'Plus de 30',
-    explanation: 'Ton poids est nettement au-dessus de la plage habituelle pour ta taille.',
-    detail:
-      "Un IMC supérieur à 30 est classé comme obésité. Comme pour les autres catégories, ce chiffre seul ne reflète pas ta santé globale.",
-  },
-];
+// Structural order only (ids are internal, never displayed) — used for color/segment-width
+// lookups that don't need translated text. Same order as the categories below.
+export const BMI_CATEGORY_IDS: BmiCategoryId[] = ['insuffisance', 'normal', 'surpoids', 'obesite'];
 
-export function getBmiCategory(bmi: number): BmiCategoryInfo {
-  if (bmi < BMI_THRESHOLDS.underweight) return BMI_CATEGORIES[0];
-  if (bmi < BMI_THRESHOLDS.overweight) return BMI_CATEGORIES[1];
-  if (bmi < BMI_THRESHOLDS.obese) return BMI_CATEGORIES[2];
-  return BMI_CATEGORIES[3];
+/** Builds the fully localized category list — label/rangeLabel/explanation/detail all come from `t`, `id` stays the fixed internal slug. */
+export function getBmiCategories(t: TranslateFn): BmiCategoryInfo[] {
+  return BMI_CATEGORY_IDS.map((id) => ({
+    id,
+    label: t(`progression.bmi.categories.${id}.label`),
+    rangeLabel: t(`progression.bmi.categories.${id}.rangeLabel`),
+    explanation: t(`progression.bmi.categories.${id}.explanation`),
+    detail: t(`progression.bmi.categories.${id}.detail`),
+  }));
+}
+
+export function getBmiCategory(bmi: number, t: TranslateFn): BmiCategoryInfo {
+  const categories = getBmiCategories(t);
+  if (bmi < BMI_THRESHOLDS.underweight) return categories[0];
+  if (bmi < BMI_THRESHOLDS.overweight) return categories[1];
+  if (bmi < BMI_THRESHOLDS.obese) return categories[2];
+  return categories[3];
 }
 
 // Segment widths (%), proportional to each category's share of [BMI_DOMAIN_MIN, BMI_DOMAIN_MAX] —
-// same order as BMI_CATEGORIES.
+// same order as BMI_CATEGORY_IDS.
 export const BMI_SEGMENT_WIDTHS_PERCENT: number[] = (() => {
   const bounds = [
     BMI_DOMAIN_MIN,

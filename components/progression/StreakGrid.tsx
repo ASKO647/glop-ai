@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatDisplayDate, isoDaysAgo, todayISODate } from '../../constants/dashboard';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import type { DayCompletion, DayCount } from '../../hooks/useMissionStreak';
 import { hexToRgba } from '../../lib/color';
@@ -15,16 +16,20 @@ type StreakGridProps = {
   activeDays: number;
 };
 
+type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
+
 const DAYS = 30;
 const COLUMNS = 10;
 const SQUARE_SIZE = 24;
 const TOOLTIP_DURATION_MS = 3000;
 
-const LEGEND_ITEMS: { status: DayCompletion; label: string }[] = [
-  { status: 'full', label: 'Toutes les missions' },
-  { status: 'partial', label: 'Partiellement' },
-  { status: 'none', label: 'Aucune' },
-];
+function legendItems(t: TranslateFn): { status: DayCompletion; label: string }[] {
+  return [
+    { status: 'full', label: t('progression.streak.legendFull') },
+    { status: 'partial', label: t('progression.streak.legendPartial') },
+    { status: 'none', label: t('progression.streak.legendNone') },
+  ];
+}
 
 function statusColor(colors: Colors, status: DayCompletion | undefined): string {
   if (status === 'full') return colors.accent;
@@ -32,13 +37,14 @@ function statusColor(colors: Colors, status: DayCompletion | undefined): string 
   return colors.border;
 }
 
-function dayDetailLabel(count: DayCount | undefined): string {
-  if (!count) return "Aucune activité ce jour-là";
-  return `${count.done} mission${count.done > 1 ? 's' : ''} sur ${count.total}`;
+function dayDetailLabel(t: TranslateFn, count: DayCount | undefined): string {
+  if (!count) return t('progression.streak.noActivity');
+  return t('progression.streak.missionsDone', { count: count.done, total: count.total });
 }
 
 export default function StreakGrid({ statusByDate, countsByDate, streak, activeDays }: StreakGridProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [tooltipDate, setTooltipDate] = useState<string | null>(null);
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -64,16 +70,16 @@ export default function StreakGrid({ statusByDate, countsByDate, streak, activeD
 
   return (
     <View>
-      <Text style={styles.explainer}>Tes 30 derniers jours — chaque carré représente un jour</Text>
+      <Text style={styles.explainer}>{t('progression.streak.explainer')}</Text>
 
       <View style={styles.activeDaysRow}>
-        <Text style={styles.activeDaysText}>{activeDays} / 30 jours actifs</Text>
+        <Text style={styles.activeDaysText}>{t('progression.streak.activeDays', { count: activeDays })}</Text>
       </View>
 
       {tooltipDate && (
         <View style={styles.tooltip}>
           <Text style={styles.tooltipDate}>{formatDisplayDate(tooltipDate)}</Text>
-          <Text style={styles.tooltipDetail}>{dayDetailLabel(countsByDate[tooltipDate])}</Text>
+          <Text style={styles.tooltipDetail}>{dayDetailLabel(t, countsByDate[tooltipDate])}</Text>
         </View>
       )}
 
@@ -84,7 +90,7 @@ export default function StreakGrid({ statusByDate, countsByDate, streak, activeD
               <Pressable
                 key={date}
                 accessibilityRole="button"
-                accessibilityLabel={`${formatDisplayDate(date)} — appui long pour le détail`}
+                accessibilityLabel={t('progression.streak.dayDetailAccessibility', { date: formatDisplayDate(date) })}
                 onLongPress={() => showTooltip(date)}
                 style={[
                   styles.square,
@@ -98,7 +104,7 @@ export default function StreakGrid({ statusByDate, countsByDate, streak, activeD
       </View>
 
       <View style={styles.legendRow}>
-        {LEGEND_ITEMS.map((item) => (
+        {legendItems(t).map((item) => (
           <View key={item.status} style={styles.legendItem}>
             <View style={[styles.legendSwatch, { backgroundColor: statusColor(colors, item.status) }]} />
             <Text style={styles.legendLabel}>{item.label}</Text>
@@ -108,7 +114,7 @@ export default function StreakGrid({ statusByDate, countsByDate, streak, activeD
 
       <View style={styles.streakRow}>
         <Flame color={colors.accent} size={16} />
-        <Text style={styles.streakText}>{streak} jour{streak > 1 ? 's' : ''} d'affilée</Text>
+        <Text style={styles.streakText}>{t('progression.streak.streakDays', { count: streak })}</Text>
       </View>
     </View>
   );

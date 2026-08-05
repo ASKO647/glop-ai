@@ -3,8 +3,10 @@ import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { Circle, Defs, LinearGradient, Line, Path, Stop, Svg } from 'react-native-svg';
 import type { Colors } from '../../constants/theme';
 import { spacing } from '../../constants/theme';
+import { useLocale, type Locale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import type { WeightLog } from '../../hooks/useWeightLogs';
+import { formatShortDate } from '../../lib/format';
 
 type WeightChartProps = {
   logs: WeightLog[];
@@ -16,9 +18,9 @@ type WeightChartProps = {
 const CHART_HEIGHT = 180;
 const DOMAIN_PADDING_RATIO = 0.15;
 
-function formatAxisDate(iso: string): string {
+function formatAxisDate(iso: string, locale: Locale): string {
   const date = new Date(`${iso}T00:00:00`);
-  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  return formatShortDate(date, locale);
 }
 
 /** How many axis labels to show for a given period — short periods have room for one per log, longer ones need to stay sparse. */
@@ -39,6 +41,7 @@ function evenIndices(total: number, count: number): number[] {
 
 export default function WeightChart({ logs, target, periodDays }: WeightChartProps) {
   const { colors } = useTheme();
+  const { t, locale } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [width, setWidth] = useState(0);
 
@@ -49,7 +52,7 @@ export default function WeightChart({ logs, target, periodDays }: WeightChartPro
   if (logs.length < 2) {
     return (
       <View style={styles.emptyState}>
-        <Text style={styles.emptyText}>Ajoute au moins deux pesées pour voir ta courbe</Text>
+        <Text style={styles.emptyText}>{t('progression.weightChart.empty')}</Text>
       </View>
     );
   }
@@ -108,14 +111,16 @@ export default function WeightChart({ logs, target, periodDays }: WeightChartPro
         )}
 
         {targetY != null && (
-          <Text style={[styles.targetLabel, { top: Math.max(0, targetY - 16) }]}>Objectif</Text>
+          <Text style={[styles.targetLabel, { top: Math.max(0, targetY - 16) }]}>
+            {t('progression.weightChart.target')}
+          </Text>
         )}
       </View>
 
       <View style={styles.axisRow}>
         {labelIndices.map((index) => (
           <Text key={logs[index].id} style={styles.axisLabel}>
-            {formatAxisDate(logs[index].date)}
+            {formatAxisDate(logs[index].date, locale)}
           </Text>
         ))}
       </View>

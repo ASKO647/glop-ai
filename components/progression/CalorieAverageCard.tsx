@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 type CalorieAverageCardProps = {
@@ -12,23 +13,24 @@ type CalorieAverageCardProps = {
 
 export default function CalorieAverageCard({ average7, average30, target }: CalorieAverageCardProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
     <View style={styles.card}>
       <View style={styles.column}>
         <Text style={styles.value}>{Math.round(average7)}</Text>
-        <Text style={styles.label}>Moy. 7 jours</Text>
+        <Text style={styles.label}>{t('progression.calorieAverage.average7')}</Text>
       </View>
       <View style={styles.divider} />
       <View style={styles.column}>
         <Text style={styles.value}>{Math.round(average30)}</Text>
-        <Text style={styles.label}>Moy. 30 jours</Text>
+        <Text style={styles.label}>{t('progression.calorieAverage.average30')}</Text>
       </View>
       <View style={styles.divider} />
       <View style={styles.column}>
         <Text style={styles.value}>{Math.round(target)}</Text>
-        <Text style={styles.label}>Objectif</Text>
+        <Text style={styles.label}>{t('progression.calorieAverage.target')}</Text>
       </View>
     </View>
   );

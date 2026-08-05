@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { formatLiters, weekdayLetter } from '../../constants/hydration';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import type { WaterDayTotal } from '../../hooks/useWaterLogs';
 
@@ -15,6 +16,7 @@ type HydrationSummaryCardProps = {
 
 export default function HydrationSummaryCard({ history, goalMl }: HydrationSummaryCardProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const average =
     history.length > 0 ? Math.round(history.reduce((sum, day) => sum + day.totalMl, 0) / history.length) : 0;
@@ -26,8 +28,8 @@ export default function HydrationSummaryCard({ history, goalMl }: HydrationSumma
           <Droplet color={colors.accent} size={18} />
         </View>
         <View style={styles.headerInfo}>
-          <Text style={styles.title}>Hydratation</Text>
-          <Text style={styles.subtitle}>Moyenne des 7 derniers jours</Text>
+          <Text style={styles.title}>{t('progression.hydration.title')}</Text>
+          <Text style={styles.subtitle}>{t('progression.hydration.subtitle')}</Text>
         </View>
         <Text style={styles.average}>{formatLiters(average)} L</Text>
       </View>

@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { BMI_CATEGORIES, bmiCategoryColor } from '../../constants/bmi';
+import { getBmiCategories, bmiCategoryColor } from '../../constants/bmi';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import Button from '../ui/Button';
 
@@ -13,18 +14,20 @@ type BmiInfoModalProps = {
 
 export default function BmiInfoModal({ visible, onClose }: BmiInfoModalProps) {
   const { colors, resolvedScheme } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const categories = useMemo(() => getBmiCategories(t), [t]);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel="Fermer" onPress={onClose} />
+        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={onClose} />
 
         <View style={styles.sheet}>
-          <Text style={styles.title}>Indice de masse corporelle</Text>
+          <Text style={styles.title}>{t('progression.bmi.title')}</Text>
 
           <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
-            {BMI_CATEGORIES.map((category) => (
+            {categories.map((category) => (
               <View key={category.id} style={styles.categoryRow}>
                 <View
                   style={[
@@ -42,14 +45,10 @@ export default function BmiInfoModal({ visible, onClose }: BmiInfoModalProps) {
               </View>
             ))}
 
-            <Text style={styles.disclaimer}>
-              L'IMC est un indicateur général : il ne tient compte ni de la masse musculaire, ni de
-              la répartition des graisses, ni de la morphologie individuelle. Il ne remplace pas
-              l'avis d'un professionnel de santé.
-            </Text>
+            <Text style={styles.disclaimer}>{t('progression.bmi.disclaimer')}</Text>
           </ScrollView>
 
-          <Button label="Fermer" variant="secondary" onPress={onClose} />
+          <Button label={t('common.close')} variant="secondary" onPress={onClose} />
         </View>
       </View>
     </Modal>

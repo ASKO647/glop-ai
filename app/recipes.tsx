@@ -11,10 +11,11 @@ import RecipeIdeaCard from '../components/recipes/RecipeIdeaCard';
 import RecipeSkeletonCard from '../components/recipes/RecipeSkeletonCard';
 import Button from '../components/ui/Button';
 import { todayISODate } from '../constants/dashboard';
-import { getDefaultRecipeCategory, getRecipeCategoryInfo, RECIPE_CATEGORIES, type RecipeCategoryId } from '../constants/recipes';
+import { getDefaultRecipeCategory, getRecipeCategories, getRecipeCategoryInfo, type RecipeCategoryId } from '../constants/recipes';
 import type { Colors } from '../constants/theme';
 import { radii, spacing, typography } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
+import { useLocale } from '../context/LocaleContext';
 import { useProfile } from '../context/ProfileContext';
 import { useTheme } from '../context/ThemeContext';
 import { showAlert, showConfirm } from '../lib/alert';
@@ -32,15 +33,7 @@ import { supabase } from '../lib/supabase';
 
 type Tab = 'suggestions' | 'frigo' | 'favoris';
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'suggestions', label: 'Suggestions' },
-  { key: 'frigo', label: 'Mon frigo' },
-  { key: 'favoris', label: 'Favoris' },
-];
-
 const MAX_FRIDGE_PHOTOS = 3;
-const LIBRARY_DENIED_MESSAGE =
-  "GlowUp AI a besoin d'accéder à tes photos pour analyser ton frigo. Active l'accès dans les réglages de ton téléphone.";
 
 type FridgeState = 'idle' | 'analyzing' | 'result' | 'error';
 type FridgePhoto = { uri: string; width: number };
@@ -59,7 +52,17 @@ export default function RecipesScreen() {
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
   const { colors } = useTheme();
+  const { t, locale } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  const TABS: { key: Tab; label: string }[] = useMemo(
+    () => [
+      { key: 'suggestions', label: t('recipes.tabs.suggestions') },
+      { key: 'frigo', label: t('recipes.tabs.fridge') },
+      { key: 'favoris', label: t('recipes.tabs.favorites') },
+    ],
+    [t]
+  );
 
   const [activeTab, setActiveTab] = useState<Tab>('suggestions');
 
@@ -101,8 +104,8 @@ export default function RecipesScreen() {
         }
       }
 
-      const categoryInfo = getRecipeCategoryInfo(category);
-      const result = await generateCategoryRecipes(categoryInfo.promptLabel, summarizeProfileForRecipes(profile));
+      const categoryInfo = getRecipeCategoryInfo(category, t);
+      const result = await generateCategoryRecipes(categoryInfo.promptLabel, summarizeProfileForRecipes(profile), locale, t);
       setSuggestionsByCategory((prev) => ({ ...prev, [category]: result.recettes }));
       setSuggestionFavorites((prev) => {
         const next = { ...prev };
@@ -113,7 +116,7 @@ export default function RecipesScreen() {
       });
       await AsyncStorage.setItem(categorySuggestionsCacheKey(user.id, category), JSON.stringify(result));
     } catch (error) {
-      setSuggestionsError(error instanceof Error ? error.message : 'Impossible de générer des recettes. Réessaie.');
+      setSuggestionsError(error instanceof Error ? error.message : t('recipes.suggestions.error'));
     } finally {
       setSuggestionsLoading(false);
       setRegenerating(false);
@@ -178,7 +181,7 @@ export default function RecipesScreen() {
       .select()
       .single();
     if (error || !data) {
-      showAlert('Erreur', "Impossible d'ajouter aux favoris. Réessaie.");
+      showAlert(t('common.error'), t('recipes.addFavoriteError'));
       return null;
     }
     return data as SavedRecipeRow;
@@ -187,7 +190,7 @@ export default function RecipesScreen() {
   const deleteSavedRecipe = async (id: string): Promise<boolean> => {
     const { error } = await supabase.from('saved_recipes').delete().eq('id', id);
     if (error) {
-      showAlert('Erreur', 'Impossible de retirer ce favori. Réessaie.');
+      showAlert(t('common.error'), t('recipes.deleteSaved.error'));
       return false;
     }
     return true;
@@ -231,7 +234,7 @@ export default function RecipesScreen() {
   };
 
   const handleDeleteSaved = (row: SavedRecipeRow) => {
-    showConfirm('Supprimer cette recette ?', 'Elle sera retirée de tes favoris.', 'Supprimer', async () => {
+    showConfirm(t('recipes.deleteSaved.title'), t('recipes.deleteSaved.message'), t('recipes.deleteSaved.confirmLabel'), async () => {
       if (!(await deleteSavedRecipe(row.id))) return;
       setSavedRecipes((prev) => prev.filter((r) => r.id !== row.id));
       setSuggestionFavorites((prev) => removeValue(prev, row.id));
@@ -264,7 +267,7 @@ export default function RecipesScreen() {
     if (existing !== 'granted') {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        showAlert('Accès à tes photos refusé', LIBRARY_DENIED_MESSAGE);
+        showAlert(t('recipes.fridge.permissionDeniedTitle'), t('recipes.fridge.permissionDeniedMessage'));
         return;
       }
     }
@@ -284,12 +287,12 @@ export default function RecipesScreen() {
     setFridgeError(null);
     try {
       const images = await Promise.all(fridgePhotos.map((photo) => compressImage(photo.uri, photo.width)));
-      const result = await analyzeFridge(images, summarizeProfileForRecipes(profile));
+      const result = await analyzeFridge(images, summarizeProfileForRecipes(profile), locale, t);
       setFridgeResult(result);
       setFridgeFavorites({});
       setFridgeState('result');
     } catch (error) {
-      setFridgeError(error instanceof Error ? error.message : "Impossible d'analyser tes ingrédients. Réessaie.");
+      setFridgeError(error instanceof Error ? error.message : t('recipes.fridge.error'));
       setFridgeState('error');
     }
   };
@@ -301,7 +304,7 @@ export default function RecipesScreen() {
     setFridgeState('idle');
   };
 
-  const selectedCategoryInfo = getRecipeCategoryInfo(selectedCategory);
+  const selectedCategoryInfo = getRecipeCategoryInfo(selectedCategory, t);
   const currentSuggestions = suggestionsByCategory[selectedCategory] ?? [];
 
   return (
@@ -315,7 +318,7 @@ export default function RecipesScreen() {
         >
           <ArrowLeft color={colors.textPrimary} size={22} />
         </Pressable>
-        <Text style={styles.headerTitle}>Recettes</Text>
+        <Text style={styles.headerTitle}>{t('recipes.header.title')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -339,15 +342,19 @@ export default function RecipesScreen() {
         {activeTab === 'suggestions' && (
           <View style={styles.tabContent}>
             <CategoryStoryBar
-              categories={RECIPE_CATEGORIES}
+              categories={getRecipeCategories(t)}
               selected={selectedCategory}
               onSelect={setSelectedCategory}
             />
 
             <View style={styles.suggestionsHeader}>
-              <Text style={styles.suggestionsTitle}>Idées {selectedCategoryInfo.label}</Text>
+              <Text style={styles.suggestionsTitle}>
+                {t('recipes.suggestions.titlePrefix', { category: selectedCategoryInfo.label })}
+              </Text>
               {profile?.objectif && (
-                <Text style={styles.suggestionsSubtitle}>Adapté à ton objectif {profile.objectif}</Text>
+                <Text style={styles.suggestionsSubtitle}>
+                  {t('recipes.suggestions.subtitleGoal', { goal: profile.objectif })}
+                </Text>
               )}
             </View>
 
@@ -360,7 +367,7 @@ export default function RecipesScreen() {
             ) : suggestionsError ? (
               <View style={styles.errorBlock}>
                 <Text style={styles.errorText}>{suggestionsError}</Text>
-                <Button label="Réessayer" onPress={() => loadCategory(selectedCategory, true)} loading={regenerating} />
+                <Button label={t('common.retry')} onPress={() => loadCategory(selectedCategory, true)} loading={regenerating} />
               </View>
             ) : (
               <>
@@ -378,7 +385,7 @@ export default function RecipesScreen() {
                   ))}
                 </View>
                 <Button
-                  label="Générer d'autres idées"
+                  label={t('recipes.suggestions.generateMore')}
                   variant="secondary"
                   onPress={() => loadCategory(selectedCategory, true)}
                   loading={regenerating}
@@ -397,8 +404,8 @@ export default function RecipesScreen() {
                     <View style={styles.iconCircle}>
                       <CameraIcon color={colors.accent} size={32} />
                     </View>
-                    <Text style={styles.fridgeTitle}>Qu'est-ce que tu as chez toi ?</Text>
-                    <Text style={styles.fridgeSubtitle}>Photographie ton frigo, ton congélateur ou tes placards</Text>
+                    <Text style={styles.fridgeTitle}>{t('recipes.fridge.emptyTitle')}</Text>
+                    <Text style={styles.fridgeSubtitle}>{t('recipes.fridge.emptySubtitle')}</Text>
                   </View>
                 ) : (
                   <View style={styles.thumbRow}>
@@ -407,7 +414,7 @@ export default function RecipesScreen() {
                         <Image source={{ uri: photo.uri }} style={styles.thumb} />
                         <Pressable
                           accessibilityRole="button"
-                          accessibilityLabel="Supprimer cette photo"
+                          accessibilityLabel={t('recipes.fridge.removePhotoAccessibility')}
                           onPress={() => removeFridgePhoto(index)}
                           hitSlop={8}
                           style={styles.thumbRemove}
@@ -421,7 +428,7 @@ export default function RecipesScreen() {
 
                 {fridgePhotos.length < MAX_FRIDGE_PHOTOS && (
                   <Button
-                    label="Ajouter une photo"
+                    label={t('recipes.fridge.addPhoto')}
                     variant="secondary"
                     onPress={handleAddFridgePhoto}
                     disabled={fridgeState === 'analyzing'}
@@ -431,10 +438,14 @@ export default function RecipesScreen() {
                 {fridgeState === 'analyzing' ? (
                   <View style={styles.loadingBlock}>
                     <ActivityIndicator color={colors.accent} size="large" />
-                    <Text style={styles.loadingText}>Analyse de tes ingrédients...</Text>
+                    <Text style={styles.loadingText}>{t('recipes.fridge.analyzing')}</Text>
                   </View>
                 ) : (
-                  <Button label="Trouver des recettes" onPress={handleAnalyzeFridge} disabled={fridgePhotos.length === 0} />
+                  <Button
+                    label={t('recipes.fridge.findRecipes')}
+                    onPress={handleAnalyzeFridge}
+                    disabled={fridgePhotos.length === 0}
+                  />
                 )}
 
                 {fridgeState === 'error' && fridgeError && (
@@ -448,7 +459,7 @@ export default function RecipesScreen() {
             {fridgeState === 'result' && fridgeResult && (
               <>
                 <View style={styles.ingredientsCard}>
-                  <Text style={styles.ingredientsTitle}>Ingrédients détectés</Text>
+                  <Text style={styles.ingredientsTitle}>{t('recipes.fridge.detectedIngredients')}</Text>
                   <View style={styles.pillsWrap}>
                     {fridgeResult.ingredients_detectes.map((ingredient) => (
                       <View key={ingredient} style={styles.ingredientPill}>
@@ -471,7 +482,7 @@ export default function RecipesScreen() {
                   ))}
                 </View>
 
-                <Button label="Recommencer" variant="secondary" onPress={resetFridge} />
+                <Button label={t('recipes.fridge.restart')} variant="secondary" onPress={resetFridge} />
               </>
             )}
           </View>
@@ -484,10 +495,8 @@ export default function RecipesScreen() {
             ) : savedRecipes.length === 0 ? (
               <View style={styles.emptyBlock}>
                 <Heart color={colors.textTertiary} size={32} />
-                <Text style={styles.emptyTitle}>Aucune recette enregistrée</Text>
-                <Text style={styles.emptyText}>
-                  Mets une recette en favori depuis Suggestions ou Mon frigo pour la retrouver ici.
-                </Text>
+                <Text style={styles.emptyTitle}>{t('recipes.favorites.emptyTitle')}</Text>
+                <Text style={styles.emptyText}>{t('recipes.favorites.emptyText')}</Text>
               </View>
             ) : (
               <View style={styles.list}>
