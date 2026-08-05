@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocale } from '../context/LocaleContext';
 import type { Profile } from '../context/ProfileContext';
 import { generateUniqueReferralCode } from '../lib/referral';
 import { supabase } from '../lib/supabase';
@@ -11,6 +12,7 @@ export function useReferral(
   profile: Profile | null,
   refreshProfile: () => Promise<void>
 ) {
+  const { t } = useLocale();
   const [referredCount, setReferredCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [redeeming, setRedeeming] = useState(false);
@@ -54,12 +56,12 @@ export function useReferral(
   }, [userId, profileCode, profileEmail]);
 
   const redeemCode = async (inputCode: string): Promise<RedeemResult> => {
-    if (!userId || !profile) return { ok: false, error: "Impossible de valider ce code pour l'instant." };
+    if (!userId || !profile) return { ok: false, error: t('profile.referral.codeFailedGeneric') };
 
     const normalized = inputCode.trim().toUpperCase();
-    if (!normalized) return { ok: false, error: 'Entre un code.' };
-    if (profile.parraine_par) return { ok: false, error: 'Tu as déjà utilisé un code de parrainage.' };
-    if (normalized === profile.code_parrainage) return { ok: false, error: 'Tu ne peux pas utiliser ton propre code.' };
+    if (!normalized) return { ok: false, error: t('profile.referral.codeRequired') };
+    if (profile.parraine_par) return { ok: false, error: t('profile.referral.codeAlreadyUsed') };
+    if (normalized === profile.code_parrainage) return { ok: false, error: t('profile.referral.codeOwn') };
 
     setRedeeming(true);
     try {
@@ -70,7 +72,7 @@ export function useReferral(
         .maybeSingle();
 
       if (!referrer) {
-        return { ok: false, error: 'Ce code de parrainage est invalide.' };
+        return { ok: false, error: t('profile.referral.codeInvalid') };
       }
 
       const { error: insertError } = await supabase.from('referrals').insert({
@@ -79,7 +81,7 @@ export function useReferral(
         code_utilise: normalized,
       });
       if (insertError) {
-        return { ok: false, error: 'Impossible de valider ce code. Réessaie.' };
+        return { ok: false, error: t('profile.referral.codeFailed') };
       }
 
       await supabase.from('profiles').update({ parraine_par: referrer.id }).eq('id', userId);

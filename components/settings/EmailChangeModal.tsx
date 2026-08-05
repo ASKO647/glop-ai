@@ -4,6 +4,7 @@ import Button from '../../components/ui/Button';
 import TextField from '../../components/ui/TextField';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
 
@@ -24,6 +25,7 @@ type EmailChangeModalProps = {
 /** Explains that an email change needs confirmation, then calls `supabase.auth.updateUser({ email })` and shows a sent-confirmation state instead of just closing. */
 export default function EmailChangeModal({ visible, currentEmail, sent, onSent, onCancel }: EmailChangeModalProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | undefined>();
@@ -40,14 +42,14 @@ export default function EmailChangeModal({ visible, currentEmail, sent, onSent, 
   const handleSend = async () => {
     const trimmed = email.trim();
     if (!EMAIL_PATTERN.test(trimmed)) {
-      setError('Adresse email invalide.');
+      setError(t('errors.auth.invalidEmail'));
       return;
     }
     setSending(true);
     const { error: updateError } = await supabase.auth.updateUser({ email: trimmed });
     setSending(false);
     if (updateError) {
-      setError("Impossible d'envoyer le lien de confirmation. Réessaie.");
+      setError(t('profile.emailChange.sendFailed'));
       return;
     }
     onSent();
@@ -56,23 +58,22 @@ export default function EmailChangeModal({ visible, currentEmail, sent, onSent, 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel="Fermer" onPress={onCancel} />
+        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={onCancel} />
 
         <View style={styles.sheet}>
-          <Text style={styles.title}>Modifier mon email</Text>
+          <Text style={styles.title}>{t('profile.emailChange.title')}</Text>
 
           {sent ? (
             <>
-              <Text style={styles.message}>Un lien de confirmation a été envoyé à cette adresse.</Text>
-              <Button label="Fermer" onPress={onCancel} />
+              <Text style={styles.message}>{t('profile.emailChange.sentMessage')}</Text>
+              <Button label={t('common.close')} onPress={onCancel} />
             </>
           ) : (
             <>
-              <Text style={styles.subtitle}>
-                La modification de ton email nécessite une confirmation : un lien te sera envoyé à ta nouvelle
-                adresse pour valider le changement.
+              <Text style={styles.subtitle}>{t('profile.emailChange.subtitle')}</Text>
+              <Text style={styles.currentEmail}>
+                {t('profile.emailChange.currentEmail', { email: currentEmail ?? '-' })}
               </Text>
-              <Text style={styles.currentEmail}>Email actuel : {currentEmail ?? '-'}</Text>
 
               <TextField
                 value={email}
@@ -81,16 +82,16 @@ export default function EmailChangeModal({ visible, currentEmail, sent, onSent, 
                   if (error) setError(undefined);
                 }}
                 error={error}
-                placeholder="nouveau@exemple.com"
+                placeholder={t('profile.emailChange.placeholder')}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
               />
 
               <View style={styles.actions}>
-                <Button label="Annuler" variant="secondary" onPress={onCancel} disabled={sending} style={styles.actionButton} />
+                <Button label={t('common.cancel')} variant="secondary" onPress={onCancel} disabled={sending} style={styles.actionButton} />
                 <Button
-                  label="Envoyer le lien de confirmation"
+                  label={t('profile.emailChange.sendLink')}
                   onPress={handleSend}
                   loading={sending}
                   style={styles.actionButton}

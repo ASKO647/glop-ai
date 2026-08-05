@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View, type TextInputProps } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import Button from './Button';
 import TextField from './TextField';
@@ -36,6 +37,7 @@ export default function TextInputModal({
   onSave,
 }: TextInputModalProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [value, setValue] = useState(initialValue);
   const [error, setError] = useState<string | undefined>();
@@ -79,7 +81,7 @@ export default function TextInputModal({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleCancel}>
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel="Fermer" onPress={handleCancel} />
+        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={handleCancel} />
 
         <View style={styles.sheet}>
           <Text style={styles.title}>{title}</Text>
@@ -96,8 +98,8 @@ export default function TextInputModal({
           />
 
           <View style={styles.actions}>
-            <Button label="Annuler" variant="secondary" onPress={handleCancel} disabled={submitting} style={styles.actionButton} />
-            <Button label="Enregistrer" onPress={handleSave} loading={submitting} style={styles.actionButton} />
+            <Button label={t('common.cancel')} variant="secondary" onPress={handleCancel} disabled={submitting} style={styles.actionButton} />
+            <Button label={t('common.save')} onPress={handleSave} loading={submitting} style={styles.actionButton} />
           </View>
         </View>
       </View>

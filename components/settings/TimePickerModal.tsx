@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import Button from '../ui/Button';
 
@@ -36,6 +37,7 @@ function wrap(value: number, max: number): number {
 
 export default function TimePickerModal({ visible, title, initialValue, saving = false, onCancel, onSave }: TimePickerModalProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [hour, setHour] = useState(0);
   const [minute, setMinute] = useState(0);
@@ -55,7 +57,7 @@ export default function TimePickerModal({ visible, title, initialValue, saving =
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel="Fermer" onPress={onCancel} />
+        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={onCancel} />
 
         <View style={styles.sheet}>
           <Text style={styles.title}>{title}</Text>
@@ -64,7 +66,7 @@ export default function TimePickerModal({ visible, title, initialValue, saving =
             <View style={styles.unitColumn}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Heure suivante"
+                accessibilityLabel={t('profile.timePicker.nextHour')}
                 onPress={() => setHour((h) => wrap(h + 1, 24))}
                 style={({ pressed }) => [styles.stepButton, pressed && styles.stepButtonPressed]}
               >
@@ -73,13 +75,13 @@ export default function TimePickerModal({ visible, title, initialValue, saving =
               <Text style={styles.unitValue}>{pad(hour)}</Text>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Heure précédente"
+                accessibilityLabel={t('profile.timePicker.prevHour')}
                 onPress={() => setHour((h) => wrap(h - 1, 24))}
                 style={({ pressed }) => [styles.stepButton, pressed && styles.stepButtonPressed]}
               >
                 <Minus color={colors.textPrimary} size={20} />
               </Pressable>
-              <Text style={styles.unitLabel}>heures</Text>
+              <Text style={styles.unitLabel}>{t('profile.timePicker.hours')}</Text>
             </View>
 
             <Text style={styles.separator}>:</Text>
@@ -87,7 +89,7 @@ export default function TimePickerModal({ visible, title, initialValue, saving =
             <View style={styles.unitColumn}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Minutes suivantes"
+                accessibilityLabel={t('profile.timePicker.nextMinute')}
                 onPress={() => setMinute((m) => wrap(m + MINUTE_STEP, 60))}
                 style={({ pressed }) => [styles.stepButton, pressed && styles.stepButtonPressed]}
               >
@@ -96,19 +98,19 @@ export default function TimePickerModal({ visible, title, initialValue, saving =
               <Text style={styles.unitValue}>{pad(minute)}</Text>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Minutes précédentes"
+                accessibilityLabel={t('profile.timePicker.prevMinute')}
                 onPress={() => setMinute((m) => wrap(m - MINUTE_STEP, 60))}
                 style={({ pressed }) => [styles.stepButton, pressed && styles.stepButtonPressed]}
               >
                 <Minus color={colors.textPrimary} size={20} />
               </Pressable>
-              <Text style={styles.unitLabel}>minutes</Text>
+              <Text style={styles.unitLabel}>{t('profile.timePicker.minutes')}</Text>
             </View>
           </View>
 
           <View style={styles.actions}>
-            <Button label="Annuler" variant="secondary" onPress={onCancel} disabled={saving} style={styles.actionButton} />
-            <Button label="Enregistrer" onPress={handleSave} loading={saving} style={styles.actionButton} />
+            <Button label={t('common.cancel')} variant="secondary" onPress={onCancel} disabled={saving} style={styles.actionButton} />
+            <Button label={t('common.save')} onPress={handleSave} loading={saving} style={styles.actionButton} />
           </View>
         </View>
       </View>

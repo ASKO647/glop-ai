@@ -5,11 +5,13 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Colors } from '../constants/theme';
 import { radii, spacing, typography } from '../constants/theme';
+import { useLocale } from '../context/LocaleContext';
 import { useTheme } from '../context/ThemeContext';
 
 export default function NotificationsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
@@ -23,14 +25,14 @@ export default function NotificationsScreen() {
         >
           <ArrowLeft color={colors.textPrimary} size={22} />
         </Pressable>
-        <Text style={styles.headerTitle}>Notifications</Text>
+        <Text style={styles.headerTitle}>{t('common.notifications.title')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <View style={styles.centered}>
         <BellOff color={colors.textTertiary} size={32} />
-        <Text style={styles.emptyTitle}>Aucune notification</Text>
-        <Text style={styles.emptyText}>Tu seras prévenu ici dès qu'il y aura du nouveau.</Text>
+        <Text style={styles.emptyTitle}>{t('common.notifications.emptyTitle')}</Text>
+        <Text style={styles.emptyText}>{t('common.notifications.emptyText')}</Text>
       </View>
     </SafeAreaView>
   );

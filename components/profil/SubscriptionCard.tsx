@@ -4,20 +4,19 @@ import { useMemo } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale, type Locale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { formatFullDate } from '../../lib/format';
 
 const SUBSCRIPTION_MANAGEMENT_URL =
   Platform.OS === 'android'
     ? 'https://play.google.com/store/account/subscriptions'
     : 'https://apps.apple.com/account/subscriptions';
 
-// TODO: lire la formule et la date de renouvellement depuis RevenueCat une fois le paiement branché.
-const MOCK_PLAN = 'Mensuel';
-
-function getMockRenewalDate(): string {
+function getMockRenewalDate(locale: Locale): string {
   const date = new Date();
   date.setMonth(date.getMonth() + 1);
-  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  return formatFullDate(date, locale);
 }
 
 function openSubscriptionSettings() {
@@ -27,19 +26,22 @@ function openSubscriptionSettings() {
 export default function SubscriptionCard({ isSubscribed }: { isSubscribed: boolean }) {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t, locale } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  // TODO: lire la formule et la date de renouvellement depuis RevenueCat une fois le paiement branché.
+  const mockPlan = t('profile.subscription.planMonthly');
 
   if (!isSubscribed) {
     return (
       <View style={styles.promoCard}>
-        <Text style={styles.promoTitle}>Passe à Premium</Text>
-        <Text style={styles.promoSubtitle}>Débloque ton coach IA et le scanner de repas</Text>
+        <Text style={styles.promoTitle}>{t('profile.subscription.upgradeTitle')}</Text>
+        <Text style={styles.promoSubtitle}>{t('profile.subscription.upgradeSubtitle')}</Text>
         <Pressable
           accessibilityRole="button"
           onPress={() => router.push('/paywall')}
           style={({ pressed }) => [styles.promoButton, pressed && styles.pressed]}
         >
-          <Text style={styles.promoButtonLabel}>Voir les offres</Text>
+          <Text style={styles.promoButtonLabel}>{t('profile.subscription.viewOffers')}</Text>
         </Pressable>
       </View>
     );
@@ -51,8 +53,8 @@ export default function SubscriptionCard({ isSubscribed }: { isSubscribed: boole
         <View style={styles.iconBox}>
           <CreditCard color={colors.textSecondary} size={20} />
         </View>
-        <Text style={styles.label}>Formule</Text>
-        <Text style={styles.value}>{MOCK_PLAN}</Text>
+        <Text style={styles.label}>{t('profile.subscription.plan')}</Text>
+        <Text style={styles.value}>{mockPlan}</Text>
       </View>
 
       <View style={styles.separator} />
@@ -61,8 +63,8 @@ export default function SubscriptionCard({ isSubscribed }: { isSubscribed: boole
         <View style={styles.iconBox}>
           <Calendar color={colors.textSecondary} size={20} />
         </View>
-        <Text style={styles.label}>Prochain renouvellement</Text>
-        <Text style={styles.value}>{getMockRenewalDate()}</Text>
+        <Text style={styles.label}>{t('profile.subscription.nextRenewal')}</Text>
+        <Text style={styles.value}>{getMockRenewalDate(locale)}</Text>
       </View>
 
       <View style={styles.separator} />
@@ -75,11 +77,11 @@ export default function SubscriptionCard({ isSubscribed }: { isSubscribed: boole
         <View style={styles.iconBox}>
           <ExternalLink color={colors.textSecondary} size={20} />
         </View>
-        <Text style={styles.label}>Gérer mon abonnement</Text>
+        <Text style={styles.label}>{t('profile.subscription.manage')}</Text>
         <ChevronRight color={colors.textTertiary} size={18} />
       </Pressable>
 
-      <Text style={styles.hint}>Les modifications et résiliations se font depuis les réglages de ton téléphone.</Text>
+      <Text style={styles.hint}>{t('profile.subscription.manageHint')}</Text>
 
       <View style={styles.separator} />
 
@@ -91,7 +93,7 @@ export default function SubscriptionCard({ isSubscribed }: { isSubscribed: boole
         <View style={styles.iconBox}>
           <RefreshCw color={colors.textSecondary} size={20} />
         </View>
-        <Text style={styles.label}>Changer de formule</Text>
+        <Text style={styles.label}>{t('profile.subscription.changePlan')}</Text>
         <ChevronRight color={colors.textTertiary} size={18} />
       </Pressable>
     </View>

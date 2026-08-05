@@ -3,6 +3,7 @@ import { Modal, StyleSheet, Text, View } from 'react-native';
 import type { BadgeDefinition } from '../../constants/badges';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing, typography } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import Button from '../ui/Button';
 import BadgeMedal from './BadgeMedal';
@@ -15,6 +16,7 @@ type BadgeUnlockModalProps = {
 /** Celebration modal for a single newly-unlocked badge — the caller queues badges and only ever passes one at a time. */
 export default function BadgeUnlockModal({ badge, onDismiss }: BadgeUnlockModalProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
@@ -23,10 +25,10 @@ export default function BadgeUnlockModal({ badge, onDismiss }: BadgeUnlockModalP
         {badge && (
           <View style={styles.card}>
             <BadgeMedal Icon={badge.Icon} unlocked size={96} iconSize={40} />
-            <Text style={styles.eyebrow}>Badge débloqué !</Text>
-            <Text style={styles.name}>{badge.name}</Text>
-            <Text style={styles.description}>{badge.description}</Text>
-            <Button label="Super !" onPress={onDismiss} style={styles.button} />
+            <Text style={styles.eyebrow}>{t('badges.unlockedTitle')}</Text>
+            <Text style={styles.name}>{t(badge.nameKey)}</Text>
+            <Text style={styles.description}>{t(badge.descriptionKey)}</Text>
+            <Button label={t('badges.unlockedButton')} onPress={onDismiss} style={styles.button} />
           </View>
         )}
       </View>

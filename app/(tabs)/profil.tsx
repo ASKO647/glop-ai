@@ -48,6 +48,7 @@ import { QUESTIONS, type SingleChoiceQuestion } from '../../constants/questionna
 import type { Colors } from '../../constants/theme';
 import { spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useProfile } from '../../context/ProfileContext';
 import { useTheme, type ThemeMode } from '../../context/ThemeContext';
 import { useAvatar } from '../../hooks/useAvatar';
@@ -59,41 +60,30 @@ import { useWeightLogs } from '../../hooks/useWeightLogs';
 import { showAlert, showConfirm } from '../../lib/alert';
 import { supabase } from '../../lib/supabase';
 
+type Translate = (key: string, params?: Record<string, string | number>) => string;
+
 // 2-30 chars, Unicode letters (accents included) plus spaces/hyphens/apostrophes.
 const NAME_PATTERN = /^[\p{L}\s'-]+$/u;
-function validateName(value: string): string | undefined {
+function validateName(t: Translate, value: string): string | undefined {
   const trimmed = value.trim();
-  if (trimmed.length < 2 || trimmed.length > 30) return 'Doit contenir entre 2 et 30 caractères.';
-  if (!NAME_PATTERN.test(trimmed)) return 'Lettres, espaces, tirets et apostrophes uniquement.';
+  if (trimmed.length < 2 || trimmed.length > 30) return t('profile.nameValidation.length');
+  if (!NAME_PATTERN.test(trimmed)) return t('profile.nameValidation.pattern');
   return undefined;
 }
 
 const USERNAME_PATTERN = /^[a-z0-9_]+$/;
-function validateUsername(value: string): string | undefined {
-  if (value.length < 3 || value.length > 20) return 'Doit contenir entre 3 et 20 caractères.';
-  if (!USERNAME_PATTERN.test(value)) return 'Lettres minuscules, chiffres et underscore uniquement.';
+function validateUsername(t: Translate, value: string): string | undefined {
+  if (value.length < 3 || value.length > 20) return t('profile.usernameValidation.length');
+  if (!USERNAME_PATTERN.test(value)) return t('profile.usernameValidation.pattern');
   return undefined;
 }
 
 const CONTACT_EMAIL = 'contact@glowupai.app';
-const PHOTOS_PERMISSION_DENIED_MESSAGE =
-  "GlowUp AI a besoin d'accéder à tes photos pour changer ta photo de profil. Active l'accès dans les réglages de ton téléphone.";
 
 const GOAL_OPTIONS = (QUESTIONS.find((q) => q.id === 'goal') as SingleChoiceQuestion).options as ChoiceOption[];
 const PACE_OPTIONS = (QUESTIONS.find((q) => q.id === 'pace') as SingleChoiceQuestion).options as ChoiceOption[];
 const WORKOUTS_OPTIONS = (QUESTIONS.find((q) => q.id === 'workouts_per_week') as SingleChoiceQuestion)
   .options as ChoiceOption[];
-
-const APPEARANCE_OPTIONS: (ChoiceOption & { id: ThemeMode })[] = [
-  { id: 'dark', label: 'Sombre' },
-  { id: 'light', label: 'Clair' },
-  { id: 'system', label: 'Automatique' },
-];
-const APPEARANCE_LABELS: Record<ThemeMode, string> = {
-  dark: 'Sombre',
-  light: 'Clair',
-  system: 'Automatique',
-};
 
 type ActiveModal =
   | 'goal'
@@ -115,7 +105,24 @@ export default function ProfilScreen() {
   const router = useRouter();
   const { user, isSubscribed, deleteAccount } = useAuth();
   const { colors, mode, setMode } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const APPEARANCE_LABELS: Record<ThemeMode, string> = useMemo(
+    () => ({
+      dark: t('profile.appearanceOptions.dark'),
+      light: t('profile.appearanceOptions.light'),
+      system: t('profile.appearanceOptions.system'),
+    }),
+    [t]
+  );
+  const APPEARANCE_OPTIONS: (ChoiceOption & { id: ThemeMode })[] = useMemo(
+    () => [
+      { id: 'dark', label: APPEARANCE_LABELS.dark },
+      { id: 'light', label: APPEARANCE_LABELS.light },
+      { id: 'system', label: APPEARANCE_LABELS.system },
+    ],
+    [APPEARANCE_LABELS]
+  );
   const { profile, loading: profileLoading, refreshProfile } = useProfile();
   const { settings, loading: settingsLoading, update: updateSettings } = useSettings(user?.id);
   const { referredCount, loading: referralLoading, redeeming, redeemCode } = useReferral(
@@ -147,7 +154,7 @@ export default function ProfilScreen() {
     const { error } = await supabase.from('profiles').update(patch).eq('id', user.id);
     setSavingField(false);
     if (error) {
-      showAlert('Erreur', "Impossible d'enregistrer ce changement. Réessaie.");
+      showAlert(t('common.error'), t('profile.saveFailed'));
       return;
     }
     await refreshProfile();
@@ -155,28 +162,28 @@ export default function ProfilScreen() {
   };
 
   const handleSaveName = async (field: 'prenom' | 'nom', rawValue: string): Promise<string | undefined> => {
-    if (!user) return 'Utilisateur introuvable.';
+    if (!user) return t('profile.userNotFound');
     const { error } = await supabase.from('profiles').update({ [field]: rawValue.trim() }).eq('id', user.id);
-    if (error) return "Impossible d'enregistrer ce changement. Réessaie.";
+    if (error) return t('profile.saveFailed');
     await refreshProfile();
     return undefined;
   };
 
   const handleSaveUsername = async (value: string): Promise<string | undefined> => {
-    if (!user) return 'Utilisateur introuvable.';
+    if (!user) return t('profile.userNotFound');
     const { data: existing } = await supabase
       .from('profiles')
       .select('id')
       .eq('username', value)
       .neq('id', user.id)
       .maybeSingle();
-    if (existing) return "Ce nom d'utilisateur est déjà pris";
+    if (existing) return t('profile.usernameValidation.taken');
 
     const { error } = await supabase.from('profiles').update({ username: value }).eq('id', user.id);
     if (error) {
       // A concurrent signup/edit could still win the race between the check above and this write.
-      if ((error as { code?: string }).code === '23505') return "Ce nom d'utilisateur est déjà pris";
-      return "Impossible d'enregistrer ce changement. Réessaie.";
+      if ((error as { code?: string }).code === '23505') return t('profile.usernameValidation.taken');
+      return t('profile.saveFailed');
     }
     await refreshProfile();
     return undefined;
@@ -187,7 +194,7 @@ export default function ProfilScreen() {
     if (existing !== 'granted') {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        showAlert('Accès à tes photos refusé', PHOTOS_PERMISSION_DENIED_MESSAGE);
+        showAlert(t('profile.avatar.permissionDeniedTitle'), t('profile.avatar.permissionDeniedMessage'));
         return;
       }
     }
@@ -200,35 +207,40 @@ export default function ProfilScreen() {
     if (outcome.ok) {
       await refreshProfile();
     } else {
-      showAlert('Erreur', outcome.error ?? "Impossible d'enregistrer ta photo de profil. Réessaie.");
+      showAlert(t('common.error'), outcome.error ?? t('profile.avatar.uploadFailed'));
     }
   };
 
   const handleLongPressAvatar = () => {
-    showConfirm('Supprimer ta photo de profil ?', 'Ton avatar reviendra à ton initiale.', 'Supprimer', async () => {
-      const ok = await deleteAvatar();
-      if (ok) {
-        await refreshProfile();
-      } else {
-        showAlert('Erreur', 'Impossible de supprimer ta photo de profil. Réessaie.');
+    showConfirm(
+      t('profile.alerts.deletePhotoTitle'),
+      t('profile.alerts.deletePhotoMessage'),
+      t('common.delete'),
+      async () => {
+        const ok = await deleteAvatar();
+        if (ok) {
+          await refreshProfile();
+        } else {
+          showAlert(t('common.error'), t('profile.avatar.deleteFailed'));
+        }
       }
-    });
+    );
   };
 
   const handleResetPassword = () => {
     if (!user?.email) return;
     showConfirm(
-      'Modifier ton mot de passe',
-      `Un email de réinitialisation sera envoyé à ${user.email}.`,
-      'Envoyer',
+      t('profile.alerts.resetPasswordTitle'),
+      t('profile.alerts.resetPasswordMessage', { email: user.email }),
+      t('profile.alerts.resetPasswordConfirm'),
       async () => {
         setResettingPassword(true);
         const { error } = await supabase.auth.resetPasswordForEmail(user.email!);
         setResettingPassword(false);
         if (error) {
-          showAlert('Erreur', "Impossible d'envoyer l'email pour le moment. Réessaie.");
+          showAlert(t('common.error'), t('profile.alerts.resetPasswordFailed'));
         } else {
-          showAlert('Email envoyé', 'Vérifie ta boîte de réception pour réinitialiser ton mot de passe.');
+          showAlert(t('profile.alerts.resetPasswordSentTitle'), t('profile.alerts.resetPasswordSentMessage'));
         }
       }
     );
@@ -238,13 +250,13 @@ export default function ProfilScreen() {
     const result = await redeemCode(code);
     if (result.ok) {
       closeModal();
-      showAlert('Code validé', 'Le code de parrainage a bien été appliqué.');
+      showAlert(t('profile.alerts.codeValidatedTitle'), t('profile.alerts.codeValidatedMessage'));
     }
     return result;
   };
 
   const handleSignOut = () => {
-    showConfirm('Se déconnecter', 'Tu devras te reconnecter pour accéder à ton compte.', 'Se déconnecter', async () => {
+    showConfirm(t('profile.sections.signOut'), t('profile.alerts.signOutMessage'), t('profile.sections.signOut'), async () => {
       await supabase.auth.signOut();
       router.replace('/welcome');
     });
@@ -252,9 +264,9 @@ export default function ProfilScreen() {
 
   const handleDeleteAccountRequest = () => {
     showConfirm(
-      'Supprimer ton compte ?',
-      'Cette action est irréversible : toutes tes données seront définitivement effacées.',
-      'Continuer',
+      t('profile.alerts.deleteAccountTitle'),
+      t('profile.alerts.deleteAccountMessage'),
+      t('common.continue'),
       () => setActiveModal('deleteAccount')
     );
   };
@@ -264,7 +276,7 @@ export default function ProfilScreen() {
     const { error } = await deleteAccount();
     setDeleting(false);
     if (error) {
-      showAlert('Erreur', error);
+      showAlert(t('common.error'), error);
       return;
     }
     closeModal();
@@ -302,11 +314,11 @@ export default function ProfilScreen() {
       };
 
       await Share.share({
-        title: 'Mes données GlowUp AI',
+        title: t('profile.alerts.exportTitle'),
         message: JSON.stringify(exportPayload, null, 2),
       });
     } catch {
-      showAlert('Erreur', "Impossible d'exporter tes données pour l'instant. Réessaie.");
+      showAlert(t('common.error'), t('profile.alerts.exportFailed'));
     } finally {
       setExporting(false);
     }
@@ -314,14 +326,14 @@ export default function ProfilScreen() {
 
   const handleResetProgress = () => {
     showConfirm(
-      'Réinitialiser ta progression ?',
-      'Tes pesées, missions, repas et photos de progression seront supprimés. Ton compte et ton profil resteront intacts.',
-      'Continuer',
+      t('profile.alerts.resetProgressTitle'),
+      t('profile.alerts.resetProgressMessage'),
+      t('common.continue'),
       () => {
         showConfirm(
-          'Es-tu vraiment sûr ?',
-          'Cette action est définitive et irréversible.',
-          'Réinitialiser',
+          t('profile.alerts.resetProgressConfirmTitle'),
+          t('profile.alerts.resetProgressConfirmMessage'),
+          t('profile.alerts.resetProgressConfirmButton'),
           async () => {
             if (!user) return;
             setResettingProgress(true);
@@ -343,9 +355,9 @@ export default function ProfilScreen() {
               ]);
 
               await Promise.all([refetchWeightLogs(), refetchStreak()]);
-              showAlert('Progression réinitialisée', 'Tes données de suivi ont été effacées.');
+              showAlert(t('profile.alerts.resetProgressDoneTitle'), t('profile.alerts.resetProgressDoneMessage'));
             } catch {
-              showAlert('Erreur', 'Impossible de réinitialiser ta progression. Réessaie.');
+              showAlert(t('common.error'), t('profile.alerts.resetProgressFailed'));
             } finally {
               setResettingProgress(false);
             }
@@ -373,7 +385,7 @@ export default function ProfilScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.pageTitle}>Profil</Text>
+        <Text style={styles.pageTitle}>{t('common.tabs.profile')}</Text>
 
         <ProfileHeader
           initial={initial}
@@ -390,28 +402,28 @@ export default function ProfilScreen() {
           onLongPressAvatar={handleLongPressAvatar}
         />
 
-        <SettingsSection title="Informations personnelles">
+        <SettingsSection title={t('profile.sections.personalInfo')}>
           <SettingsRow
             icon={User}
-            label="Prénom"
+            label={t('profile.sections.firstName')}
             onPress={() => setActiveModal('prenom')}
             right={<SettingsValue value={profile?.prenom ?? '-'} />}
           />
           <SettingsRow
             icon={IdCard}
-            label="Nom"
+            label={t('profile.sections.lastName')}
             onPress={() => setActiveModal('nom')}
             right={<SettingsValue value={profile?.nom ?? '-'} />}
           />
           <SettingsRow
             icon={AtSign}
-            label="Nom d'utilisateur"
+            label={t('profile.sections.username')}
             onPress={() => setActiveModal('username')}
             right={<SettingsValue value={profile?.username ? `@${profile.username}` : '-'} />}
           />
           <SettingsRow
             icon={Mail}
-            label="Email"
+            label={t('profile.sections.email')}
             onPress={() => {
               setEmailChangeSent(false);
               setActiveModal('email');
@@ -424,60 +436,60 @@ export default function ProfilScreen() {
 
         <ReferralCard code={profile?.code_parrainage ?? null} referredCount={referredCount} loading={referralLoading} />
 
-        <SettingsSection title="Mes objectifs">
+        <SettingsSection title={t('profile.sections.goals')}>
           <SettingsRow
             icon={Target}
-            label="Objectif principal"
+            label={t('profile.sections.mainGoal')}
             onPress={() => setActiveModal('goal')}
             right={<SettingsValue value={profile?.objectif ?? '-'} />}
           />
           <SettingsRow
             icon={Scale}
-            label="Poids objectif"
+            label={t('profile.sections.targetWeight')}
             onPress={() => setActiveModal('targetWeight')}
             right={<SettingsValue value={profile?.poids_objectif != null ? `${formatWeight(profile.poids_objectif)} kg` : '-'} />}
           />
           <SettingsRow
             icon={Gauge}
-            label="Vitesse"
+            label={t('profile.sections.pace')}
             onPress={() => setActiveModal('pace')}
             right={<SettingsValue value={profile?.vitesse ?? '-'} />}
           />
           <SettingsRow
             icon={Dumbbell}
-            label="Entraînements par semaine"
+            label={t('profile.sections.workoutsPerWeek')}
             onPress={() => setActiveModal('workouts')}
             right={<SettingsValue value={profile?.frequence_entrainement ?? '-'} />}
           />
           <SettingsRow
             icon={Award}
-            label="Mes badges"
+            label={t('badges.title')}
             onPress={() => router.push('/badges')}
             right={<SettingsValue value={`${badgesEarnedCount}/${badgesTotalCount}`} />}
           />
         </SettingsSection>
 
-        <SettingsSection title="Compte">
+        <SettingsSection title={t('profile.sections.account')}>
           <SettingsRow
             icon={Lock}
-            label="Modifier mon mot de passe"
+            label={t('profile.sections.changePassword')}
             onPress={handleResetPassword}
             disabled={resettingPassword}
             right={resettingPassword ? <ActivityIndicator color={colors.accent} size="small" /> : undefined}
           />
           <SettingsRow
             icon={Gift}
-            label="Saisir un code de parrainage"
+            label={t('profile.sections.enterReferralCode')}
             onPress={() => setActiveModal('referralCode')}
             disabled={!!profile?.parraine_par}
-            right={<SettingsValue value={profile?.parraine_par ? 'Utilisé' : ''} />}
+            right={<SettingsValue value={profile?.parraine_par ? t('profile.sections.referralUsed') : ''} />}
           />
         </SettingsSection>
 
-        <SettingsSection title="Notifications">
+        <SettingsSection title={t('common.notifications.title')}>
           <SettingsRow
             icon={Bell}
-            label="Activer les notifications"
+            label={t('profile.sections.enableNotifications')}
             right={
               <SettingsSwitch
                 value={settings.notificationsActives}
@@ -488,73 +500,77 @@ export default function ProfilScreen() {
           />
           <SettingsRow
             icon={Sunrise}
-            label="Rappel du matin"
+            label={t('profile.sections.morningReminder')}
             disabled={!settings.notificationsActives}
             onPress={settings.notificationsActives ? () => setActiveModal('morningReminder') : undefined}
             right={<SettingsValue value={settings.rappelMatin} />}
           />
           <SettingsRow
             icon={Sunset}
-            label="Rappel du soir"
+            label={t('profile.sections.eveningReminder')}
             disabled={!settings.notificationsActives}
             onPress={settings.notificationsActives ? () => setActiveModal('eveningReminder') : undefined}
             right={<SettingsValue value={settings.rappelSoir} />}
           />
         </SettingsSection>
 
-        <SettingsSection title="Préférences">
+        <SettingsSection title={t('profile.sections.preferences')}>
           <SettingsRow
             icon={Scale}
-            label="Unité de poids"
+            label={t('profile.sections.weightUnit')}
             onPress={() => updateSettings({ unitePoids: settings.unitePoids === 'kg' ? 'lb' : 'kg' })}
             right={<SettingsValue value={settings.unitePoids} />}
           />
-          <SettingsRow icon={Globe} label="Langue" right={<Text style={styles.plainValue}>{settings.langue}</Text>} />
+          <SettingsRow
+            icon={Globe}
+            label={t('profile.sections.language')}
+            right={<Text style={styles.plainValue}>{settings.langue}</Text>}
+          />
           <SettingsRow
             icon={Moon}
-            label="Apparence"
+            label={t('profile.sections.appearance')}
             onPress={() => setActiveModal('appearance')}
             right={<SettingsValue value={APPEARANCE_LABELS[mode]} />}
           />
         </SettingsSection>
 
-        <SettingsSection title="À propos">
-          <SettingsRow icon={FileText} label="Conditions d'utilisation" onPress={() => router.push('/legal/terms')} />
-          <SettingsRow icon={Shield} label="Politique de confidentialité" onPress={() => router.push('/legal/privacy')} />
-          <SettingsRow icon={Mail} label="Nous contacter" onPress={() => Linking.openURL(`mailto:${CONTACT_EMAIL}`)} />
+        <SettingsSection title={t('profile.sections.about')}>
+          <SettingsRow icon={FileText} label={t('common.legal.termsTitle')} onPress={() => router.push('/legal/terms')} />
+          <SettingsRow icon={Shield} label={t('common.legal.privacyTitle')} onPress={() => router.push('/legal/privacy')} />
+          <SettingsRow icon={Mail} label={t('profile.sections.contactUs')} onPress={() => Linking.openURL(`mailto:${CONTACT_EMAIL}`)} />
           <SettingsRow
             icon={Info}
-            label="Version"
+            label={t('profile.sections.version')}
             right={<Text style={styles.plainValue}>{Constants.expoConfig?.version ?? '-'}</Text>}
           />
         </SettingsSection>
 
-        <SettingsSection title="Mes données">
+        <SettingsSection title={t('profile.sections.data')}>
           <SettingsRow
             icon={Download}
-            label="Exporter mes données"
+            label={t('profile.sections.exportData')}
             onPress={handleExportData}
             disabled={exporting}
             right={exporting ? <ActivityIndicator color={colors.accent} size="small" /> : undefined}
           />
           <SettingsRow
             icon={RotateCcw}
-            label="Réinitialiser ma progression"
+            label={t('profile.sections.resetProgress')}
             onPress={handleResetProgress}
             disabled={resettingProgress}
             right={resettingProgress ? <ActivityIndicator color={colors.accent} size="small" /> : undefined}
           />
         </SettingsSection>
 
-        <SettingsSection title="Zone de danger">
-          <SettingsRow icon={LogOut} label="Se déconnecter" danger onPress={handleSignOut} />
-          <SettingsRow icon={Trash2} label="Supprimer mon compte" danger onPress={handleDeleteAccountRequest} />
+        <SettingsSection title={t('profile.sections.dangerZone')}>
+          <SettingsRow icon={LogOut} label={t('profile.sections.signOut')} danger onPress={handleSignOut} />
+          <SettingsRow icon={Trash2} label={t('profile.sections.deleteAccount')} danger onPress={handleDeleteAccountRequest} />
         </SettingsSection>
       </ScrollView>
 
       <ChoiceModal
         visible={activeModal === 'goal'}
-        title="Objectif principal"
+        title={t('profile.sections.mainGoal')}
         options={GOAL_OPTIONS}
         selectedLabel={profile?.objectif ?? null}
         onCancel={closeModal}
@@ -563,7 +579,7 @@ export default function ProfilScreen() {
 
       <NumberStepperModal
         visible={activeModal === 'targetWeight'}
-        title="Poids objectif"
+        title={t('profile.sections.targetWeight')}
         initialValue={profile?.poids_objectif ?? 70}
         unit="kg"
         step={WEIGHT_STEP}
@@ -575,7 +591,7 @@ export default function ProfilScreen() {
 
       <ChoiceModal
         visible={activeModal === 'pace'}
-        title="Vitesse"
+        title={t('profile.sections.pace')}
         options={PACE_OPTIONS}
         selectedLabel={profile?.vitesse ?? null}
         onCancel={closeModal}
@@ -584,7 +600,7 @@ export default function ProfilScreen() {
 
       <ChoiceModal
         visible={activeModal === 'workouts'}
-        title="Entraînements par semaine"
+        title={t('profile.sections.workoutsPerWeek')}
         options={WORKOUTS_OPTIONS}
         selectedLabel={profile?.frequence_entrainement ?? null}
         onCancel={closeModal}
@@ -593,7 +609,7 @@ export default function ProfilScreen() {
 
       <ChoiceModal
         visible={activeModal === 'appearance'}
-        title="Apparence"
+        title={t('profile.sections.appearance')}
         options={APPEARANCE_OPTIONS}
         selectedLabel={APPEARANCE_LABELS[mode]}
         onCancel={closeModal}
@@ -612,7 +628,7 @@ export default function ProfilScreen() {
 
       <TimePickerModal
         visible={activeModal === 'morningReminder'}
-        title="Rappel du matin"
+        title={t('profile.sections.morningReminder')}
         initialValue={settings.rappelMatin}
         onCancel={closeModal}
         onSave={(value) => {
@@ -623,7 +639,7 @@ export default function ProfilScreen() {
 
       <TimePickerModal
         visible={activeModal === 'eveningReminder'}
-        title="Rappel du soir"
+        title={t('profile.sections.eveningReminder')}
         initialValue={settings.rappelSoir}
         onCancel={closeModal}
         onSave={(value) => {
@@ -641,35 +657,35 @@ export default function ProfilScreen() {
 
       <TextInputModal
         visible={activeModal === 'prenom'}
-        title="Prénom"
+        title={t('profile.sections.firstName')}
         initialValue={profile?.prenom ?? ''}
-        placeholder="Ton prénom"
+        placeholder={t('profile.sections.firstNamePlaceholder')}
         autoCapitalize="words"
-        validate={validateName}
+        validate={(value) => validateName(t, value)}
         onCancel={closeModal}
         onSave={(value) => handleSaveName('prenom', value)}
       />
 
       <TextInputModal
         visible={activeModal === 'nom'}
-        title="Nom"
+        title={t('profile.sections.lastName')}
         initialValue={profile?.nom ?? ''}
-        placeholder="Ton nom"
+        placeholder={t('profile.sections.lastNamePlaceholder')}
         autoCapitalize="words"
-        validate={validateName}
+        validate={(value) => validateName(t, value)}
         onCancel={closeModal}
         onSave={(value) => handleSaveName('nom', value)}
       />
 
       <TextInputModal
         visible={activeModal === 'username'}
-        title="Nom d'utilisateur"
-        subtitle="Lettres minuscules, chiffres et underscore uniquement."
+        title={t('profile.sections.username')}
+        subtitle={t('profile.usernameValidation.pattern')}
         initialValue={profile?.username ?? ''}
-        placeholder="tonpseudo"
+        placeholder={t('profile.sections.usernamePlaceholder')}
         autoCapitalize="none"
         transform={(value) => value.toLowerCase()}
-        validate={validateUsername}
+        validate={(value) => validateUsername(t, value)}
         onCancel={closeModal}
         onSave={handleSaveUsername}
       />

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import Button from './Button';
 
@@ -49,6 +50,7 @@ export default function NumberStepperModal({
   onSave,
 }: NumberStepperModalProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const decimals = Number.isInteger(step) ? 0 : 1;
   const [value, setValue] = useState(initialValue);
@@ -115,7 +117,7 @@ export default function NumberStepperModal({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleCancel}>
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel="Fermer" onPress={handleCancel} />
+        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={handleCancel} />
 
         <View style={styles.sheet}>
           <Text style={styles.title}>{title}</Text>
@@ -123,7 +125,7 @@ export default function NumberStepperModal({
           <View style={styles.stepperRow}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Diminuer de ${formatValue(step, decimals)} ${unit}`}
+              accessibilityLabel={t('profile.weightStepper.decreaseBy', { value: formatValue(step, decimals), unit })}
               onPressIn={() => handlePressIn(-step)}
               onPressOut={() => handlePressOut(-step)}
               style={({ pressed }) => [styles.stepButton, pressed && styles.stepButtonPressed]}
@@ -138,7 +140,7 @@ export default function NumberStepperModal({
 
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Augmenter de ${formatValue(step, decimals)} ${unit}`}
+              accessibilityLabel={t('profile.weightStepper.increaseBy', { value: formatValue(step, decimals), unit })}
               onPressIn={() => handlePressIn(step)}
               onPressOut={() => handlePressOut(step)}
               style={({ pressed }) => [styles.stepButton, pressed && styles.stepButtonPressed]}
@@ -163,8 +165,8 @@ export default function NumberStepperModal({
           )}
 
           <View style={styles.actions}>
-            <Button label="Annuler" variant="secondary" onPress={handleCancel} disabled={saving} style={styles.actionButton} />
-            <Button label="Enregistrer" onPress={handleSave} loading={saving} style={styles.actionButton} />
+            <Button label={t('common.cancel')} variant="secondary" onPress={handleCancel} disabled={saving} style={styles.actionButton} />
+            <Button label={t('common.save')} onPress={handleSave} loading={saving} style={styles.actionButton} />
           </View>
         </View>
       </View>

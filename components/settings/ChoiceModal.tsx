@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 export type ChoiceOption = { id: string; label: string };
@@ -18,12 +19,13 @@ type ChoiceModalProps = {
 
 export default function ChoiceModal({ visible, title, options, selectedLabel, onCancel, onSelect }: ChoiceModalProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel="Fermer" onPress={onCancel} />
+        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={onCancel} />
 
         <View style={styles.sheet}>
           <Text style={styles.title}>{title}</Text>

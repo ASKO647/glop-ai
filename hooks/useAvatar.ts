@@ -1,5 +1,6 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { useCallback, useEffect, useState } from 'react';
+import { useLocale } from '../context/LocaleContext';
 import { supabase } from '../lib/supabase';
 import { uploadBase64Image } from '../lib/storageUpload';
 
@@ -15,6 +16,7 @@ const SIGNED_URL_TTL_SECONDS = 86400;
  * and is expected to call `refreshProfile()` after a successful upload/delete.
  */
 export function useAvatar(userId: string | undefined, avatarPath: string | null | undefined) {
+  const { t } = useLocale();
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -57,7 +59,7 @@ export function useAvatar(userId: string | undefined, avatarPath: string | null 
 
       if (!result.base64) {
         console.error('Image compression did not return base64 data for the avatar.');
-        return { ok: false, error: "Impossible de préparer cette image. Réessaie." };
+        return { ok: false, error: t('profile.avatar.prepareFailed') };
       }
 
       const storagePath = `${userId}/avatar.jpg`;
@@ -69,7 +71,7 @@ export function useAvatar(userId: string | undefined, avatarPath: string | null 
       const { error } = await supabase.from('profiles').update({ avatar_path: storagePath }).eq('id', userId);
       if (error) {
         console.error('Failed to save avatar_path on profile:', error);
-        return { ok: false, error: "L'enregistrement de ta photo de profil a échoué. Réessaie." };
+        return { ok: false, error: t('profile.avatar.saveFailed') };
       }
 
       // The path is unchanged from before this upload (always `{user_id}/avatar.jpg`), so
@@ -79,7 +81,7 @@ export function useAvatar(userId: string | undefined, avatarPath: string | null 
       return { ok: true };
     } catch (err) {
       console.error('Failed to upload avatar:', err);
-      return { ok: false, error: "Impossible d'enregistrer ta photo de profil. Réessaie." };
+      return { ok: false, error: t('profile.avatar.uploadFailed') };
     } finally {
       setUploading(false);
     }

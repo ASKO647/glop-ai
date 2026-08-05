@@ -5,11 +5,13 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Colors } from '../../constants/theme';
 import { spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function PrivacyScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
@@ -18,20 +20,13 @@ export default function PrivacyScreen() {
         <Pressable accessibilityRole="button" onPress={() => router.back()} hitSlop={12} style={styles.backButton}>
           <ArrowLeft color={colors.textPrimary} size={22} />
         </Pressable>
-        <Text style={styles.headerTitle}>Politique de confidentialité</Text>
+        <Text style={styles.headerTitle}>{t('common.legal.privacyTitle')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.paragraph}>
-          Cette politique de confidentialité décrit quelles données GlowUp AI collecte (profil, repas, pesées,
-          photos de progression, historique du coach) et comment elles sont utilisées pour faire fonctionner
-          l'application.
-        </Text>
-        <Text style={styles.paragraph}>
-          Ce texte est un placeholder — le contenu juridique définitif sera rédigé avant la mise en production de
-          l'application.
-        </Text>
+        <Text style={styles.paragraph}>{t('common.legal.privacyBody1')}</Text>
+        <Text style={styles.paragraph}>{t('common.legal.privacyBody2')}</Text>
       </ScrollView>
     </SafeAreaView>
   );
