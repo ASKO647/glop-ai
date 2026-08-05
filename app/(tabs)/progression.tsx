@@ -46,7 +46,7 @@ export default function ProgressionScreen() {
   const { statusByDate, countsByDate, streak, activeDays, loading: streakLoading } = useMissionStreak(user?.id);
   const { photosBySlot, loading: photosLoading, addPhoto, deletePhoto } = useProgressPhotos(user?.id);
   const { history: waterHistory } = useWaterLogs(user?.id);
-  const { settings } = useSettings(user?.id);
+  const { settings } = useSettings(user?.id, profile);
   const { average7: kcalAverage7, average30: kcalAverage30, todayKcal, kcalByDate } = useMealStats(user?.id);
   const { badges, earnedCount, totalCount } = useBadges();
   const weeklyWaterHistory = useMemo(() => waterHistory.slice(-7), [waterHistory]);

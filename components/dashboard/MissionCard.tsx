@@ -1,4 +1,4 @@
-import { Check, Droplet, Dumbbell, Footprints, Sparkles } from 'lucide-react-native';
+import { Check, Dumbbell, Footprints, Sparkles, Target } from 'lucide-react-native';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatMissionValue, getMissionLabel, type MissionKey } from '../../constants/dashboard';
@@ -8,8 +8,8 @@ import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import ProgressBar from '../ui/ProgressBar';
 
-const MISSION_ICON: Record<MissionKey, typeof Droplet> = {
-  water: Droplet,
+const MISSION_ICON: Record<MissionKey, typeof Target> = {
+  objective: Target,
   steps: Footprints,
   workout: Dumbbell,
   skincare: Sparkles,
@@ -23,6 +23,8 @@ type MissionCardProps = {
   onPress: () => void;
   /** Read-only mode (e.g. viewing a past day) — blocks taps without implying "completed". */
   disabled?: boolean;
+  /** `profile.objectif` — only meaningful for the `objective` mission's label. */
+  objectif?: string | null;
 };
 
 export default function MissionCard({
@@ -32,12 +34,13 @@ export default function MissionCard({
   completed,
   onPress,
   disabled = false,
+  objectif,
 }: MissionCardProps) {
   const { colors } = useTheme();
   const { t, locale } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const Icon = MISSION_ICON[missionKey];
-  const label = getMissionLabel(missionKey, target, t, locale);
+  const label = getMissionLabel(missionKey, target, t, locale, objectif);
   const progress = target > 0 ? current / target : 0;
   const isInteractive = !completed && !disabled;
 

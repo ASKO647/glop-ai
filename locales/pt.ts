@@ -340,7 +340,12 @@ const pt: TranslationSchema = {
       sectionTitle: 'Missões do dia',
       counter: '%{done}/%{total}',
       emptyForDay: 'Nenhuma missão registada nesse dia',
-      water: 'Beber %{amount}L de água',
+      objective: {
+        weightLoss: 'Mantém-te abaixo do teu objetivo calórico',
+        muscleGain: 'Atinge o teu objetivo de proteína',
+        glowUp: 'Rotina de skincare',
+        discipline: 'Completa a tua sessão',
+      },
       steps: '%{count} passos',
       workout: 'Sessão do dia',
       skincare: 'Rotina de skincare',

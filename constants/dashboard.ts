@@ -1,7 +1,7 @@
 import { Apple, Moon, Sun, Sunrise, type LucideIcon } from 'lucide-react-native';
 import type { ImageSourcePropType } from 'react-native';
 import type { Profile } from '../context/ProfileContext';
-import { formatDecimal, formatInteger, formatLongDate } from '../lib/format';
+import { formatInteger, formatLongDate } from '../lib/format';
 import type { Locale } from '../lib/i18n';
 import { computeBmr, computeTdee } from './energy';
 import { appImage } from './images';
@@ -132,7 +132,7 @@ export function getCurrentWeekDays(t?: TFunction): WeekDayInfo[] {
 // Daily missions
 // ---------------------------------------------------------------------------
 
-export type MissionKey = 'water' | 'steps' | 'workout' | 'skincare';
+export type MissionKey = 'objective' | 'steps' | 'workout' | 'skincare';
 
 export type MissionTemplate = {
   key: MissionKey;
@@ -150,17 +150,23 @@ const STEPS_TARGET_BY_FREQUENCY: Record<string, number> = {
 };
 const DEFAULT_STEPS_TARGET = 8000;
 
-const WATER_TARGET_BY_GOAL: Record<string, number> = {
-  'Perte de poids': 3.5,
-  'Prise de muscle': 3.5,
-  'Glow up & esthétique': 3,
-  'Être plus discipliné': 2.5,
+type ObjectiveMissionVariant = 'weightLoss' | 'muscleGain' | 'glowUp' | 'discipline';
+
+const OBJECTIVE_MISSION_VARIANT_BY_GOAL: Record<string, ObjectiveMissionVariant> = {
+  'Perte de poids': 'weightLoss',
+  'Prise de muscle': 'muscleGain',
+  'Glow up & esthétique': 'glowUp',
+  'Être plus discipliné': 'discipline',
 };
-const DEFAULT_WATER_TARGET = 3;
+const DEFAULT_OBJECTIVE_MISSION_VARIANT: ObjectiveMissionVariant = 'discipline';
+
+function getObjectiveMissionVariant(objectif: string | null | undefined): ObjectiveMissionVariant {
+  return OBJECTIVE_MISSION_VARIANT_BY_GOAL[objectif ?? ''] ?? DEFAULT_OBJECTIVE_MISSION_VARIANT;
+}
 
 /** Per-tap increment for each mission, in the same unit as its target. */
 export const MISSION_INCREMENT: Record<MissionKey, number> = {
-  water: 0.5,
+  objective: 1,
   steps: 1000,
   workout: 1,
   skincare: 1,
@@ -168,11 +174,18 @@ export const MISSION_INCREMENT: Record<MissionKey, number> = {
 
 /** Translated display label for a mission, given its key and current target — used both to seed
  * a freshly-created mission row's `label` column and to render `MissionCard` (which recomputes
- * from `mission_key`/`target` rather than trusting the possibly-stale/other-locale stored label). */
-export function getMissionLabel(key: MissionKey, target: number, t: TFunction, locale: Locale): string {
+ * from `mission_key`/`target` rather than trusting the possibly-stale/other-locale stored label).
+ * `objectif` is only meaningful for the `objective` key — every other key ignores it. */
+export function getMissionLabel(
+  key: MissionKey,
+  target: number,
+  t: TFunction,
+  locale: Locale,
+  objectif?: string | null
+): string {
   switch (key) {
-    case 'water':
-      return t('dashboard.missions.water', { amount: formatDecimal(target, locale, { maximumFractionDigits: 1 }) });
+    case 'objective':
+      return t(`dashboard.missions.objective.${getObjectiveMissionVariant(objectif)}`);
     case 'steps':
       return t('dashboard.missions.steps', { count: formatInteger(target, locale) });
     case 'workout':
@@ -186,21 +199,19 @@ export function getMissionLabel(key: MissionKey, target: number, t: TFunction, l
 
 export function getDefaultMissionTemplates(profile: Profile | null, t: TFunction, locale: Locale): MissionTemplate[] {
   const stepsTarget = STEPS_TARGET_BY_FREQUENCY[profile?.frequence_entrainement ?? ''] ?? DEFAULT_STEPS_TARGET;
-  const waterTarget = WATER_TARGET_BY_GOAL[profile?.objectif ?? ''] ?? DEFAULT_WATER_TARGET;
 
   return [
-    { key: 'water', label: getMissionLabel('water', waterTarget, t, locale), target: waterTarget },
+    { key: 'objective', label: getMissionLabel('objective', 1, t, locale, profile?.objectif), target: 1 },
     { key: 'steps', label: getMissionLabel('steps', stepsTarget, t, locale), target: stepsTarget },
     { key: 'workout', label: getMissionLabel('workout', 1, t, locale), target: 1 },
     { key: 'skincare', label: getMissionLabel('skincare', 1, t, locale), target: 1 },
   ];
 }
 
-export const MISSION_ORDER: MissionKey[] = ['water', 'steps', 'workout', 'skincare'];
+export const MISSION_ORDER: MissionKey[] = ['objective', 'steps', 'workout', 'skincare'];
 
 export function formatMissionValue(key: MissionKey, value: number, locale: Locale): string {
   if (key === 'steps') return formatInteger(value, locale);
-  if (key === 'water') return formatDecimal(value, locale, { maximumFractionDigits: 1 });
   return String(value);
 }
 
@@ -296,7 +307,7 @@ export const WORKOUT_CATEGORIES: { id: WorkoutCategoryId; labelKey: string }[] =
 ];
 
 export type WorkoutExercise = {
-  /** Internal French name — never displayed directly; kept only so `getExerciseThumbnail`'s
+  /** Internal French name — never displayed directly; kept only so `exerciseImage()`'s
    * keyword matching keeps working regardless of the active display locale. Use `nameKey` for UI. */
   name: string;
   nameKey: string;
@@ -514,19 +525,8 @@ export const WORKOUT_CATEGORY_IMAGES: Record<Exclude<WorkoutCategoryId, 'all'>, 
   cardio: EXERCISE_CARDIO_IMAGE,
 };
 
-const LOWER_BODY_KEYWORDS = /squat|fente|soulevé|mollet|hip thrust|jambe/i;
-const CARDIO_KEYWORDS = /jumping|burpee|mountain|corde|sauté|dynamique/i;
-
-/**
- * Best-effort classification of a single exercise by name, for its own thumbnail (distinct from
- * the session's overall category image). Takes the internal French `exercise.name` (not the
- * translated `nameKey`) so the classification stays correct regardless of display locale.
- */
-export function getExerciseThumbnail(exerciseName: string): ImageSourcePropType {
-  if (LOWER_BODY_KEYWORDS.test(exerciseName)) return EXERCISE_SQUAT_IMAGE;
-  if (CARDIO_KEYWORDS.test(exerciseName)) return EXERCISE_CARDIO_IMAGE;
-  return EXERCISE_DUMBBELLS_IMAGE;
-}
+// Per-exercise thumbnails (as opposed to the session-level category image above) come from
+// `constants/images.ts`'s `exerciseImage()`.
 
 // ---------------------------------------------------------------------------
 // Tip of the day

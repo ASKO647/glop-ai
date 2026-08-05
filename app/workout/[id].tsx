@@ -3,8 +3,10 @@ import { ArrowLeft, Clock, Flame } from 'lucide-react-native';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppImage from '../../components/ui/AppImage';
 import Button from '../../components/ui/Button';
 import { WORKOUT_SESSIONS } from '../../constants/dashboard';
+import { exerciseImage } from '../../constants/images';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing, typography } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
@@ -59,6 +61,7 @@ export default function WorkoutDetailScreen() {
             <View style={styles.exercisesList}>
               {session.exercises.map((exercise) => (
                 <View key={exercise.nameKey} style={styles.exerciseRow}>
+                  <AppImage source={exerciseImage(exercise.name)} style={styles.exerciseThumbnail} overlay={0.3} />
                   <Text style={styles.exerciseName}>{t(exercise.nameKey)}</Text>
                   <Text style={styles.exerciseDetail}>
                     {exercise.sets} x {exercise.reps}
@@ -155,15 +158,21 @@ function makeStyles(colors: Colors) {
     exerciseRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radii.lg,
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.md,
+      gap: spacing.sm,
+    },
+    exerciseThumbnail: {
+      width: 48,
+      height: 48,
+      borderRadius: radii.sm,
     },
     exerciseName: {
+      flex: 1,
       fontSize: 14,
       fontWeight: '600',
       color: colors.textPrimary,

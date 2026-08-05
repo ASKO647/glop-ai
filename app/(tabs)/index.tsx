@@ -109,7 +109,7 @@ export default function DashboardScreen() {
   const { logs: weightLogs, refetch: refetchWeightLogs } = useWeightLogs(user?.id);
   const { badges, pendingUnlock, dismissPendingUnlock } = useBadges();
   const { totalToday: waterTotalToday, addWater, removeWater, refetch: refetchWater } = useWaterLogs(user?.id);
-  const { settings, update: updateSettings } = useSettings(user?.id);
+  const { settings, update: updateSettings } = useSettings(user?.id, profile);
   const {
     activeSession: activeFastingSession,
     elapsedMs: fastingElapsedMs,
@@ -307,7 +307,7 @@ export default function DashboardScreen() {
     <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.logoWrapper}>
-          <Logo />
+          <Logo height={34} textSize={26} />
         </View>
 
         <DashboardHeader
@@ -339,6 +339,29 @@ export default function DashboardScreen() {
           lipides={{ current: totals.lipides, target: macroTargets.lipides }}
         />
 
+        <HydrationCard
+          totalMl={waterTotalToday}
+          goalMl={settings.objectifEauMl}
+          onSetTotal={handleSetWaterTotal}
+          onQuickAdd={handleQuickAddWater}
+          onLongPressHeader={() => setWaterGoalModalVisible(true)}
+        />
+
+        <FastingCard
+          activeSession={
+            activeFastingSession
+              ? { debut: activeFastingSession.debut, targetHours: activeFastingSession.duree_cible_heures }
+              : null
+          }
+          elapsedMs={fastingElapsedMs}
+          currentProgramLabel={resolvedFastingProgram.label}
+          lastCompletedTodayMs={lastCompletedTodayMs}
+          onStart={() => setFastingStartModalVisible(true)}
+          onStop={handleStopFasting}
+          onLongPressHeader={() => setFastingProgramModalVisible(true)}
+          onHistoryPress={() => router.push('/fasting')}
+        />
+
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{t('dashboard.missions.sectionTitle')}</Text>
@@ -360,6 +383,7 @@ export default function DashboardScreen() {
                   target={mission.target}
                   completed={mission.completed}
                   disabled={isViewingPast}
+                  objectif={profile?.objectif}
                   onPress={() => incrementMission(mission)}
                 />
               ))
@@ -397,31 +421,6 @@ export default function DashboardScreen() {
           )}
         </View>
 
-        <HydrationCard
-          totalMl={waterTotalToday}
-          goalMl={settings.objectifEauMl}
-          onSetTotal={handleSetWaterTotal}
-          onQuickAdd={handleQuickAddWater}
-          onLongPressHeader={() => setWaterGoalModalVisible(true)}
-        />
-
-        <BmiCard weightKg={poidsActuel} heightCm={profile.taille} />
-
-        <FastingCard
-          activeSession={
-            activeFastingSession
-              ? { debut: activeFastingSession.debut, targetHours: activeFastingSession.duree_cible_heures }
-              : null
-          }
-          elapsedMs={fastingElapsedMs}
-          currentProgramLabel={resolvedFastingProgram.label}
-          lastCompletedTodayMs={lastCompletedTodayMs}
-          onStart={() => setFastingStartModalVisible(true)}
-          onStop={handleStopFasting}
-          onLongPressHeader={() => setFastingProgramModalVisible(true)}
-          onHistoryPress={() => router.push('/fasting')}
-        />
-
         <View style={styles.section}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
             {WORKOUT_CATEGORIES.map((c) => (
@@ -443,6 +442,8 @@ export default function DashboardScreen() {
             ))}
           </View>
         </View>
+
+        <BmiCard weightKg={poidsActuel} heightCm={profile.taille} />
 
         <View style={styles.statsRow}>
           <StatCard
@@ -615,7 +616,7 @@ function makeStyles(colors: Colors) {
     textAlign: 'center',
   },
   logoWrapper: {
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     // content's gap is 24; pull it down to the requested 12px below the logo.
     marginBottom: -12,
   },

@@ -6,8 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import WeekHistoryStrip from '../../components/workout/WeekHistoryStrip';
 import AppImage from '../../components/ui/AppImage';
 import Button from '../../components/ui/Button';
-import { getExerciseThumbnail, getTodaysWorkout, todayISODate } from '../../constants/dashboard';
-import { appImage } from '../../constants/images';
+import { getTodaysWorkout, todayISODate } from '../../constants/dashboard';
+import { appImage, exerciseImage } from '../../constants/images';
 import { TAB_BAR_CLEARANCE } from '../../constants/layout';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing, typography } from '../../constants/theme';
@@ -82,7 +82,7 @@ export default function WorkoutTabScreen() {
           <View style={styles.exercisesList}>
             {session.exercises.map((exercise) => (
               <View key={exercise.nameKey} style={styles.exerciseRow}>
-                <AppImage source={getExerciseThumbnail(exercise.name)} style={styles.exerciseThumbnail} overlay={0.3} />
+                <AppImage source={exerciseImage(exercise.name)} style={styles.exerciseThumbnail} overlay={0.3} />
                 <Text style={styles.exerciseName}>{t(exercise.nameKey)}</Text>
                 <Text style={styles.exerciseDetail}>
                   {exercise.sets} x {exercise.reps}

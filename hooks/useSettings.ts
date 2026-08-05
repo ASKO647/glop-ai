@@ -1,5 +1,8 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
-import { detectSupportedLocale } from '../lib/i18n';
+import { computeHydrationGoal } from '../constants/hydration';
+import type { Profile } from '../context/ProfileContext';
+import { PENDING_LOCALE_STORAGE_KEY, detectSupportedLocale, resolveStoredLocale } from '../lib/i18n';
 import { supabase } from '../lib/supabase';
 
 export type WeightUnit = 'kg' | 'lb';
@@ -71,7 +74,7 @@ function toRow(settings: UserSettings): SettingsRow {
 }
 
 /** Reads `user_settings`, creating a default row on first visit, and writes changes immediately (optimistic, reverts on failure). */
-export function useSettings(userId: string | undefined) {
+export function useSettings(userId: string | undefined, profile?: Profile | null) {
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
 
@@ -100,13 +103,29 @@ export function useSettings(userId: string | undefined) {
         return;
       }
 
-      // First visit: no row yet — seed `langue` from the device's language (if supported) rather
-      // than always defaulting to French, per the "detect phone language on first launch" spec.
+      // First visit: no row yet. Prefer a language explicitly picked before signup (the welcome
+      // screen's picker, persisted locally since there's no `user_settings` row yet to write to)
+      // over silently re-detecting the device's language and possibly overriding that choice;
+      // fall back to device detection, per the "detect phone language on first launch" spec.
+      // Also seed the hydration goal from the profile's weight/activity level rather than the
+      // flat fallback (which only applies when no profile is available to compute from).
+      const pendingLocale = await AsyncStorage.getItem(PENDING_LOCALE_STORAGE_KEY);
+      const langue = pendingLocale ? resolveStoredLocale(pendingLocale) : detectSupportedLocale();
+
       const { data: created } = await supabase
         .from('user_settings')
-        .insert({ user_id: userId, ...toRow({ ...DEFAULT_SETTINGS, langue: detectSupportedLocale() }) })
+        .insert({
+          user_id: userId,
+          ...toRow({
+            ...DEFAULT_SETTINGS,
+            langue,
+            objectifEauMl: computeHydrationGoal(profile?.poids_actuel, profile?.niveau_activite),
+          }),
+        })
         .select(SETTINGS_COLUMNS)
         .single();
+
+      if (created) await AsyncStorage.removeItem(PENDING_LOCALE_STORAGE_KEY);
 
       if (!cancelled) {
         setSettings(created ? fromRow(created as SettingsRow) : DEFAULT_SETTINGS);
