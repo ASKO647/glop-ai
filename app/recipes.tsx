@@ -5,9 +5,13 @@ import { ArrowLeft, Camera as CameraIcon, Heart, X } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import CategoryStoryBar from '../components/recipes/CategoryStoryBar';
 import RecipeCard from '../components/recipes/RecipeCard';
+import RecipeIdeaCard from '../components/recipes/RecipeIdeaCard';
+import RecipeSkeletonCard from '../components/recipes/RecipeSkeletonCard';
 import Button from '../components/ui/Button';
 import { todayISODate } from '../constants/dashboard';
+import { getDefaultRecipeCategory, getRecipeCategoryInfo, RECIPE_CATEGORIES, type RecipeCategoryId } from '../constants/recipes';
 import type { Colors } from '../constants/theme';
 import { radii, spacing, typography } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
@@ -17,7 +21,7 @@ import { showAlert, showConfirm } from '../lib/alert';
 import { compressImage } from '../lib/foodScanner';
 import {
   analyzeFridge,
-  generateSuggestions,
+  generateCategoryRecipes,
   summarizeProfileForRecipes,
   type FridgeAnalysis,
   type FridgeRecipe,
@@ -41,8 +45,13 @@ const LIBRARY_DENIED_MESSAGE =
 type FridgeState = 'idle' | 'analyzing' | 'result' | 'error';
 type FridgePhoto = { uri: string; width: number };
 
-function suggestionsCacheKey(userId: string): string {
-  return `recipes_suggestions_${userId}_${todayISODate()}`;
+function categorySuggestionsCacheKey(userId: string, category: RecipeCategoryId): string {
+  return `recipes_category_${userId}_${todayISODate()}_${category}`;
+}
+
+/** `suggestionFavorites` is keyed by category+index (not just index) so switching categories doesn't collide favorite state between two unrelated lists of 10. */
+function suggestionFavoriteKey(category: RecipeCategoryId, index: number): string {
+  return `${category}:${index}`;
 }
 
 export default function RecipesScreen() {
@@ -54,12 +63,13 @@ export default function RecipesScreen() {
 
   const [activeTab, setActiveTab] = useState<Tab>('suggestions');
 
-  // Suggestions
-  const [suggestions, setSuggestions] = useState<Recipe[]>([]);
+  // Suggestions — one 10-recipe list per category, cached daily by day + category.
+  const [selectedCategory, setSelectedCategory] = useState<RecipeCategoryId>(() => getDefaultRecipeCategory());
+  const [suggestionsByCategory, setSuggestionsByCategory] = useState<Partial<Record<RecipeCategoryId, Recipe[]>>>({});
   const [suggestionsLoading, setSuggestionsLoading] = useState(true);
   const [regenerating, setRegenerating] = useState(false);
   const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
-  const [suggestionFavorites, setSuggestionFavorites] = useState<Record<number, string>>({});
+  const [suggestionFavorites, setSuggestionFavorites] = useState<Record<string, string>>({});
 
   // Mon frigo
   const [fridgePhotos, setFridgePhotos] = useState<FridgePhoto[]>([]);
@@ -72,7 +82,7 @@ export default function RecipesScreen() {
   const [savedRecipes, setSavedRecipes] = useState<SavedRecipeRow[]>([]);
   const [savedLoading, setSavedLoading] = useState(true);
 
-  const loadSuggestions = async (force: boolean) => {
+  const loadCategory = async (category: RecipeCategoryId, force: boolean) => {
     if (!user) return;
     if (force) setRegenerating(true);
     else setSuggestionsLoading(true);
@@ -80,22 +90,28 @@ export default function RecipesScreen() {
 
     try {
       if (!force) {
-        const cached = await AsyncStorage.getItem(suggestionsCacheKey(user.id));
+        const cached = await AsyncStorage.getItem(categorySuggestionsCacheKey(user.id, category));
         if (cached) {
           const parsed = JSON.parse(cached) as { recettes?: Recipe[] };
           if (parsed.recettes && parsed.recettes.length > 0) {
-            setSuggestions(parsed.recettes);
-            setSuggestionFavorites({});
+            setSuggestionsByCategory((prev) => ({ ...prev, [category]: parsed.recettes! }));
             setSuggestionsLoading(false);
             return;
           }
         }
       }
 
-      const result = await generateSuggestions(summarizeProfileForRecipes(profile));
-      setSuggestions(result.recettes);
-      setSuggestionFavorites({});
-      await AsyncStorage.setItem(suggestionsCacheKey(user.id), JSON.stringify(result));
+      const categoryInfo = getRecipeCategoryInfo(category);
+      const result = await generateCategoryRecipes(categoryInfo.promptLabel, summarizeProfileForRecipes(profile));
+      setSuggestionsByCategory((prev) => ({ ...prev, [category]: result.recettes }));
+      setSuggestionFavorites((prev) => {
+        const next = { ...prev };
+        for (const key of Object.keys(next)) {
+          if (key.startsWith(`${category}:`)) delete next[key];
+        }
+        return next;
+      });
+      await AsyncStorage.setItem(categorySuggestionsCacheKey(user.id, category), JSON.stringify(result));
     } catch (error) {
       setSuggestionsError(error instanceof Error ? error.message : 'Impossible de générer des recettes. Réessaie.');
     } finally {
@@ -106,12 +122,18 @@ export default function RecipesScreen() {
 
   useEffect(() => {
     // Waits for the profile to finish loading so the very first generation is already
-    // personalized — `loadSuggestions` closes over the current `profile`/`user`, so this only
-    // needs to key off their identity/loading state, not be listed as a dependency itself.
+    // personalized — `loadCategory` closes over the current `profile`/`user`, so this only needs
+    // to key off their identity/loading state (plus the selected category) as dependencies.
     if (!user || profileLoading) return;
-    loadSuggestions(false);
+    if (suggestionsByCategory[selectedCategory]) {
+      // Already loaded this session (cache or a fresh generation) — switching back to a
+      // previously viewed category shouldn't re-read AsyncStorage or regenerate.
+      setSuggestionsLoading(false);
+      return;
+    }
+    loadCategory(selectedCategory, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, profileLoading]);
+  }, [user?.id, profileLoading, selectedCategory]);
 
   useEffect(() => {
     if (!user) {
@@ -171,13 +193,14 @@ export default function RecipesScreen() {
     return true;
   };
 
-  const toggleSuggestionFavorite = async (index: number, recipe: Recipe) => {
-    const existingId = suggestionFavorites[index];
+  const toggleSuggestionFavorite = async (category: RecipeCategoryId, index: number, recipe: Recipe) => {
+    const key = suggestionFavoriteKey(category, index);
+    const existingId = suggestionFavorites[key];
     if (existingId) {
       if (!(await deleteSavedRecipe(existingId))) return;
       setSuggestionFavorites((prev) => {
         const next = { ...prev };
-        delete next[index];
+        delete next[key];
         return next;
       });
       setSavedRecipes((prev) => prev.filter((row) => row.id !== existingId));
@@ -185,7 +208,7 @@ export default function RecipesScreen() {
     }
     const saved = await insertSavedRecipe(recipe, 'suggestion');
     if (!saved) return;
-    setSuggestionFavorites((prev) => ({ ...prev, [index]: saved.id }));
+    setSuggestionFavorites((prev) => ({ ...prev, [key]: saved.id }));
     setSavedRecipes((prev) => [saved, ...prev]);
   };
 
@@ -278,6 +301,9 @@ export default function RecipesScreen() {
     setFridgeState('idle');
   };
 
+  const selectedCategoryInfo = getRecipeCategoryInfo(selectedCategory);
+  const currentSuggestions = suggestionsByCategory[selectedCategory] ?? [];
+
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
@@ -312,33 +338,49 @@ export default function RecipesScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {activeTab === 'suggestions' && (
           <View style={styles.tabContent}>
+            <CategoryStoryBar
+              categories={RECIPE_CATEGORIES}
+              selected={selectedCategory}
+              onSelect={setSelectedCategory}
+            />
+
+            <View style={styles.suggestionsHeader}>
+              <Text style={styles.suggestionsTitle}>Idées {selectedCategoryInfo.label}</Text>
+              {profile?.objectif && (
+                <Text style={styles.suggestionsSubtitle}>Adapté à ton objectif {profile.objectif}</Text>
+              )}
+            </View>
+
             {suggestionsLoading ? (
-              <View style={styles.loadingBlock}>
-                <ActivityIndicator color={colors.accent} size="large" />
-                <Text style={styles.loadingText}>Génération de tes recettes...</Text>
+              <View style={styles.list}>
+                <RecipeSkeletonCard />
+                <RecipeSkeletonCard />
+                <RecipeSkeletonCard />
               </View>
             ) : suggestionsError ? (
               <View style={styles.errorBlock}>
                 <Text style={styles.errorText}>{suggestionsError}</Text>
-                <Button label="Réessayer" onPress={() => loadSuggestions(true)} loading={regenerating} />
+                <Button label="Réessayer" onPress={() => loadCategory(selectedCategory, true)} loading={regenerating} />
               </View>
             ) : (
               <>
                 <View style={styles.list}>
-                  {suggestions.map((recipe, index) => (
-                    <RecipeCard
+                  {currentSuggestions.map((recipe, index) => (
+                    <RecipeIdeaCard
                       key={index}
                       recipe={recipe}
-                      isFavorite={!!suggestionFavorites[index]}
-                      onToggleFavorite={() => toggleSuggestionFavorite(index, recipe)}
-                      onPress={() => openRecipe(recipe, 'suggestion', suggestionFavorites[index])}
+                      isFavorite={!!suggestionFavorites[suggestionFavoriteKey(selectedCategory, index)]}
+                      onToggleFavorite={() => toggleSuggestionFavorite(selectedCategory, index, recipe)}
+                      onPress={() =>
+                        openRecipe(recipe, 'suggestion', suggestionFavorites[suggestionFavoriteKey(selectedCategory, index)])
+                      }
                     />
                   ))}
                 </View>
                 <Button
                   label="Générer d'autres idées"
                   variant="secondary"
-                  onPress={() => loadSuggestions(true)}
+                  onPress={() => loadCategory(selectedCategory, true)}
                   loading={regenerating}
                 />
               </>
@@ -468,12 +510,12 @@ export default function RecipesScreen() {
   );
 }
 
-function removeValue(map: Record<number, string>, value: string): Record<number, string> {
-  const next = { ...map };
+function removeValue<K extends string | number>(map: Record<K, string>, value: string): Record<K, string> {
+  const next = { ...map } as Record<string, string>;
   for (const key of Object.keys(next)) {
-    if (next[Number(key)] === value) delete next[Number(key)];
+    if (next[key] === value) delete next[key];
   }
-  return next;
+  return next as Record<K, string>;
 }
 
 function makeStyles(colors: Colors) {
@@ -541,6 +583,18 @@ function makeStyles(colors: Colors) {
     },
     tabContent: {
       gap: spacing.md,
+    },
+    suggestionsHeader: {
+      gap: 2,
+    },
+    suggestionsTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    suggestionsSubtitle: {
+      fontSize: 12,
+      color: colors.textSecondary,
     },
     list: {
       gap: spacing.sm,

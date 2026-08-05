@@ -10,3 +10,27 @@ const BASE = 'https://qzmntduiztddspskrqqc.supabase.co/storage/v1/object/public/
 export function appImage(name: string): { uri: string } {
   return { uri: `${BASE}/${name}` };
 }
+
+// The AI classifies each generated recipe into one of these visual categories
+// (`categorie_visuelle` in lib/recipes.ts) purely to pick a representative stock photo — it's
+// unrelated to `constants/recipes.ts`'s meal-time categories (a "Déjeuner" idea can visually be
+// a salade, viande, poisson, pates or vegetarien dish).
+const RECIPE_VISUAL_CATEGORIES = [
+  'petit-dejeuner',
+  'salade',
+  'viande',
+  'poisson',
+  'pates',
+  'vegetarien',
+  'dessert',
+  'snack',
+] as const;
+
+export type RecipeVisualCategory = (typeof RECIPE_VISUAL_CATEGORIES)[number];
+
+/** `recipe-{categorie}.jpg` from the `app-images` bucket, falling back to `recipe-vegetarien.jpg` for an unrecognized or missing category. */
+export function recipeImage(categorie: string | undefined): { uri: string } {
+  const isValid = (RECIPE_VISUAL_CATEGORIES as readonly string[]).includes(categorie ?? '');
+  const safeCategorie = isValid ? (categorie as RecipeVisualCategory) : 'vegetarien';
+  return appImage(`recipe-${safeCategorie}.jpg`);
+}
