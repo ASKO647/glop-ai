@@ -58,6 +58,7 @@ import { useReferral } from '../../hooks/useReferral';
 import { useSettings } from '../../hooks/useSettings';
 import { useWeightLogs } from '../../hooks/useWeightLogs';
 import { showAlert, showConfirm } from '../../lib/alert';
+import { LANGUAGE_OPTIONS, type Locale } from '../../lib/i18n';
 import { supabase } from '../../lib/supabase';
 
 type Translate = (key: string, params?: Record<string, string | number>) => string;
@@ -94,6 +95,7 @@ type ActiveModal =
   | 'morningReminder'
   | 'eveningReminder'
   | 'appearance'
+  | 'language'
   | 'deleteAccount'
   | 'prenom'
   | 'nom'
@@ -105,7 +107,7 @@ export default function ProfilScreen() {
   const router = useRouter();
   const { user, isSubscribed, deleteAccount } = useAuth();
   const { colors, mode, setMode } = useTheme();
-  const { t } = useLocale();
+  const { t, locale, setLocale } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const APPEARANCE_LABELS: Record<ThemeMode, string> = useMemo(
     () => ({
@@ -123,6 +125,13 @@ export default function ProfilScreen() {
     ],
     [APPEARANCE_LABELS]
   );
+  // Each language names itself, in its own language — flag + label come straight from
+  // lib/i18n.ts's LANGUAGE_OPTIONS, not from t(), since these are never translated.
+  const LANGUAGE_CHOICE_OPTIONS: (ChoiceOption & { id: Locale })[] = useMemo(
+    () => LANGUAGE_OPTIONS.map((option) => ({ id: option.id, label: `${option.flag} ${option.label}` })),
+    []
+  );
+  const currentLanguageLabel = LANGUAGE_CHOICE_OPTIONS.find((option) => option.id === locale)?.label ?? null;
   const { profile, loading: profileLoading, refreshProfile } = useProfile();
   const { settings, loading: settingsLoading, update: updateSettings } = useSettings(user?.id);
   const { referredCount, loading: referralLoading, redeeming, redeemCode } = useReferral(
@@ -524,7 +533,8 @@ export default function ProfilScreen() {
           <SettingsRow
             icon={Globe}
             label={t('profile.sections.language')}
-            right={<Text style={styles.plainValue}>{settings.langue}</Text>}
+            onPress={() => setActiveModal('language')}
+            right={<SettingsValue value={currentLanguageLabel ?? ''} />}
           />
           <SettingsRow
             icon={Moon}
@@ -615,6 +625,18 @@ export default function ProfilScreen() {
         onCancel={closeModal}
         onSelect={(option) => {
           setMode(option.id as ThemeMode);
+          closeModal();
+        }}
+      />
+
+      <ChoiceModal
+        visible={activeModal === 'language'}
+        title={t('profile.sections.language')}
+        options={LANGUAGE_CHOICE_OPTIONS}
+        selectedLabel={currentLanguageLabel}
+        onCancel={closeModal}
+        onSelect={(option) => {
+          setLocale(option.id as Locale);
           closeModal();
         }}
       />
