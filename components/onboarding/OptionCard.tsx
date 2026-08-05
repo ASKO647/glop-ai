@@ -1,22 +1,11 @@
 import * as Haptics from 'expo-haptics';
-import { useEffect } from 'react';
 import type { LucideIcon } from 'lucide-react-native';
-import { Pressable, StyleSheet } from 'react-native';
-import Animated, {
-  Easing,
-  interpolateColor,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withSequence,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import { useEffect, useRef } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
 
-const COLOR_TRANSITION_MS = 200;
 const PRESS_SCALE_DURATION_MS = 80;
 // The whole pulse (delay + up + down) lands inside the 250ms auto-advance window.
 const PULSE_DELAY_MS = 150;
@@ -40,71 +29,75 @@ type OptionCardProps = {
 export default function OptionCard({ label, selected, onPress, icon: Icon, pulseOnAutoAdvance, index = 0 }: OptionCardProps) {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
-  const scale = useSharedValue(1);
-  const colorProgress = useSharedValue(selected ? 1 : 0);
-  const entranceOpacity = useSharedValue(0);
-  const entranceTranslateY = useSharedValue(CASCADE_RISE_DISTANCE);
+  const scale = useRef(new Animated.Value(1)).current;
+  const entranceOpacity = useRef(new Animated.Value(0)).current;
+  const entranceTranslateY = useRef(new Animated.Value(CASCADE_RISE_DISTANCE)).current;
 
   useEffect(() => {
     const delay = (index + 1) * CASCADE_STAGGER_MS;
-    entranceOpacity.value = withDelay(
-      delay,
-      withTiming(1, { duration: CASCADE_DURATION_MS, easing: Easing.out(Easing.cubic) })
-    );
-    entranceTranslateY.value = withDelay(
-      delay,
-      withTiming(0, { duration: CASCADE_DURATION_MS, easing: Easing.out(Easing.cubic) })
-    );
+    Animated.parallel([
+      Animated.timing(entranceOpacity, {
+        toValue: 1,
+        duration: CASCADE_DURATION_MS,
+        delay,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(entranceTranslateY, {
+        toValue: 0,
+        duration: CASCADE_DURATION_MS,
+        delay,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    colorProgress.value = withTiming(selected ? 1 : 0, { duration: COLOR_TRANSITION_MS });
+    // Background/border/text color flip with the `selected` prop rather than animating —
+    // color transitions can't run on the native driver, and interpolating them on the JS
+    // thread would add cost for no visible benefit on a card that's already snapping in a
+    // scale pulse at the same moment.
     if (selected && pulseOnAutoAdvance) {
-      scale.value = withDelay(
-        PULSE_DELAY_MS,
-        withSequence(
-          withTiming(1.02, { duration: PULSE_DURATION_MS }),
-          withTiming(1, { duration: PULSE_DURATION_MS })
-        )
-      );
+      Animated.sequence([
+        Animated.timing(scale, { toValue: 1.02, duration: PULSE_DURATION_MS, delay: PULSE_DELAY_MS, useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 1, duration: PULSE_DURATION_MS, useNativeDriver: true }),
+      ]).start();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected]);
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    scale.value = withSequence(
-      withTiming(0.97, { duration: PRESS_SCALE_DURATION_MS }),
-      withSpring(1, { damping: 15, stiffness: 300 })
-    );
+    Animated.sequence([
+      Animated.timing(scale, { toValue: 0.97, duration: PRESS_SCALE_DURATION_MS, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, damping: 15, stiffness: 300, useNativeDriver: true }),
+    ]).start();
     onPress();
   };
 
-  const cardStyle = useAnimatedStyle(() => ({
-    opacity: entranceOpacity.value,
-    transform: [{ scale: scale.value }, { translateY: entranceTranslateY.value }],
-    backgroundColor: interpolateColor(colorProgress.value, [0, 1], [colors.surface, colors.accent]),
-    borderColor: interpolateColor(colorProgress.value, [0, 1], [colors.border, colors.accent]),
-  }));
-
-  const textStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(colorProgress.value, [0, 1], [colors.textPrimary, colors.onAccent]),
-  }));
-
-  const iconCircleStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(colorProgress.value, [0, 1], [colors.background, colors.onAccent]),
-  }));
+  const cardColors = selected
+    ? { backgroundColor: colors.accent, borderColor: colors.accent }
+    : { backgroundColor: colors.surface, borderColor: colors.border };
+  const textColor = selected ? colors.onAccent : colors.textPrimary;
+  const iconCircleColor = selected ? colors.onAccent : colors.background;
 
   return (
     <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={handlePress}>
-      <Animated.View style={[styles.card, cardStyle]}>
+      <Animated.View
+        style={[
+          styles.card,
+          cardColors,
+          { opacity: entranceOpacity, transform: [{ scale }, { translateY: entranceTranslateY }] },
+        ]}
+      >
         {Icon && (
-          <Animated.View style={[styles.iconCircle, iconCircleStyle]}>
+          <View style={[styles.iconCircle, { backgroundColor: iconCircleColor }]}>
             <Icon color={colors.accent} size={16} />
-          </Animated.View>
+          </View>
         )}
-        <Animated.Text style={[styles.label, textStyle, Icon && styles.labelWithIcon]}>{label}</Animated.Text>
+        <Text style={[styles.label, { color: textColor }, Icon && styles.labelWithIcon]}>{label}</Text>
       </Animated.View>
     </Pressable>
   );

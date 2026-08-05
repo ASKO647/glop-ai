@@ -1,8 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import type { LucideIcon } from 'lucide-react-native';
-import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
+import { useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { spacing } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
@@ -20,19 +19,30 @@ type FinalScreenProps = {
 };
 
 function useCascadeStyle(delay: number) {
-  const opacity = useSharedValue(0);
-  const translateY = useSharedValue(RISE_DISTANCE);
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(RISE_DISTANCE)).current;
 
   useEffect(() => {
-    opacity.value = withDelay(delay, withTiming(1, { duration: CASCADE_DURATION_MS, easing: Easing.out(Easing.cubic) }));
-    translateY.value = withDelay(delay, withTiming(0, { duration: CASCADE_DURATION_MS, easing: Easing.out(Easing.cubic) }));
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: CASCADE_DURATION_MS,
+        delay,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: CASCADE_DURATION_MS,
+        delay,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateY: translateY.value }],
-  }));
+  return { opacity, transform: [{ translateY }] };
 }
 
 export default function FinalScreen({ title, subtitle, icon: Icon }: FinalScreenProps) {

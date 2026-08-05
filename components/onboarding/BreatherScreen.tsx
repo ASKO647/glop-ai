@@ -1,17 +1,7 @@
 import * as Haptics from 'expo-haptics';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react-native';
-import { StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withSequence,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { PrivacyIcon } from '../../constants/onboardingFlow';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
@@ -20,7 +10,7 @@ import { hexToRgba } from '../../lib/color';
 
 const CIRCLE_SIZE = 180;
 const ICON_DELAY_MS = 150;
-const BREATHE_DURATION_MS = 3000;
+const BREATHE_HALF_DURATION_MS = 1500;
 
 type BreatherScreenProps = {
   title: string;
@@ -34,42 +24,51 @@ export default function BreatherScreen({ title, subtitle, icon: Icon, privacyTit
   const { colors } = useTheme();
   const styles = makeStyles(colors);
 
-  const circleScale = useSharedValue(0.8);
-  const circleRotation = useSharedValue(-8);
-  const iconOpacity = useSharedValue(0);
-  const breathe = useSharedValue(1);
+  const circleScale = useRef(new Animated.Value(0.8)).current;
+  const circleRotation = useRef(new Animated.Value(-8)).current;
+  const iconOpacity = useRef(new Animated.Value(0)).current;
+  const breathe = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    circleScale.value = withSpring(1, { damping: 15, stiffness: 220 });
-    circleRotation.value = withSpring(0, { damping: 15, stiffness: 220 });
-    iconOpacity.value = withDelay(ICON_DELAY_MS, withTiming(1, { duration: 200 }));
+    Animated.spring(circleScale, { toValue: 1, damping: 15, stiffness: 220, useNativeDriver: true }).start();
+    Animated.spring(circleRotation, { toValue: 0, damping: 15, stiffness: 220, useNativeDriver: true }).start();
+    Animated.timing(iconOpacity, { toValue: 1, duration: 200, delay: ICON_DELAY_MS, useNativeDriver: true }).start();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    breathe.value = withDelay(
-      ICON_DELAY_MS + 200,
-      withRepeat(
-        withSequence(
-          withTiming(1.03, { duration: BREATHE_DURATION_MS / 2, easing: Easing.inOut(Easing.sin) }),
-          withTiming(1, { duration: BREATHE_DURATION_MS / 2, easing: Easing.inOut(Easing.sin) })
-        ),
-        -1
-      )
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breathe, {
+          toValue: 1.03,
+          duration: BREATHE_HALF_DURATION_MS,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(breathe, {
+          toValue: 1,
+          duration: BREATHE_HALF_DURATION_MS,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const startTimeout = setTimeout(() => loop.start(), ICON_DELAY_MS + 200);
+    return () => {
+      clearTimeout(startTimeout);
+      loop.stop();
+    };
   }, []);
 
-  const circleStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: circleScale.value * breathe.value }, { rotate: `${circleRotation.value}deg` }],
-  }));
-
-  const iconStyle = useAnimatedStyle(() => ({
-    opacity: iconOpacity.value,
-  }));
+  const circleStyle = {
+    transform: [
+      { scale: Animated.multiply(circleScale, breathe) },
+      { rotate: circleRotation.interpolate({ inputRange: [-8, 0], outputRange: ['-8deg', '0deg'] }) },
+    ],
+  };
 
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.circle, circleStyle]}>
-        <Animated.View style={iconStyle}>
+        <Animated.View style={{ opacity: iconOpacity }}>
           <Icon color={colors.accent} size={64} />
         </Animated.View>
       </Animated.View>

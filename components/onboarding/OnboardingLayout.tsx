@@ -1,17 +1,8 @@
 import * as Haptics from 'expo-haptics';
 import { ArrowLeft } from 'lucide-react-native';
 import { useEffect, useRef, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, {
-  Easing,
-  interpolateColor,
-  useAnimatedStyle,
-  useSharedValue,
-  withSequence,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
@@ -49,67 +40,86 @@ export default function OnboardingLayout({
   const { colors } = useTheme();
   const styles = makeStyles(colors);
 
-  const progressWidth = useSharedValue(progress * 100);
-  const progressFlash = useSharedValue(1);
-  const buttonActive = useSharedValue(continueDisabled ? 0 : 1);
-  const buttonScale = useSharedValue(1);
-  const titleOpacity = useSharedValue(0);
-  const titleTranslateY = useSharedValue(CASCADE_RISE_DISTANCE);
+  // Width can't run on the native driver (it's a layout property, not opacity/transform), but
+  // this is a single 3px-tall bar animated only on step changes — cheap enough on the JS thread
+  // that pulling it off-thread wouldn't be noticeable.
+  const progressWidth = useRef(new Animated.Value(progress * 100)).current;
+  const progressFlash = useRef(new Animated.Value(1)).current;
+  const buttonScale = useRef(new Animated.Value(1)).current;
+  const titleOpacity = useRef(new Animated.Value(0)).current;
+  const titleTranslateY = useRef(new Animated.Value(CASCADE_RISE_DISTANCE)).current;
 
   useEffect(() => {
     if (!title) return;
-    titleOpacity.value = 0;
-    titleTranslateY.value = CASCADE_RISE_DISTANCE;
-    titleOpacity.value = withTiming(1, { duration: CASCADE_DURATION_MS, easing: Easing.out(Easing.cubic) });
-    titleTranslateY.value = withTiming(0, { duration: CASCADE_DURATION_MS, easing: Easing.out(Easing.cubic) });
+    titleOpacity.setValue(0);
+    titleTranslateY.setValue(CASCADE_RISE_DISTANCE);
+    Animated.parallel([
+      Animated.timing(titleOpacity, {
+        toValue: 1,
+        duration: CASCADE_DURATION_MS,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(titleTranslateY, {
+        toValue: 0,
+        duration: CASCADE_DURATION_MS,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title]);
 
   useEffect(() => {
-    progressWidth.value = withTiming(progress * 100, { duration: PROGRESS_DURATION_MS, easing: Easing.out(Easing.exp) });
-    progressFlash.value = withSequence(withTiming(0.4, { duration: 80 }), withTiming(1, { duration: 220 }));
+    Animated.timing(progressWidth, {
+      toValue: progress * 100,
+      duration: PROGRESS_DURATION_MS,
+      easing: Easing.out(Easing.exp),
+      useNativeDriver: false,
+    }).start();
+    Animated.sequence([
+      Animated.timing(progressFlash, { toValue: 0.4, duration: 80, useNativeDriver: true }),
+      Animated.timing(progressFlash, { toValue: 1, duration: 220, useNativeDriver: true }),
+    ]).start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress]);
 
   const wasDisabled = useRef(continueDisabled);
   useEffect(() => {
-    buttonActive.value = withTiming(continueDisabled ? 0 : 1, { duration: BUTTON_COLOR_DURATION_MS });
     if (wasDisabled.current && !continueDisabled) {
-      buttonScale.value = withSequence(
-        withTiming(1.03, { duration: 90 }),
-        withSpring(1, { damping: 15, stiffness: 300 })
-      );
+      Animated.sequence([
+        Animated.timing(buttonScale, { toValue: 1.03, duration: 90, useNativeDriver: true }),
+        Animated.spring(buttonScale, { toValue: 1, damping: 15, stiffness: 300, useNativeDriver: true }),
+      ]).start();
     }
     wasDisabled.current = continueDisabled;
+    // Color itself (background/text) can't run on the native driver, and interpolating it on the
+    // JS thread would add cost for no visible benefit here, so it flips instantly with the prop
+    // instead of animating — only the scale pulse above stays animated.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [continueDisabled]);
 
-  const progressFillStyle = useAnimatedStyle(() => ({
-    width: `${progressWidth.value}%`,
-    opacity: progressFlash.value,
-  }));
+  const progressFillStyle = {
+    width: progressWidth.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }),
+    opacity: progressFlash,
+  };
 
-  const buttonStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(buttonActive.value, [0, 1], [colors.border, colors.accent]),
-    transform: [{ scale: buttonScale.value }],
-  }));
+  const buttonColors = continueDisabled
+    ? { backgroundColor: colors.border, textColor: colors.textTertiary }
+    : { backgroundColor: colors.accent, textColor: colors.onAccent };
 
-  const buttonTextStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(buttonActive.value, [0, 1], [colors.textTertiary, colors.onAccent]),
-  }));
-
-  const titleStyle = useAnimatedStyle(() => ({
-    opacity: titleOpacity.value,
-    transform: [{ translateY: titleTranslateY.value }],
-  }));
+  const titleStyle = {
+    opacity: titleOpacity,
+    transform: [{ translateY: titleTranslateY }],
+  };
 
   const handleContinuePress = () => {
     if (continueDisabled) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    buttonScale.value = withSequence(
-      withTiming(BUTTON_PRESS_SCALE, { duration: 80 }),
-      withSpring(1, { damping: 15, stiffness: 300 })
-    );
+    Animated.sequence([
+      Animated.timing(buttonScale, { toValue: BUTTON_PRESS_SCALE, duration: 80, useNativeDriver: true }),
+      Animated.spring(buttonScale, { toValue: 1, damping: 15, stiffness: 300, useNativeDriver: true }),
+    ]).start();
     onContinue();
   };
 
@@ -142,8 +152,10 @@ export default function OnboardingLayout({
         onPress={handleContinuePress}
         style={styles.buttonWrap}
       >
-        <Animated.View style={[styles.button, buttonStyle]}>
-          <Animated.Text style={[styles.buttonLabel, buttonTextStyle]}>{continueLabel}</Animated.Text>
+        <Animated.View
+          style={[styles.button, { backgroundColor: buttonColors.backgroundColor, transform: [{ scale: buttonScale }] }]}
+        >
+          <Text style={[styles.buttonLabel, { color: buttonColors.textColor }]}>{continueLabel}</Text>
         </Animated.View>
       </Pressable>
     </SafeAreaView>
