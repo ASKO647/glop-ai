@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Button from '../../components/ui/Button';
 import TextField from '../../components/ui/TextField';
 import type { Colors } from '../../constants/theme';
@@ -57,50 +57,52 @@ export default function EmailChangeModal({ visible, currentEmail, sent, onSent, 
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
-      <View style={styles.backdrop}>
+      <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={onCancel} />
 
-        <View style={styles.sheet}>
-          <Text style={styles.title}>{t('profile.emailChange.title')}</Text>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <View style={styles.sheet}>
+            <Text style={styles.title}>{t('profile.emailChange.title')}</Text>
 
-          {sent ? (
-            <>
-              <Text style={styles.message}>{t('profile.emailChange.sentMessage')}</Text>
-              <Button label={t('common.close')} onPress={onCancel} />
-            </>
-          ) : (
-            <>
-              <Text style={styles.subtitle}>{t('profile.emailChange.subtitle')}</Text>
-              <Text style={styles.currentEmail}>
-                {t('profile.emailChange.currentEmail', { email: currentEmail ?? '-' })}
-              </Text>
+            {sent ? (
+              <>
+                <Text style={styles.message}>{t('profile.emailChange.sentMessage')}</Text>
+                <Button label={t('common.close')} onPress={onCancel} />
+              </>
+            ) : (
+              <>
+                <Text style={styles.subtitle}>{t('profile.emailChange.subtitle')}</Text>
+                <Text style={styles.currentEmail}>
+                  {t('profile.emailChange.currentEmail', { email: currentEmail ?? '-' })}
+                </Text>
 
-              <TextField
-                value={email}
-                onChangeText={(text) => {
-                  setEmail(text);
-                  if (error) setError(undefined);
-                }}
-                error={error}
-                placeholder={t('profile.emailChange.placeholder')}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-
-              <View style={styles.actions}>
-                <Button label={t('common.cancel')} variant="secondary" onPress={onCancel} disabled={sending} style={styles.actionButton} />
-                <Button
-                  label={t('profile.emailChange.sendLink')}
-                  onPress={handleSend}
-                  loading={sending}
-                  style={styles.actionButton}
+                <TextField
+                  value={email}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    if (error) setError(undefined);
+                  }}
+                  error={error}
+                  placeholder={t('profile.emailChange.placeholder')}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
                 />
-              </View>
-            </>
-          )}
-        </View>
-      </View>
+
+                <View style={styles.actions}>
+                  <Button label={t('common.cancel')} variant="secondary" onPress={onCancel} disabled={sending} style={styles.actionButton} />
+                  <Button
+                    label={t('profile.emailChange.sendLink')}
+                    onPress={handleSend}
+                    loading={sending}
+                    style={styles.actionButton}
+                  />
+                </View>
+              </>
+            )}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -109,8 +111,11 @@ function makeStyles(colors: Colors) {
   return StyleSheet.create({
     backdrop: {
       flex: 1,
-      justifyContent: 'flex-end',
       backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    },
+    scrollContent: {
+      flexGrow: 1,
+      justifyContent: 'flex-end',
     },
     sheet: {
       backgroundColor: colors.surface,

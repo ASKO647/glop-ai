@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AppImage from '../../components/ui/AppImage';
 import { isoDaysAgo, todayISODate } from '../../constants/dashboard';
 import { appImage } from '../../constants/images';
+import { TAB_BAR_CLEARANCE } from '../../constants/layout';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
@@ -203,7 +204,7 @@ function makeStyles(colors: Colors) {
   },
   content: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: 120,
+    paddingBottom: TAB_BAR_CLEARANCE,
     gap: spacing.lg,
   },
   group: {

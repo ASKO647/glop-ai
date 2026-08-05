@@ -10,6 +10,7 @@ import Button from '../../components/ui/Button';
 import ProgressBar from '../../components/ui/ProgressBar';
 import { guessMealTypeNow, todayISODate, type MealType } from '../../constants/dashboard';
 import { appImage } from '../../constants/images';
+import { TAB_BAR_BOTTOM_MARGIN_MIN, TAB_BAR_CLEARANCE, TAB_BAR_HEIGHT } from '../../constants/layout';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
@@ -21,11 +22,6 @@ import { supabase } from '../../lib/supabase';
 
 type ScreenState = 'idle' | 'analyzing' | 'result' | 'error';
 
-// Mirrors the floating tab bar's own geometry (app/(tabs)/_layout.tsx) so the
-// action buttons never sit underneath it.
-const TAB_BAR_BOTTOM_MIN = 24;
-const TAB_BAR_HEIGHT = 64;
-
 export default function ScannerScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -33,7 +29,11 @@ export default function ScannerScreen() {
   const { locale, t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
-  const actionsBottomPadding = Math.max(TAB_BAR_BOTTOM_MIN, insets.bottom + 12) + TAB_BAR_HEIGHT + spacing.sm;
+  // Mirrors the floating tab bar's own geometry (app/(tabs)/_layout.tsx) so the action
+  // buttons never sit underneath it — insets-aware, unlike the flat TAB_BAR_CLEARANCE
+  // used for plain scroll content, since this is a fixed footer whose own height must
+  // clear the real per-device bar position, not just a safe minimum.
+  const actionsBottomPadding = Math.max(TAB_BAR_BOTTOM_MARGIN_MIN, insets.bottom + 12) + TAB_BAR_HEIGHT + spacing.sm;
 
   const [screenState, setScreenState] = useState<ScreenState>('idle');
   const [photoUri, setPhotoUri] = useState<string | null>(null);

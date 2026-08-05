@@ -1,7 +1,18 @@
 import * as Clipboard from 'expo-clipboard';
 import { Check, Copy, Share2 } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
@@ -86,48 +97,50 @@ export default function CreateGroupModal({ visible, onCancel, onCreate, onDone }
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <View style={styles.backdrop}>
+      <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={handleClose} />
 
-        <View style={styles.sheet}>
-          {step === 'form' ? (
-            <>
-              <Text style={styles.title}>{t('groups.create.title')}</Text>
-              <TextField
-                label={t('groups.create.nameLabel')}
-                value={nom}
-                onChangeText={(text) => {
-                  setNom(text);
-                  if (error) setError(undefined);
-                }}
-                placeholder={t('groups.create.namePlaceholder')}
-                error={error}
-                autoFocus
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <View style={styles.sheet}>
+            {step === 'form' ? (
+              <>
+                <Text style={styles.title}>{t('groups.create.title')}</Text>
+                <TextField
+                  label={t('groups.create.nameLabel')}
+                  value={nom}
+                  onChangeText={(text) => {
+                    setNom(text);
+                    if (error) setError(undefined);
+                  }}
+                  placeholder={t('groups.create.namePlaceholder')}
+                  error={error}
+                  autoFocus
+                />
+                <TextField
+                  label={t('groups.create.descriptionLabel')}
+                  value={description}
+                  onChangeText={setDescription}
+                  placeholder={t('groups.create.descriptionPlaceholder')}
+                  multiline
+                />
+                <View style={styles.actions}>
+                  <Button label={t('common.cancel')} variant="secondary" onPress={handleClose} disabled={submitting} style={styles.actionButton} />
+                  <Button label={t('groups.create.submit')} onPress={handleSubmit} loading={submitting} style={styles.actionButton} />
+                </View>
+              </>
+            ) : (
+              <GroupCreatedStep
+                nom={step.group.nom}
+                code={step.group.code}
+                justCopied={justCopied}
+                onCopy={() => handleCopy(step.group.code)}
+                onShare={() => handleShare(step.group.nom, step.group.code)}
+                onDone={() => onDone(step.group.id)}
               />
-              <TextField
-                label={t('groups.create.descriptionLabel')}
-                value={description}
-                onChangeText={setDescription}
-                placeholder={t('groups.create.descriptionPlaceholder')}
-                multiline
-              />
-              <View style={styles.actions}>
-                <Button label={t('common.cancel')} variant="secondary" onPress={handleClose} disabled={submitting} style={styles.actionButton} />
-                <Button label={t('groups.create.submit')} onPress={handleSubmit} loading={submitting} style={styles.actionButton} />
-              </View>
-            </>
-          ) : (
-            <GroupCreatedStep
-              nom={step.group.nom}
-              code={step.group.code}
-              justCopied={justCopied}
-              onCopy={() => handleCopy(step.group.code)}
-              onShare={() => handleShare(step.group.nom, step.group.code)}
-              onDone={() => onDone(step.group.id)}
-            />
-          )}
-        </View>
-      </View>
+            )}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -184,8 +197,11 @@ function makeStyles(colors: Colors) {
   return StyleSheet.create({
     backdrop: {
       flex: 1,
-      justifyContent: 'flex-end',
       backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    },
+    scrollContent: {
+      flexGrow: 1,
+      justifyContent: 'flex-end',
     },
     sheet: {
       backgroundColor: colors.surface,

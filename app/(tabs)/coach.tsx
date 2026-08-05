@@ -5,6 +5,7 @@ import ChatInput from '../../components/coach/ChatInput';
 import MessageBubble from '../../components/coach/MessageBubble';
 import SuggestionChip from '../../components/coach/SuggestionChip';
 import TypingIndicator from '../../components/coach/TypingIndicator';
+import { TAB_BAR_CLEARANCE } from '../../constants/layout';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
@@ -182,7 +183,7 @@ function makeStyles(colors: Colors) {
   inputWrap: {
     paddingHorizontal: 20,
     paddingTop: spacing.sm,
-    paddingBottom: 100,
+    paddingBottom: TAB_BAR_CLEARANCE,
   },
   });
 }

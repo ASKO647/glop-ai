@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
@@ -41,46 +41,48 @@ export default function EditMealModal({ visible, meal, saving, onCancel, onSave 
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
-      <View style={styles.backdrop}>
+      <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={onCancel} />
 
-        <View style={styles.sheet}>
-          <Text style={styles.title} numberOfLines={1}>
-            {meal?.name ?? t('dashboard.editMeal.fallbackTitle')}
-          </Text>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <View style={styles.sheet}>
+            <Text style={styles.title} numberOfLines={1}>
+              {meal?.name ?? t('dashboard.editMeal.fallbackTitle')}
+            </Text>
 
-          <TextField
-            label={t('dashboard.meals.portionLabel')}
-            value={portion}
-            onChangeText={setPortion}
-            placeholder={t('dashboard.meals.portionPlaceholder')}
-          />
-          <TextField
-            label={t('dashboard.meals.caloriesLabel')}
-            value={kcalText}
-            onChangeText={setKcalText}
-            keyboardType="number-pad"
-            placeholder={t('dashboard.meals.kcalPlaceholder')}
-          />
+            <TextField
+              label={t('dashboard.meals.portionLabel')}
+              value={portion}
+              onChangeText={setPortion}
+              placeholder={t('dashboard.meals.portionPlaceholder')}
+            />
+            <TextField
+              label={t('dashboard.meals.caloriesLabel')}
+              value={kcalText}
+              onChangeText={setKcalText}
+              keyboardType="number-pad"
+              placeholder={t('dashboard.meals.kcalPlaceholder')}
+            />
 
-          <View style={styles.actions}>
-            <Button
-              label={t('common.cancel')}
-              variant="secondary"
-              onPress={onCancel}
-              disabled={saving}
-              style={styles.actionButton}
-            />
-            <Button
-              label={t('common.save')}
-              onPress={handleSave}
-              loading={saving}
-              disabled={!isValid}
-              style={styles.actionButton}
-            />
+            <View style={styles.actions}>
+              <Button
+                label={t('common.cancel')}
+                variant="secondary"
+                onPress={onCancel}
+                disabled={saving}
+                style={styles.actionButton}
+              />
+              <Button
+                label={t('common.save')}
+                onPress={handleSave}
+                loading={saving}
+                disabled={!isValid}
+                style={styles.actionButton}
+              />
+            </View>
           </View>
-        </View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -89,8 +91,11 @@ function makeStyles(colors: Colors) {
   return StyleSheet.create({
     backdrop: {
       flex: 1,
-      justifyContent: 'flex-end',
       backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    },
+    scrollContent: {
+      flexGrow: 1,
+      justifyContent: 'flex-end',
     },
     sheet: {
       backgroundColor: colors.surface,

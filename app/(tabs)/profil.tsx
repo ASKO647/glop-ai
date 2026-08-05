@@ -42,6 +42,7 @@ import TimePickerModal from '../../components/settings/TimePickerModal';
 import NumberStepperModal from '../../components/ui/NumberStepperModal';
 import TextInputModal from '../../components/ui/TextInputModal';
 import { getProgramDay, PROGRAM_LENGTH_DAYS } from '../../constants/dashboard';
+import { TAB_BAR_CLEARANCE } from '../../constants/layout';
 import { getDisplayName } from '../../constants/profile';
 import { formatWeight, QUICK_ADJUSTMENTS, WEIGHT_STEP } from '../../constants/progression';
 import { getStepOptions } from '../../constants/onboardingFlow';
@@ -458,7 +459,7 @@ export default function ProfilScreen() {
           />
         </SettingsSection>
 
-        <SubscriptionCard isSubscribed={!!isSubscribed} />
+        <SubscriptionCard isSubscribed={!!isSubscribed} subscribedAt={profile?.created_at ?? null} />
 
         <ReferralCard code={profile?.code_parrainage ?? null} referredCount={referredCount} loading={referralLoading} />
 
@@ -755,7 +756,7 @@ function makeStyles(colors: Colors) {
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    paddingBottom: 100,
+    paddingBottom: TAB_BAR_CLEARANCE,
     gap: spacing.lg,
   },
   pageTitle: {

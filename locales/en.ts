@@ -664,6 +664,10 @@ const en: TranslationSchema = {
       empty: 'Add at least two weigh-ins to see your chart',
       target: 'Goal',
     },
+    hydration: {
+      title: 'Hydration',
+      subtitle: '7-day average',
+    },
     calorieAverage: {
       average7: '7-day avg.',
       average30: '30-day avg.',

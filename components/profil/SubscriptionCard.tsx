@@ -13,22 +13,57 @@ const SUBSCRIPTION_MANAGEMENT_URL =
     ? 'https://play.google.com/store/account/subscriptions'
     : 'https://apps.apple.com/account/subscriptions';
 
-function getMockRenewalDate(locale: Locale): string {
-  const date = new Date();
-  date.setMonth(date.getMonth() + 1);
-  return formatFullDate(date, locale);
+/** `date` shifted by `months`, clamping the day-of-month to the target month's length (e.g. Jan 31 + 1 month → Feb 28, not an overflow into March). */
+function addMonthsClamped(date: Date, months: number): Date {
+  const day = date.getDate();
+  const result = new Date(date.getFullYear(), date.getMonth() + months, 1);
+  const daysInResultMonth = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate();
+  result.setDate(Math.min(day, daysInResultMonth));
+  return result;
+}
+
+/**
+ * The next monthly renewal on or after `now`, anchored on the subscription's actual start date
+ * rather than on `now` itself — subscribed June 5th → renewal is July 5th no matter which day
+ * the profile screen happens to be viewed on, and keeps rolling forward one billing cycle at a
+ * time for a subscriber checking back after several cycles have already elapsed.
+ */
+function getNextRenewalDate(subscribedAt: Date, now: Date): Date {
+  let cycles = 1;
+  let renewal = addMonthsClamped(subscribedAt, cycles);
+  while (renewal < now) {
+    cycles += 1;
+    renewal = addMonthsClamped(subscribedAt, cycles);
+  }
+  return renewal;
+}
+
+// TODO: remplacer par la date de renouvellement RevenueCat une fois le paiement réel branché —
+// `profiles.created_at` sert d'ancrage temporaire (date de souscription non trackée séparément).
+function getRenewalDate(createdAt: string | null, locale: Locale): string {
+  const subscribedAt = createdAt ? new Date(createdAt) : null;
+  if (!subscribedAt || Number.isNaN(subscribedAt.getTime())) {
+    return formatFullDate(addMonthsClamped(new Date(), 1), locale);
+  }
+  return formatFullDate(getNextRenewalDate(subscribedAt, new Date()), locale);
 }
 
 function openSubscriptionSettings() {
   Linking.openURL(SUBSCRIPTION_MANAGEMENT_URL);
 }
 
-export default function SubscriptionCard({ isSubscribed }: { isSubscribed: boolean }) {
+type SubscriptionCardProps = {
+  isSubscribed: boolean;
+  /** `profiles.created_at` — see the TODO on `getRenewalDate`. */
+  subscribedAt: string | null;
+};
+
+export default function SubscriptionCard({ isSubscribed, subscribedAt }: SubscriptionCardProps) {
   const router = useRouter();
   const { colors } = useTheme();
   const { t, locale } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  // TODO: lire la formule et la date de renouvellement depuis RevenueCat une fois le paiement branché.
+  // TODO: lire la formule depuis RevenueCat une fois le paiement branché.
   const mockPlan = t('profile.subscription.planMonthly');
 
   if (!isSubscribed) {
@@ -64,7 +99,7 @@ export default function SubscriptionCard({ isSubscribed }: { isSubscribed: boole
           <Calendar color={colors.textSecondary} size={20} />
         </View>
         <Text style={styles.label}>{t('profile.subscription.nextRenewal')}</Text>
-        <Text style={styles.value}>{getMockRenewalDate(locale)}</Text>
+        <Text style={styles.value}>{getRenewalDate(subscribedAt, locale)}</Text>
       </View>
 
       <View style={styles.separator} />
