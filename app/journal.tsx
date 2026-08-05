@@ -100,7 +100,8 @@ export default function JournalScreen() {
       async () => {
         const ok = await deleteMeal(meal.id);
         if (!ok) showAlert(t('common.error'), t('dashboard.errors.deleteFoodFailed'));
-      }
+      },
+      t('common.cancel')
     );
   };
 

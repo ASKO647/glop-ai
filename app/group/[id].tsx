@@ -25,6 +25,7 @@ import { radii, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBlockedUsers } from '../../hooks/useBlockedUsers';
 import { useGroupMessages, type GroupMessage } from '../../hooks/useGroupMessages';
 import { useMessageReactions } from '../../hooks/useMessageReactions';
 import { showAlert } from '../../lib/alert';
@@ -105,6 +106,7 @@ export default function GroupConversationScreen() {
     getMessageById,
   } = useGroupMessages(id, user?.id);
   const { reactionsByMessage, toggleReaction } = useMessageReactions(id, user?.id);
+  const { blockedIds } = useBlockedUsers(user?.id);
 
   useEffect(() => {
     if (!id) return;
@@ -122,7 +124,11 @@ export default function GroupConversationScreen() {
     };
   }, [id]);
 
-  const listItems = useMemo(() => buildListItems(messages, t, locale), [messages, t, locale]);
+  const visibleMessages = useMemo(
+    () => messages.filter((m) => !blockedIds.has(m.userId)),
+    [messages, blockedIds]
+  );
+  const listItems = useMemo(() => buildListItems(visibleMessages, t, locale), [visibleMessages, t, locale]);
 
   const actionSheetMessage = actionSheetMessageId ? getMessageById(actionSheetMessageId) : null;
 

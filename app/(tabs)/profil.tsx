@@ -232,7 +232,8 @@ export default function ProfilScreen() {
         } else {
           showAlert(t('common.error'), t('profile.avatar.deleteFailed'));
         }
-      }
+      },
+      t('common.cancel')
     );
   };
 
@@ -251,7 +252,8 @@ export default function ProfilScreen() {
         } else {
           showAlert(t('profile.alerts.resetPasswordSentTitle'), t('profile.alerts.resetPasswordSentMessage'));
         }
-      }
+      },
+      t('common.cancel')
     );
   };
 
@@ -265,10 +267,16 @@ export default function ProfilScreen() {
   };
 
   const handleSignOut = () => {
-    showConfirm(t('profile.sections.signOut'), t('profile.alerts.signOutMessage'), t('profile.sections.signOut'), async () => {
-      await supabase.auth.signOut();
-      router.replace('/welcome');
-    });
+    showConfirm(
+      t('profile.sections.signOut'),
+      t('profile.alerts.signOutMessage'),
+      t('profile.sections.signOut'),
+      async () => {
+        await supabase.auth.signOut();
+        router.replace('/welcome');
+      },
+      t('common.cancel')
+    );
   };
 
   const handleDeleteAccountRequest = () => {
@@ -276,7 +284,8 @@ export default function ProfilScreen() {
       t('profile.alerts.deleteAccountTitle'),
       t('profile.alerts.deleteAccountMessage'),
       t('common.continue'),
-      () => setActiveModal('deleteAccount')
+      () => setActiveModal('deleteAccount'),
+      t('common.cancel')
     );
   };
 
@@ -370,9 +379,11 @@ export default function ProfilScreen() {
             } finally {
               setResettingProgress(false);
             }
-          }
+          },
+          t('common.cancel')
         );
-      }
+      },
+      t('common.cancel')
     );
   };
 

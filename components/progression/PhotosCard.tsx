@@ -36,7 +36,8 @@ export default function PhotosCard({ photosBySlot, loading, uploadingSlot, onPre
       t('progression.photos.deleteTitle'),
       t('progression.photos.deleteMessage', { slot: slotLabel(t, slot) }),
       t('progression.photos.deleteConfirmLabel'),
-      () => onDeleteSlot(slot)
+      () => onDeleteSlot(slot),
+      t('common.cancel')
     );
   };
 

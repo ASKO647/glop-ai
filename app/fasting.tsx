@@ -32,7 +32,8 @@ export default function FastingHistoryScreen() {
       t('dashboard.fasting.deleteConfirmTitle'),
       t('dashboard.fasting.deleteConfirmMessage'),
       t('dashboard.actions.delete'),
-      () => deleteSession(session.id)
+      () => deleteSession(session.id),
+      t('common.cancel')
     );
   };
 

@@ -234,12 +234,18 @@ export default function RecipesScreen() {
   };
 
   const handleDeleteSaved = (row: SavedRecipeRow) => {
-    showConfirm(t('recipes.deleteSaved.title'), t('recipes.deleteSaved.message'), t('recipes.deleteSaved.confirmLabel'), async () => {
-      if (!(await deleteSavedRecipe(row.id))) return;
-      setSavedRecipes((prev) => prev.filter((r) => r.id !== row.id));
-      setSuggestionFavorites((prev) => removeValue(prev, row.id));
-      setFridgeFavorites((prev) => removeValue(prev, row.id));
-    });
+    showConfirm(
+      t('recipes.deleteSaved.title'),
+      t('recipes.deleteSaved.message'),
+      t('recipes.deleteSaved.confirmLabel'),
+      async () => {
+        if (!(await deleteSavedRecipe(row.id))) return;
+        setSavedRecipes((prev) => prev.filter((r) => r.id !== row.id));
+        setSuggestionFavorites((prev) => removeValue(prev, row.id));
+        setFridgeFavorites((prev) => removeValue(prev, row.id));
+      },
+      t('common.cancel')
+    );
   };
 
   const openRecipe = (recipe: Recipe, source: 'suggestion' | 'frigo', savedId?: string) => {
@@ -286,7 +292,7 @@ export default function RecipesScreen() {
     setFridgeState('analyzing');
     setFridgeError(null);
     try {
-      const images = await Promise.all(fridgePhotos.map((photo) => compressImage(photo.uri, photo.width)));
+      const images = await Promise.all(fridgePhotos.map((photo) => compressImage(photo.uri, photo.width, t)));
       const result = await analyzeFridge(images, summarizeProfileForRecipes(profile), locale, t);
       setFridgeResult(result);
       setFridgeFavorites({});

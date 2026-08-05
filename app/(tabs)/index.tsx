@@ -170,7 +170,8 @@ export default function DashboardScreen() {
       async () => {
         const ok = await deleteMeal(meal.id);
         if (!ok) showAlert(t('common.error'), t('dashboard.errors.deleteFoodFailed'));
-      }
+      },
+      t('common.cancel')
     );
   };
 
@@ -217,7 +218,8 @@ export default function DashboardScreen() {
       async () => {
         const ok = await stopFasting();
         if (!ok) showAlert(t('common.error'), t('dashboard.errors.stopFastingFailed'));
-      }
+      },
+      t('common.cancel')
     );
   };
 

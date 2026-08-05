@@ -45,13 +45,8 @@ export type CompressedImage = {
 
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 
-// Falls back to a hardcoded French message when a caller outside the scanner flow (e.g. the
-// recipes fridge-photo flow) doesn't pass `t` — keeps this shared helper's signature backward
-// compatible without silently losing the error message.
-const untranslated: Translate = () => 'Impossible de préparer la photo. Réessaie.';
-
 /** Downscales to at most 1024px wide (never upscales), re-encodes as JPEG at 0.5 quality. */
-export async function compressImage(uri: string, originalWidth: number, t: Translate = untranslated): Promise<CompressedImage> {
+export async function compressImage(uri: string, originalWidth: number, t: Translate): Promise<CompressedImage> {
   const targetWidth = originalWidth > 0 ? Math.min(originalWidth, MAX_WIDTH) : MAX_WIDTH;
 
   const context = ImageManipulator.manipulate(uri).resize({ width: targetWidth });
