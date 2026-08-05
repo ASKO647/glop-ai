@@ -1,8 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { Minus, Plus } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
@@ -34,21 +33,23 @@ export default function NumericStepperScreen({
   const { colors } = useTheme();
   const styles = makeStyles(colors);
 
-  const valueOpacity = useSharedValue(1);
-  const valueTranslateY = useSharedValue(0);
+  const valueOpacity = useRef(new Animated.Value(1)).current;
+  const valueTranslateY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    valueOpacity.value = 0;
-    valueTranslateY.value = 6;
-    valueOpacity.value = withTiming(1, { duration: VALUE_FADE_DURATION_MS });
-    valueTranslateY.value = withTiming(0, { duration: VALUE_FADE_DURATION_MS });
+    valueOpacity.setValue(0);
+    valueTranslateY.setValue(6);
+    Animated.parallel([
+      Animated.timing(valueOpacity, { toValue: 1, duration: VALUE_FADE_DURATION_MS, useNativeDriver: true }),
+      Animated.timing(valueTranslateY, { toValue: 0, duration: VALUE_FADE_DURATION_MS, useNativeDriver: true }),
+    ]).start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
-  const valueStyle = useAnimatedStyle(() => ({
-    opacity: valueOpacity.value,
-    transform: [{ translateY: valueTranslateY.value }],
-  }));
+  const valueStyle = {
+    opacity: valueOpacity,
+    transform: [{ translateY: valueTranslateY }],
+  };
 
   const changeBy = (delta: number) => {
     onChange(Math.min(max, Math.max(min, value + delta)));

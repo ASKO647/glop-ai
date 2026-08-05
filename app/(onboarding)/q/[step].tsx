@@ -1,7 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
 import BreatherScreen from '../../../components/onboarding/BreatherScreen';
 import FinalScreen from '../../../components/onboarding/FinalScreen';
 import NumericStepperScreen from '../../../components/onboarding/NumericStepperScreen';
@@ -26,16 +25,28 @@ export default function OnboardingStepScreen() {
   const index = Number(step) || 0;
   const stepDef = getStepByIndex(index);
 
-  const translateX = useSharedValue(dir === 'back' ? -SLIDE_DISTANCE : SLIDE_DISTANCE);
-  const opacity = useSharedValue(0);
+  const translateX = useRef(new Animated.Value(dir === 'back' ? -SLIDE_DISTANCE : SLIDE_DISTANCE)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
   const autoAdvanceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (autoAdvanceTimeout.current) clearTimeout(autoAdvanceTimeout.current);
-    translateX.value = dir === 'back' ? -SLIDE_DISTANCE : SLIDE_DISTANCE;
-    opacity.value = 0;
-    translateX.value = withTiming(0, { duration: TRANSITION_DURATION_MS, easing: Easing.out(Easing.cubic) });
-    opacity.value = withTiming(1, { duration: TRANSITION_DURATION_MS, easing: Easing.out(Easing.cubic) });
+    translateX.setValue(dir === 'back' ? -SLIDE_DISTANCE : SLIDE_DISTANCE);
+    opacity.setValue(0);
+    Animated.parallel([
+      Animated.timing(translateX, {
+        toValue: 0,
+        duration: TRANSITION_DURATION_MS,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: TRANSITION_DURATION_MS,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index]);
 
@@ -52,10 +63,7 @@ export default function OnboardingStepScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepDef?.id]);
 
-  const transitionStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateX: translateX.value }],
-  }));
+  const transitionStyle = { opacity, transform: [{ translateX }] };
 
   if (!stepDef) return null;
 
