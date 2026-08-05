@@ -76,6 +76,7 @@ const fr = {
   onboarding: {
     common: {
       continue: 'Continuer',
+      back: 'Retour',
     },
     step: {
       defaultDescription: 'Cet écran sera implémenté prochainement.',
@@ -94,7 +95,7 @@ const fr = {
       title: "Ta transformation, guidée par l'IA.",
       subtitle: 'Coaching fitness personnalisé, suivi de progression et plan sur mesure.',
       start: 'Commencer',
-      haveAccount: "J'ai déjà un compte",
+      haveAccount: 'Tu as déjà un compte ? Se connecter',
     },
     login: {
       title: 'Content de te revoir',
@@ -203,6 +204,28 @@ const fr = {
           motivated: 'Je suis motivé',
           determined: 'Je suis déterminé à changer',
         },
+      },
+    },
+    flow: {
+      breather1: {
+        title: 'On va personnaliser ton plan',
+        subtitle: 'Quelques questions pour créer un programme qui te correspond vraiment.',
+      },
+      breather2: {
+        title: 'Merci de ta confiance',
+        subtitle: 'Encore quelques questions pour affiner ton plan.',
+        privacyTitle: 'Tes données restent privées',
+        privacyText: 'Elles servent uniquement à personnaliser ton expérience et ne sont jamais partagées.',
+      },
+      result: {
+        lose: 'Tu veux perdre %{amount} kg',
+        gain: 'Tu veux prendre %{amount} kg',
+        transform: 'Tu veux te transformer',
+        subtitle: "C'est un objectif réaliste et atteignable",
+      },
+      final: {
+        title: "C'est terminé !",
+        subtitle: 'On génère ton plan personnalisé...',
       },
     },
     analysis: {

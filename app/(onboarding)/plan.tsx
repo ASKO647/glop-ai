@@ -7,7 +7,7 @@ import AppImage from '../../components/ui/AppImage';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import { appImage } from '../../constants/images';
-import { getOptionLabelKey } from '../../constants/questionnaire';
+import { getOptionLabelKey } from '../../constants/onboardingFlow';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';

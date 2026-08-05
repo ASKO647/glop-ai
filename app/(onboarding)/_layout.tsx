@@ -21,7 +21,7 @@ export default function OnboardingLayout() {
         }}
       >
         <Stack.Screen name="welcome" />
-        <Stack.Screen name="questionnaire" />
+        <Stack.Screen name="q/[step]" options={{ animation: 'none' }} />
         <Stack.Screen name="analyse" />
         <Stack.Screen name="plan" />
         <Stack.Screen name="signup" />

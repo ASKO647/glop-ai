@@ -72,6 +72,7 @@ const en: TranslationSchema = {
   onboarding: {
     common: {
       continue: 'Continue',
+      back: 'Back',
     },
     step: {
       defaultDescription: 'This screen will be implemented soon.',
@@ -90,7 +91,7 @@ const en: TranslationSchema = {
       title: 'Your transformation, guided by AI.',
       subtitle: 'Personalized fitness coaching, progress tracking, and a plan built just for you.',
       start: 'Get started',
-      haveAccount: 'I already have an account',
+      haveAccount: 'Already have an account? Sign in',
     },
     login: {
       title: 'Good to see you again',
@@ -199,6 +200,28 @@ const en: TranslationSchema = {
           motivated: "I'm motivated",
           determined: "I'm determined to change",
         },
+      },
+    },
+    flow: {
+      breather1: {
+        title: "Let's personalize your plan",
+        subtitle: 'A few questions to build a program that really fits you.',
+      },
+      breather2: {
+        title: 'Thanks for trusting us',
+        subtitle: 'Just a few more questions to fine-tune your plan.',
+        privacyTitle: 'Your data stays private',
+        privacyText: "It's only used to personalize your experience and is never shared.",
+      },
+      result: {
+        lose: 'You want to lose %{amount} kg',
+        gain: 'You want to gain %{amount} kg',
+        transform: 'You want to transform yourself',
+        subtitle: "That's a realistic, achievable goal",
+      },
+      final: {
+        title: 'All done!',
+        subtitle: 'Generating your personalized plan...',
       },
     },
     analysis: {

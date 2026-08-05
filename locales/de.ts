@@ -72,6 +72,7 @@ const de: TranslationSchema = {
   onboarding: {
     common: {
       continue: 'Weiter',
+      back: 'Zurück',
     },
     step: {
       defaultDescription: 'Dieser Bildschirm wird demnächst verfügbar sein.',
@@ -90,7 +91,7 @@ const de: TranslationSchema = {
       title: 'Deine Transformation, geführt von KI.',
       subtitle: 'Personalisiertes Fitness-Coaching, Fortschrittsverfolgung und ein maßgeschneiderter Plan.',
       start: 'Loslegen',
-      haveAccount: 'Ich habe bereits ein Konto',
+      haveAccount: 'Schon ein Konto? Anmelden',
     },
     login: {
       title: 'Schön, dich wiederzusehen',
@@ -199,6 +200,28 @@ const de: TranslationSchema = {
           motivated: 'Ich bin motiviert',
           determined: 'Ich bin entschlossen, etwas zu ändern',
         },
+      },
+    },
+    flow: {
+      breather1: {
+        title: 'Wir personalisieren jetzt deinen Plan',
+        subtitle: 'Ein paar Fragen, um ein Programm zu erstellen, das wirklich zu dir passt.',
+      },
+      breather2: {
+        title: 'Danke für dein Vertrauen',
+        subtitle: 'Noch ein paar Fragen, um deinen Plan zu verfeinern.',
+        privacyTitle: 'Deine Daten bleiben privat',
+        privacyText: 'Sie dienen nur der Personalisierung deiner Erfahrung und werden nie weitergegeben.',
+      },
+      result: {
+        lose: 'Du willst %{amount} kg abnehmen',
+        gain: 'Du willst %{amount} kg zunehmen',
+        transform: 'Du willst dich verändern',
+        subtitle: 'Das ist ein realistisches und erreichbares Ziel',
+      },
+      final: {
+        title: 'Geschafft!',
+        subtitle: 'Dein persönlicher Plan wird erstellt...',
       },
     },
     analysis: {

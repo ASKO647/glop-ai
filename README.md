@@ -206,7 +206,8 @@ app/
     _layout.tsx             Stack d'onboarding, enveloppé dans OnboardingProvider — s'ouvre sur
                             `paywall` (session sans abonnement) ou `welcome` sinon
     welcome.tsx
-    questionnaire.tsx        Écran complet : 15 questions, une par écran
+    q/[step].tsx              Écran dynamique : une question par étape (19 au total), voir
+                              "Écrans de questions" dans "Flow d'onboarding"
     analyse.tsx               Cercle de progression animé (0→87%, ~4s) + checklist, redirige vers plan
     plan.tsx                   Résultat calculé depuis OnboardingContext (objectif, écart de poids, axes)
     signup.tsx                 Apple / Google (stubs) + email/mot de passe (Supabase signUp + insert profiles)
@@ -295,9 +296,14 @@ components/
     ChatInput.tsx                     Champ arrondi + bouton d'envoi rond, désactivé si vide
     SuggestionChip.tsx                 Pilule de suggestion (état vide)
   onboarding/
-    QuestionInput.tsx         Dispatcher par type de question (single / multiple / numeric)
-    OptionCard.tsx             Carte de réponse (bordure + fond accent quand sélectionnée)
-    NumericStepper.tsx         Sélecteur numérique (âge, taille, poids)
+    OnboardingLayout.tsx        Gabarit commun des écrans de question (retour, barre de progression
+                              animée, titre, bouton "Continuer") — voir "Écrans de questions"
+    OptionCard.tsx             Carte de réponse (inversion de couleur + cascade d'entrée à la
+                              sélection, réanimated)
+    NumericStepperScreen.tsx    Sélecteur numérique plein écran (âge, taille, poids)
+    BreatherScreen.tsx           Écrans de respiration ("On va personnaliser ton plan", etc.)
+    ResultScreen.tsx              Écart de poids calculé, avec compteur animé
+    FinalScreen.tsx                Écran de fin de questionnaire, avant `analyse`
     ProgressRing.tsx           Cercle de progression SVG animé (écran analyse)
     AnalysisStepRow.tsx        Étape de checklist (gris → accent + coche) (écran analyse)
     BenefitRow.tsx              Ligne de bénéfice, pastille verte + coche (écran paywall)
@@ -346,7 +352,8 @@ constants/
   profile.ts                   `getDisplayName(profile, user)` — prénom, sinon nom d'utilisateur,
                               sinon partie locale de l'email dérivée et capitalisée ; utilisé par
                               le dashboard et l'en-tête du profil
-  questionnaire.ts            Les 15 questions (id, type, options)
+  onboardingFlow.ts            Les 19 étapes du questionnaire (id, kind, options) — voir
+                              "Écrans de questions" dans "Flow d'onboarding"
   dashboard.ts                 Logique/données pures du dashboard : jour du programme (90j),
                               missions par défaut (cibles adaptées à `frequence_entrainement` et
                               `objectif`), cibles calories/macros (Mifflin-St Jeor + multiplicateur
@@ -400,9 +407,24 @@ lib/
 
 ## Flow d'onboarding
 
-`welcome` → `questionnaire` (15 questions) → `analyse` → `plan` → `signup` → `paywall` → `(tabs)`
+`welcome` → `q/[step]` (19 écrans, un par étape) → `analyse` → `plan` → `signup` → `paywall` → `(tabs)`
 
-Le bouton "J'ai déjà un compte" sur l'écran `welcome` va directement à `login`, en court-circuitant le questionnaire. Depuis `signup`, le lien "J'ai déjà un compte" mène aussi à `login`.
+Le bouton "J'ai déjà un compte" sur l'écran `welcome` va directement à `login`, en court-circuitant le flow de questions. Depuis `signup`, le lien "J'ai déjà un compte" mène aussi à `login`.
+
+### Écrans de questions (`q/[step]`)
+
+Chaque étape du questionnaire est un écran plein écran dédié, une question à la fois, plutôt qu'un formulaire unique — animations fluides, typographie imposante, thème sombre avec l'accent vert lime (`#c6ff3a`) comme seule couleur de mise en avant.
+
+- **`constants/onboardingFlow.ts`** — source de vérité unique : un tableau `ONBOARDING_STEPS` de 19 étapes typées en union discriminée (`kind: 'single' | 'multiple' | 'numeric' | 'breather' | 'result' | 'final'`). Chaque `OnboardingOption` porte un `label` (valeur brute persistée dans `profiles`, jamais affichée) et un `labelKey` (clé i18n pour l'affichage) — remplace l'ancien `constants/questionnaire.ts`, supprimé. `getOptionLabel`/`getOptionLabelKey` gardent la même signature pour `signup.tsx`/`plan.tsx`.
+- **`app/(onboarding)/q/[step].tsx`** — écran dynamique unique qui lit l'index d'étape depuis l'URL (`/q/0`, `/q/1`, …) et rend le bon composant selon `kind`. La navigation utilise `router.replace` (pas `push`) pour garder l'historique plat ; un paramètre `dir` (`fwd`/`back`) pilote le sens du slide d'entrée. Le choix unique sélectionne puis avance automatiquement après 250ms ; le choix multiple et les autres types nécessitent le bouton "Continuer". Le retour conserve les réponses déjà données (`OnboardingContext`, inchangé).
+- **`components/onboarding/OnboardingLayout.tsx`** — gabarit commun (flèche retour, barre de progression animée, titre 30px, bouton "Continuer" plein largeur en bas) partagé par tous les écrans.
+- **`components/onboarding/OptionCard.tsx`** — carte d'option avec inversion de couleur à la sélection (fond clair ↔ accent), icône optionnelle, entrée en cascade décalée.
+- **`components/onboarding/NumericStepperScreen.tsx`** — sélecteur ± plein écran (âge, taille, poids) avec raccourcis en pilules et appui long pour défiler vite ; aucun clavier.
+- **`components/onboarding/BreatherScreen.tsx`** — écrans de respiration ("On va personnaliser ton plan", "Merci de ta confiance") avec cercle animé et encart confidentialité optionnel.
+- **`components/onboarding/ResultScreen.tsx`** — affiche l'écart de poids calculé avec un compteur animé.
+- **`components/onboarding/FinalScreen.tsx`** — écran de fin avant `analyse`.
+
+Toutes les animations sont en `react-native-reanimated` (jamais l'API `Animated` de React Native) — `useSharedValue`/`useAnimatedStyle` sur le thread natif, aucune animation supérieure à 400ms, aucune ne bloque une interaction. Retours haptiques via `expo-haptics` (léger à la sélection, moyen sur "Continuer", succès sur les écrans de respiration/résultat/fin).
 
 Ni `signup.tsx` ni `login.tsx` ne naviguent explicitement après une authentification réussie — `app/_layout.tsx` réagit à la session (et à `isSubscribed` une fois chargé) et route lui-même vers `(tabs)` ou `(onboarding)`. Ça évite toute course entre une navigation manuelle et la redirection automatique.
 
@@ -774,7 +796,7 @@ Comme le chemin de stockage de l'avatar est fixe (`{user_id}/avatar.jpg`, jamais
 
 **Mon abonnement** (`components/profil/SubscriptionCard.tsx`) a deux rendus complètement différents plutôt qu'un seul composant avec des branches internes lourdes : une carte accent lime "Passe à Premium" → paywall si `!isSubscribed`, ou une carte neutre avec Formule / Prochain renouvellement / Gérer mon abonnement / Changer de formule si abonné. "Formule" et "Prochain renouvellement" sont pour l'instant une valeur fixe ("Mensuel") et une date calculée localement (`// TODO: lire la formule et la date de renouvellement depuis RevenueCat` — ce sera branché une fois le paiement réel en place). "Gérer mon abonnement" et "Changer de formule" ouvrent tous les deux les réglages d'abonnement natifs du store (`Linking.openURL`, URL différente selon `Platform.OS`) — il n'existe pas d'API pour changer de formule autrement que depuis ces réglages, donc les deux lignes pointent vers le même endroit.
 
-Chaque changement s'écrit immédiatement en base : `hooks/useSettings.ts` (sur le modèle de `useWeightLogs`/`useDailyMissions`) lit `user_settings`, crée une ligne par défaut si elle n'existe pas encore, et applique chaque `update()` de façon optimiste (revert local si l'écriture échoue). Les notifications ne sont pas branchées : le switch et les rappels enregistrent la préférence sans déclencher quoi que ce soit (`// TODO: brancher expo-notifications`). Les modales de sélection à choix unique (Objectif principal, Vitesse, Entraînements par semaine) réutilisent directement les options de `constants/questionnaire.ts` via `components/settings/ChoiceModal.tsx`. La modale "Poids objectif" réutilise le stepper sans clavier de l'écran Progression (`components/ui/NumberStepperModal.tsx`, extrait pour être partagé avec `components/progression/WeightEntryModal.tsx`). "Rappel du matin"/"Rappel du soir" utilisent un stepper heure/minute maison (`components/settings/TimePickerModal.tsx`) plutôt qu'un date-picker natif — pas de nouvelle dépendance, et ça reste testable sur web.
+Chaque changement s'écrit immédiatement en base : `hooks/useSettings.ts` (sur le modèle de `useWeightLogs`/`useDailyMissions`) lit `user_settings`, crée une ligne par défaut si elle n'existe pas encore, et applique chaque `update()` de façon optimiste (revert local si l'écriture échoue). Les notifications ne sont pas branchées : le switch et les rappels enregistrent la préférence sans déclencher quoi que ce soit (`// TODO: brancher expo-notifications`). Les modales de sélection à choix unique (Objectif principal, Vitesse, Entraînements par semaine) réutilisent les options de `constants/onboardingFlow.ts` (via `getStepOptions`) à travers `components/settings/ChoiceModal.tsx`. La modale "Poids objectif" réutilise le stepper sans clavier de l'écran Progression (`components/ui/NumberStepperModal.tsx`, extrait pour être partagé avec `components/progression/WeightEntryModal.tsx`). "Rappel du matin"/"Rappel du soir" utilisent un stepper heure/minute maison (`components/settings/TimePickerModal.tsx`) plutôt qu'un date-picker natif — pas de nouvelle dépendance, et ça reste testable sur web.
 
 **Parrainage.** À l'inscription (`app/(onboarding)/signup.tsx`), `lib/referral.ts` génère un code de 8 caractères dérivé de l'email (ex. `LUCAS4K2` — jusqu'à 5 lettres/chiffres de la partie locale de l'email + un suffixe aléatoire complétant à 8 caractères), en vérifiant l'unicité en base avant de l'utiliser (jusqu'à 10 tentatives, puis repli sur un code entièrement aléatoire). `hooks/useReferral.ts` lit le nombre de filleuls (`referrals` où `parrain_id` = l'utilisateur) et regénère un code au vol si un profil plus ancien n'en a pas ; `redeemCode()` refuse le propre code de l'utilisateur et refuse un second parrainage (`profiles.parraine_par` déjà renseigné) avant d'insérer la ligne dans `referrals` et de mettre à jour `parraine_par`. Le bouton copie (`expo-clipboard`) et le bouton partage (`Share` de React Native) sont sur `components/settings/ReferralCard.tsx`.
 
@@ -981,7 +1003,7 @@ Six langues : français (référence), anglais, espagnol, allemand, italien, por
 - **Pluriels** : une valeur pluralisée est un objet `{ one: '...', other: '...' }` (parfois `zero`) plutôt qu'une chaîne ICU — c'est le mécanisme réel d'i18n-js. Passer `count` dans les params sélectionne automatiquement la bonne forme : `t('groups.info.removeMemberConfirmMessage', { count })`.
 - **`context/LocaleContext.tsx`** expose `useLocale()` → `{ locale, setLocale, t }`. `locale` vient de `user_settings.langue` (résolu via `resolveStoredLocale`, qui retombe sur `detectSupportedLocale()` — langue du téléphone via `expo-localization` si supportée, sinon français — pour une valeur absente ou héritée de l'ancien format `'Français'`). `setLocale` écrit dans `user_settings.langue` et s'applique immédiatement (pas de redémarrage).
 - **Fichiers non-composants** (`constants/*.ts`, `lib/*.ts`) ne peuvent pas appeler `useLocale()` — ils reçoivent `t` (et `locale` si besoin) en paramètre explicite depuis l'appelant. Même règle pour tout module `lib/` ajouté à l'avenir.
-- **Constantes affichées vs valeurs stockées** : certains champs de `constants/questionnaire.ts`, `constants/dashboard.ts`, `constants/badges.ts` etc. sont à la fois affichés ET comparés à des valeurs Supabase (`profile.objectif`, `profile.niveau_activite`, `daily_missions.mission_key`...). Ces valeurs stockées restent en français, intactes ; seul l'affichage passe par une clé `<champ>Key` séparée (ex. `titleKey`, `labelKey`, `nameKey`) résolue via `t()`.
+- **Constantes affichées vs valeurs stockées** : certains champs de `constants/onboardingFlow.ts`, `constants/dashboard.ts`, `constants/badges.ts` etc. sont à la fois affichés ET comparés à des valeurs Supabase (`profile.objectif`, `profile.niveau_activite`, `daily_missions.mission_key`...). Ces valeurs stockées restent en français, intactes ; seul l'affichage passe par une clé `<champ>Key` séparée (ex. `titleKey`, `labelKey`, `nameKey`) résolue via `t()`.
 - **`lib/format.ts`** — formatage sensible à la locale (`Intl` sous le capot) : `formatLongDate`, `formatFullDate`, `formatShortDate`, `formatDecimal`, `formatInteger`, `formatWeight`.
 - **Prompts IA** — les 4 appels Anthropic (coach, scanner, recettes, analyse de progression) gardent leurs prompts système en français, mais `lib/anthropic.ts`'s `languageInstruction(locale)` y ajoute une ligne demandant explicitement une réponse dans la langue active de l'utilisateur.
 - **Sélecteur de langue** — Profil > Préférences > Langue ouvre une `ChoiceModal` listant les 6 langues (`lib/i18n.ts`'s `LANGUAGE_OPTIONS`), chacune avec son drapeau et son nom dans sa propre langue (jamais traduits).
