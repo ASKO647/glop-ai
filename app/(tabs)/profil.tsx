@@ -44,7 +44,7 @@ import TextInputModal from '../../components/ui/TextInputModal';
 import { getProgramDay, PROGRAM_LENGTH_DAYS } from '../../constants/dashboard';
 import { getDisplayName } from '../../constants/profile';
 import { formatWeight, QUICK_ADJUSTMENTS, WEIGHT_STEP } from '../../constants/progression';
-import { QUESTIONS, type SingleChoiceQuestion } from '../../constants/questionnaire';
+import { getStepOptions } from '../../constants/onboardingFlow';
 import type { Colors } from '../../constants/theme';
 import { spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
@@ -81,10 +81,13 @@ function validateUsername(t: Translate, value: string): string | undefined {
 
 const CONTACT_EMAIL = 'contact@glowupai.app';
 
-const GOAL_OPTIONS = (QUESTIONS.find((q) => q.id === 'goal') as SingleChoiceQuestion).options as ChoiceOption[];
-const PACE_OPTIONS = (QUESTIONS.find((q) => q.id === 'pace') as SingleChoiceQuestion).options as ChoiceOption[];
-const WORKOUTS_OPTIONS = (QUESTIONS.find((q) => q.id === 'workouts_per_week') as SingleChoiceQuestion)
-  .options as ChoiceOption[];
+/** `option.id` stays the raw French value (matches what's persisted to `profiles`), `option.label` is translated for display — mirrors the appearance/language pickers' pattern below. */
+function useTranslatedStepOptions(stepId: string, t: Translate): ChoiceOption[] {
+  return useMemo(
+    () => getStepOptions(stepId).map((option) => ({ id: option.label, label: t(option.labelKey) })),
+    [stepId, t]
+  );
+}
 
 type ActiveModal =
   | 'goal'
@@ -132,6 +135,9 @@ export default function ProfilScreen() {
     []
   );
   const currentLanguageLabel = LANGUAGE_CHOICE_OPTIONS.find((option) => option.id === locale)?.label ?? null;
+  const GOAL_OPTIONS = useTranslatedStepOptions('goal', t);
+  const PACE_OPTIONS = useTranslatedStepOptions('pace', t);
+  const WORKOUTS_OPTIONS = useTranslatedStepOptions('workouts_per_week', t);
   const { profile, loading: profileLoading, refreshProfile } = useProfile();
   const { settings, loading: settingsLoading, update: updateSettings } = useSettings(user?.id);
   const { referredCount, loading: referralLoading, redeeming, redeemCode } = useReferral(
@@ -593,9 +599,9 @@ export default function ProfilScreen() {
         visible={activeModal === 'goal'}
         title={t('profile.sections.mainGoal')}
         options={GOAL_OPTIONS}
-        selectedLabel={profile?.objectif ?? null}
+        selectedLabel={GOAL_OPTIONS.find((o) => o.id === profile?.objectif)?.label ?? null}
         onCancel={closeModal}
-        onSelect={(option) => updateProfileField({ objectif: option.label })}
+        onSelect={(option) => updateProfileField({ objectif: option.id })}
       />
 
       <NumberStepperModal
@@ -614,18 +620,18 @@ export default function ProfilScreen() {
         visible={activeModal === 'pace'}
         title={t('profile.sections.pace')}
         options={PACE_OPTIONS}
-        selectedLabel={profile?.vitesse ?? null}
+        selectedLabel={PACE_OPTIONS.find((o) => o.id === profile?.vitesse)?.label ?? null}
         onCancel={closeModal}
-        onSelect={(option) => updateProfileField({ vitesse: option.label })}
+        onSelect={(option) => updateProfileField({ vitesse: option.id })}
       />
 
       <ChoiceModal
         visible={activeModal === 'workouts'}
         title={t('profile.sections.workoutsPerWeek')}
         options={WORKOUTS_OPTIONS}
-        selectedLabel={profile?.frequence_entrainement ?? null}
+        selectedLabel={WORKOUTS_OPTIONS.find((o) => o.id === profile?.frequence_entrainement)?.label ?? null}
         onCancel={closeModal}
-        onSelect={(option) => updateProfileField({ frequence_entrainement: option.label })}
+        onSelect={(option) => updateProfileField({ frequence_entrainement: option.id })}
       />
 
       <ChoiceModal

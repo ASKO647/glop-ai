@@ -7,7 +7,7 @@ import GoogleIcon from '../../components/onboarding/GoogleIcon';
 import SocialButton from '../../components/onboarding/SocialButton';
 import Button from '../../components/ui/Button';
 import TextField from '../../components/ui/TextField';
-import { getOptionLabel } from '../../constants/questionnaire';
+import { getOptionLabel } from '../../constants/onboardingFlow';
 import type { Colors } from '../../constants/theme';
 import { spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';

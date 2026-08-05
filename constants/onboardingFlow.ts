@@ -1,4 +1,15 @@
-export type QuestionOption = {
+import {
+  Dumbbell,
+  Lock,
+  PartyPopper,
+  Sparkles,
+  Target,
+  TrendingDown,
+  Wand2,
+  type LucideIcon,
+} from 'lucide-react-native';
+
+export type OnboardingOption = {
   id: string;
   /**
    * Raw French label — this is the literal value persisted to Supabase (profiles.objectif,
@@ -9,53 +20,83 @@ export type QuestionOption = {
   label: string;
   /** i18n key for the translated, display-only version of `label`. */
   labelKey: string;
+  /** Shown at the left of the option card, in a 32px circle. */
+  icon?: LucideIcon;
   /** Selecting this option clears every other selection (e.g. "Aucune"). */
   exclusive?: boolean;
 };
 
-type BaseQuestion = {
+type BaseStep = {
   id: string;
-  /** i18n key for the question's display text. */
   titleKey: string;
+  subtitleKey?: string;
 };
 
-export type SingleChoiceQuestion = BaseQuestion & {
-  type: 'single';
-  options: QuestionOption[];
-};
+export type SingleStep = BaseStep & { kind: 'single'; options: OnboardingOption[] };
+export type MultipleStep = BaseStep & { kind: 'multiple'; options: OnboardingOption[] };
 
-export type MultipleChoiceQuestion = BaseQuestion & {
-  type: 'multiple';
-  options: QuestionOption[];
-};
-
-export type NumericQuestion = BaseQuestion & {
-  type: 'numeric';
+export type NumericStep = BaseStep & {
+  kind: 'numeric';
   /** i18n key for the unit label (e.g. "ans", "cm", "kg") — display-only. */
   unitKey?: string;
   min: number;
   max: number;
   step?: number;
   defaultValue: number;
+  /** Quick-adjustment pills shown under the ± stepper. */
+  quickAdjustments: number[];
 };
 
-export type Question = SingleChoiceQuestion | MultipleChoiceQuestion | NumericQuestion;
+export type BreatherStep = BaseStep & {
+  kind: 'breather';
+  icon: LucideIcon;
+  /** Extra privacy insert (breather2 only) — icon is always the lock. */
+  privacyTitleKey?: string;
+  privacyTextKey?: string;
+};
 
-export const QUESTIONS: Question[] = [
+/** Purely computed from current_weight vs target_weight — carries no answer of its own. */
+export type ResultStep = { id: 'result'; kind: 'result' };
+
+export type FinalStep = BaseStep & { kind: 'final'; icon: LucideIcon };
+
+export type OnboardingStep = SingleStep | MultipleStep | NumericStep | BreatherStep | ResultStep | FinalStep;
+
+export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'goal',
-    type: 'single',
+    kind: 'single',
     titleKey: 'onboarding.questionnaire.goal.title',
     options: [
-      { id: 'weight_loss', label: 'Perte de poids', labelKey: 'onboarding.questionnaire.goal.options.weightLoss' },
-      { id: 'muscle_gain', label: 'Prise de muscle', labelKey: 'onboarding.questionnaire.goal.options.muscleGain' },
-      { id: 'glow_up', label: 'Glow up & esthétique', labelKey: 'onboarding.questionnaire.goal.options.glowUp' },
-      { id: 'discipline', label: 'Être plus discipliné', labelKey: 'onboarding.questionnaire.goal.options.discipline' },
+      {
+        id: 'weight_loss',
+        label: 'Perte de poids',
+        labelKey: 'onboarding.questionnaire.goal.options.weightLoss',
+        icon: TrendingDown,
+      },
+      {
+        id: 'muscle_gain',
+        label: 'Prise de muscle',
+        labelKey: 'onboarding.questionnaire.goal.options.muscleGain',
+        icon: Dumbbell,
+      },
+      {
+        id: 'glow_up',
+        label: 'Glow up & esthétique',
+        labelKey: 'onboarding.questionnaire.goal.options.glowUp',
+        icon: Sparkles,
+      },
+      {
+        id: 'discipline',
+        label: 'Être plus discipliné',
+        labelKey: 'onboarding.questionnaire.goal.options.discipline',
+        icon: Target,
+      },
     ],
   },
   {
     id: 'gender',
-    type: 'single',
+    kind: 'single',
     titleKey: 'onboarding.questionnaire.gender.title',
     options: [
       { id: 'male', label: 'Homme', labelKey: 'onboarding.questionnaire.gender.options.male' },
@@ -64,44 +105,56 @@ export const QUESTIONS: Question[] = [
     ],
   },
   {
+    id: 'breather1',
+    kind: 'breather',
+    titleKey: 'onboarding.flow.breather1.title',
+    subtitleKey: 'onboarding.flow.breather1.subtitle',
+    icon: Wand2,
+  },
+  {
     id: 'age',
-    type: 'numeric',
+    kind: 'numeric',
     titleKey: 'onboarding.questionnaire.age.title',
     unitKey: 'onboarding.questionnaire.units.years',
     min: 13,
     max: 90,
     defaultValue: 25,
+    quickAdjustments: [-5, -1, 1, 5],
   },
   {
     id: 'height',
-    type: 'numeric',
+    kind: 'numeric',
     titleKey: 'onboarding.questionnaire.height.title',
     unitKey: 'onboarding.questionnaire.units.cm',
     min: 120,
     max: 220,
     defaultValue: 170,
+    quickAdjustments: [-5, -1, 1, 5],
   },
   {
     id: 'current_weight',
-    type: 'numeric',
+    kind: 'numeric',
     titleKey: 'onboarding.questionnaire.currentWeight.title',
     unitKey: 'onboarding.questionnaire.units.kg',
     min: 30,
     max: 200,
     defaultValue: 70,
+    quickAdjustments: [-5, -1, 1, 5],
   },
   {
     id: 'target_weight',
-    type: 'numeric',
+    kind: 'numeric',
     titleKey: 'onboarding.questionnaire.targetWeight.title',
     unitKey: 'onboarding.questionnaire.units.kg',
     min: 30,
     max: 200,
     defaultValue: 65,
+    quickAdjustments: [-5, -1, 1, 5],
   },
+  { id: 'result', kind: 'result' },
   {
     id: 'pace',
-    type: 'single',
+    kind: 'single',
     titleKey: 'onboarding.questionnaire.pace.title',
     options: [
       { id: 'progressive', label: 'Progressif', labelKey: 'onboarding.questionnaire.pace.options.progressive' },
@@ -111,7 +164,7 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: 'activity_level',
-    type: 'single',
+    kind: 'single',
     titleKey: 'onboarding.questionnaire.activityLevel.title',
     options: [
       { id: 'sedentary', label: 'Sédentaire', labelKey: 'onboarding.questionnaire.activityLevel.options.sedentary' },
@@ -122,7 +175,7 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: 'workouts_per_week',
-    type: 'single',
+    kind: 'single',
     titleKey: 'onboarding.questionnaire.workoutsPerWeek.title',
     options: [
       { id: '1_2', label: '1-2', labelKey: 'onboarding.questionnaire.workoutsPerWeek.options.oneTwo' },
@@ -133,7 +186,7 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: 'training_location',
-    type: 'single',
+    kind: 'single',
     titleKey: 'onboarding.questionnaire.trainingLocation.title',
     options: [
       { id: 'gym', label: 'Salle', labelKey: 'onboarding.questionnaire.trainingLocation.options.gym' },
@@ -142,8 +195,17 @@ export const QUESTIONS: Question[] = [
     ],
   },
   {
+    id: 'breather2',
+    kind: 'breather',
+    titleKey: 'onboarding.flow.breather2.title',
+    subtitleKey: 'onboarding.flow.breather2.subtitle',
+    icon: PartyPopper,
+    privacyTitleKey: 'onboarding.flow.breather2.privacyTitle',
+    privacyTextKey: 'onboarding.flow.breather2.privacyText',
+  },
+  {
     id: 'diet_quality',
-    type: 'single',
+    kind: 'single',
     titleKey: 'onboarding.questionnaire.dietQuality.title',
     options: [
       { id: 'messy', label: 'Désordonnée', labelKey: 'onboarding.questionnaire.dietQuality.options.messy' },
@@ -153,8 +215,25 @@ export const QUESTIONS: Question[] = [
     ],
   },
   {
+    id: 'dietary_restrictions',
+    kind: 'multiple',
+    titleKey: 'onboarding.questionnaire.dietaryRestrictions.title',
+    options: [
+      {
+        id: 'none',
+        label: 'Aucune',
+        labelKey: 'onboarding.questionnaire.dietaryRestrictions.options.none',
+        exclusive: true,
+      },
+      { id: 'vegetarian', label: 'Végétarien', labelKey: 'onboarding.questionnaire.dietaryRestrictions.options.vegetarian' },
+      { id: 'vegan', label: 'Végan', labelKey: 'onboarding.questionnaire.dietaryRestrictions.options.vegan' },
+      { id: 'gluten_free', label: 'Sans gluten', labelKey: 'onboarding.questionnaire.dietaryRestrictions.options.glutenFree' },
+      { id: 'lactose_free', label: 'Sans lactose', labelKey: 'onboarding.questionnaire.dietaryRestrictions.options.lactoseFree' },
+    ],
+  },
+  {
     id: 'sleep_hours',
-    type: 'single',
+    kind: 'single',
     titleKey: 'onboarding.questionnaire.sleepHours.title',
     options: [
       { id: 'under_5', label: 'Moins de 5', labelKey: 'onboarding.questionnaire.sleepHours.options.under5' },
@@ -165,7 +244,7 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: 'blocker',
-    type: 'single',
+    kind: 'single',
     titleKey: 'onboarding.questionnaire.blocker.title',
     options: [
       { id: 'motivation', label: 'Manque de motivation', labelKey: 'onboarding.questionnaire.blocker.options.motivation' },
@@ -175,44 +254,62 @@ export const QUESTIONS: Question[] = [
     ],
   },
   {
-    id: 'dietary_restrictions',
-    type: 'multiple',
-    titleKey: 'onboarding.questionnaire.dietaryRestrictions.title',
-    options: [
-      { id: 'none', label: 'Aucune', labelKey: 'onboarding.questionnaire.dietaryRestrictions.options.none', exclusive: true },
-      { id: 'vegetarian', label: 'Végétarien', labelKey: 'onboarding.questionnaire.dietaryRestrictions.options.vegetarian' },
-      { id: 'vegan', label: 'Végan', labelKey: 'onboarding.questionnaire.dietaryRestrictions.options.vegan' },
-      { id: 'gluten_free', label: 'Sans gluten', labelKey: 'onboarding.questionnaire.dietaryRestrictions.options.glutenFree' },
-      { id: 'lactose_free', label: 'Sans lactose', labelKey: 'onboarding.questionnaire.dietaryRestrictions.options.lactoseFree' },
-    ],
-  },
-  {
     id: 'commitment_level',
-    type: 'single',
+    kind: 'single',
     titleKey: 'onboarding.questionnaire.commitmentLevel.title',
     options: [
       { id: 'testing', label: 'Je teste', labelKey: 'onboarding.questionnaire.commitmentLevel.options.testing' },
       { id: 'motivated', label: 'Je suis motivé', labelKey: 'onboarding.questionnaire.commitmentLevel.options.motivated' },
-      { id: 'determined', label: 'Je suis déterminé à changer', labelKey: 'onboarding.questionnaire.commitmentLevel.options.determined' },
+      {
+        id: 'determined',
+        label: 'Je suis déterminé à changer',
+        labelKey: 'onboarding.questionnaire.commitmentLevel.options.determined',
+      },
     ],
+  },
+  {
+    id: 'final',
+    kind: 'final',
+    titleKey: 'onboarding.flow.final.title',
+    subtitleKey: 'onboarding.flow.final.subtitle',
+    icon: PartyPopper,
   },
 ];
 
-/**
- * Looks up the raw French label for a given question/option id pair — this is the value
- * that gets persisted to Supabase (see `QuestionOption.label` above). Never use this for display.
- */
-export function getOptionLabel(questionId: string, optionId: string | undefined): string | undefined {
-  if (!optionId) return undefined;
-  const question = QUESTIONS.find((q) => q.id === questionId);
-  if (!question || question.type === 'numeric') return undefined;
-  return question.options.find((o) => o.id === optionId)?.label;
+export const TOTAL_STEPS = ONBOARDING_STEPS.length;
+
+export function getStep(id: string): OnboardingStep | undefined {
+  return ONBOARDING_STEPS.find((step) => step.id === id);
 }
 
-/** Looks up the i18n key for the translated, display-only label of a given question/option id pair. */
-export function getOptionLabelKey(questionId: string, optionId: string | undefined): string | undefined {
-  if (!optionId) return undefined;
-  const question = QUESTIONS.find((q) => q.id === questionId);
-  if (!question || question.type === 'numeric') return undefined;
-  return question.options.find((o) => o.id === optionId)?.labelKey;
+export function getStepByIndex(index: number): OnboardingStep | undefined {
+  return ONBOARDING_STEPS[index];
 }
+
+/**
+ * Looks up the raw French label for a given step/option id pair — this is the value that gets
+ * persisted to Supabase (see `OnboardingOption.label` above). Never use this for display.
+ */
+export function getOptionLabel(stepId: string, optionId: string | undefined): string | undefined {
+  if (!optionId) return undefined;
+  const step = getStep(stepId);
+  if (!step || (step.kind !== 'single' && step.kind !== 'multiple')) return undefined;
+  return step.options.find((o) => o.id === optionId)?.label;
+}
+
+/** Looks up the i18n key for the translated, display-only label of a given step/option id pair. */
+export function getOptionLabelKey(stepId: string, optionId: string | undefined): string | undefined {
+  if (!optionId) return undefined;
+  const step = getStep(stepId);
+  if (!step || (step.kind !== 'single' && step.kind !== 'multiple')) return undefined;
+  return step.options.find((o) => o.id === optionId)?.labelKey;
+}
+
+/** The options list for a single/multiple-choice step, for callers that only deal with question steps (e.g. profil.tsx rebuilding a ChoiceModal's option list). */
+export function getStepOptions(stepId: string): OnboardingOption[] {
+  const step = getStep(stepId);
+  if (!step || (step.kind !== 'single' && step.kind !== 'multiple')) return [];
+  return step.options;
+}
+
+export { Lock as PrivacyIcon };
