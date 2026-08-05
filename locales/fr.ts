@@ -344,7 +344,12 @@ const fr = {
       sectionTitle: 'Missions du jour',
       counter: '%{done}/%{total}',
       emptyForDay: 'Aucune mission enregistrée ce jour-là',
-      water: "Boire %{amount}L d'eau",
+      objective: {
+        weightLoss: 'Rester sous ton objectif calorique',
+        muscleGain: 'Atteindre ton objectif protéines',
+        glowUp: 'Routine skincare',
+        discipline: 'Compléter ta séance',
+      },
       steps: '%{count} pas',
       workout: 'Séance du jour',
       skincare: 'Routine skincare',

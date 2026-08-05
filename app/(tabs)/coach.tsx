@@ -5,6 +5,8 @@ import ChatInput from '../../components/coach/ChatInput';
 import MessageBubble from '../../components/coach/MessageBubble';
 import SuggestionChip from '../../components/coach/SuggestionChip';
 import TypingIndicator from '../../components/coach/TypingIndicator';
+import AppImage from '../../components/ui/AppImage';
+import { appImage } from '../../constants/images';
 import { TAB_BAR_CLEARANCE } from '../../constants/layout';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
@@ -35,7 +37,7 @@ export default function CoachScreen() {
     <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>C</Text>
+          <AppImage source={appImage('logo-mark.png')} style={styles.avatarLogo} resizeMode="contain" />
         </View>
         <View>
           <Text style={styles.headerTitle}>{t('coach.headerTitle')}</Text>
@@ -113,10 +115,10 @@ function makeStyles(colors: Colors) {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.accent,
+  // ~65% of the 40px circle.
+  avatarLogo: {
+    width: 26,
+    height: 26,
   },
   headerTitle: {
     fontSize: 16,

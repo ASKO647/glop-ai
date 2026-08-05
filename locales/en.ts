@@ -340,7 +340,12 @@ const en: TranslationSchema = {
       sectionTitle: "Today's missions",
       counter: '%{done}/%{total}',
       emptyForDay: 'No missions logged for that day',
-      water: "Drink %{amount}L of water",
+      objective: {
+        weightLoss: 'Stay under your calorie target',
+        muscleGain: 'Hit your protein target',
+        glowUp: 'Skincare routine',
+        discipline: 'Complete your workout',
+      },
       steps: '%{count} steps',
       workout: "Today's workout",
       skincare: 'Skincare routine',

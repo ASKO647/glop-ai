@@ -7,6 +7,23 @@ export const WATER_GOAL_MAX_ML = 5000;
 export const WATER_GOAL_STEP_ML = 250;
 export const DEFAULT_WATER_GOAL_ML = 2000;
 
+const HYDRATION_ML_PER_KG = 35;
+const HYDRATION_BONUS_VERY_ACTIVE_ML = 500;
+const HYDRATION_BONUS_MODERATE_ML = 250;
+
+/**
+ * 35ml per kg of body weight, +500ml if activity level is "Très actif", +250ml if "Modéré",
+ * rounded up to the next 250ml — only used to seed a brand-new user's hydration goal on their
+ * first visit; the user can always change it manually afterward via the water goal modal.
+ */
+export function computeHydrationGoal(poidsKg: number | null | undefined, niveauActivite: string | null | undefined): number {
+  if (!poidsKg) return DEFAULT_WATER_GOAL_ML;
+  let goalMl = poidsKg * HYDRATION_ML_PER_KG;
+  if (niveauActivite === 'Très actif') goalMl += HYDRATION_BONUS_VERY_ACTIVE_ML;
+  else if (niveauActivite === 'Modéré') goalMl += HYDRATION_BONUS_MODERATE_ML;
+  return Math.ceil(goalMl / WATER_GOAL_STEP_ML) * WATER_GOAL_STEP_ML;
+}
+
 /** How many 250ml glasses make up a given goal — always at least 1. */
 export function computeGlassCount(goalMl: number): number {
   return Math.max(1, Math.round(goalMl / WATER_GLASS_ML));

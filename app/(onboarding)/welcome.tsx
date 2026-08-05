@@ -1,20 +1,30 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppImage from '../../components/ui/AppImage';
+import ChoiceModal, { type ChoiceOption } from '../../components/settings/ChoiceModal';
 import { appImage } from '../../constants/images';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
-import { useLocale } from '../../context/LocaleContext';
+import { useLocale, type Locale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { LANGUAGE_OPTIONS } from '../../lib/i18n';
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { t } = useLocale();
+  const { t, locale, setLocale } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const [languageModalVisible, setLanguageModalVisible] = useState(false);
+
+  const LANGUAGE_CHOICE_OPTIONS: (ChoiceOption & { id: Locale })[] = useMemo(
+    () => LANGUAGE_OPTIONS.map((option) => ({ id: option.id, label: `${option.flag} ${option.label}` })),
+    []
+  );
+  const currentLanguage = LANGUAGE_OPTIONS.find((option) => option.id === locale) ?? LANGUAGE_OPTIONS[0];
+  const currentLanguageLabel = LANGUAGE_CHOICE_OPTIONS.find((option) => option.id === locale)?.label ?? null;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
@@ -29,6 +39,29 @@ export default function WelcomeScreen() {
         locations={[0, 0.55, 1]}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
+      />
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('profile.sections.language')}
+        onPress={() => setLanguageModalVisible(true)}
+        style={({ pressed }) => [styles.languagePill, pressed && styles.languagePillPressed]}
+      >
+        <Text style={styles.languagePillText}>
+          {currentLanguage.flag} {currentLanguage.id.toUpperCase()}
+        </Text>
+      </Pressable>
+
+      <ChoiceModal
+        visible={languageModalVisible}
+        title={t('profile.sections.language')}
+        options={LANGUAGE_CHOICE_OPTIONS}
+        selectedLabel={currentLanguageLabel}
+        onCancel={() => setLanguageModalVisible(false)}
+        onSelect={(option) => {
+          setLocale(option.id as Locale);
+          setLanguageModalVisible(false);
+        }}
       />
 
       <View style={styles.hero}>
@@ -61,6 +94,27 @@ function makeStyles(colors: Colors) {
       flex: 1,
       backgroundColor: colors.background,
       paddingHorizontal: spacing.lg,
+    },
+    languagePill: {
+      position: 'absolute',
+      top: spacing.md,
+      right: spacing.lg,
+      flexDirection: 'row',
+      alignItems: 'center',
+      height: 32,
+      paddingHorizontal: 12,
+      borderRadius: radii.full,
+      backgroundColor: '#101410',
+      borderWidth: 1,
+      borderColor: '#232a25',
+    },
+    languagePillPressed: {
+      opacity: 0.7,
+    },
+    languagePillText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.white,
     },
     hero: {
       marginTop: spacing['2xl'],

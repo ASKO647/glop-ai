@@ -10,6 +10,11 @@ import pt from '../locales/pt';
 export const SUPPORTED_LOCALES = ['fr', 'en', 'es', 'de', 'it', 'pt'] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
 
+/** AsyncStorage key for a language picked before signup (welcome screen) — read by both
+ * `LocaleContext` (to apply it immediately, pre-auth) and `useSettings` (to seed a brand-new
+ * account's `user_settings` row with it instead of silently dropping the explicit choice). */
+export const PENDING_LOCALE_STORAGE_KEY = 'glowup:pending-locale';
+
 export type LanguageOption = { id: Locale; flag: string; label: string };
 
 /** Each language names itself, in its own language — used by the Préférences language picker. */
