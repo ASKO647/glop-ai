@@ -7,6 +7,7 @@ import Button from '../../components/ui/Button';
 import { WORKOUT_SESSIONS } from '../../constants/dashboard';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing, typography } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function WorkoutDetailScreen() {
@@ -14,6 +15,7 @@ export default function WorkoutDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = WORKOUT_SESSIONS.find((s) => s.id === id);
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
@@ -28,18 +30,18 @@ export default function WorkoutDetailScreen() {
           <ArrowLeft color={colors.textPrimary} size={22} />
         </Pressable>
         <Text style={styles.headerTitle} numberOfLines={1}>
-          {session?.title ?? 'Séance'}
+          {session ? t(session.titleKey) : t('dashboard.workout.fallbackTitle')}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
 
       {!session ? (
         <View style={styles.centered}>
-          <Text style={styles.emptyText}>Cette séance est introuvable.</Text>
+          <Text style={styles.emptyText}>{t('dashboard.workout.notFound')}</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={styles.muscles}>{session.muscles}</Text>
+          <Text style={styles.muscles}>{t(session.musclesKey)}</Text>
 
           <View style={styles.metaRow}>
             <View style={styles.metaItem}>
@@ -53,11 +55,11 @@ export default function WorkoutDetailScreen() {
           </View>
 
           <View style={styles.exercisesSection}>
-            <Text style={styles.sectionTitle}>Exercices</Text>
+            <Text style={styles.sectionTitle}>{t('dashboard.workout.exercisesTitle')}</Text>
             <View style={styles.exercisesList}>
               {session.exercises.map((exercise) => (
-                <View key={exercise.name} style={styles.exerciseRow}>
-                  <Text style={styles.exerciseName}>{exercise.name}</Text>
+                <View key={exercise.nameKey} style={styles.exerciseRow}>
+                  <Text style={styles.exerciseName}>{t(exercise.nameKey)}</Text>
                   <Text style={styles.exerciseDetail}>
                     {exercise.sets} x {exercise.reps}
                   </Text>
@@ -66,7 +68,7 @@ export default function WorkoutDetailScreen() {
             </View>
           </View>
 
-          <Button label="Commencer la séance" onPress={() => router.push(`/workout/session/${session.id}`)} />
+          <Button label={t('dashboard.workout.startFull')} onPress={() => router.push(`/workout/session/${session.id}`)} />
         </ScrollView>
       )}
     </SafeAreaView>

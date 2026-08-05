@@ -22,24 +22,23 @@ import { PERIOD_OPTIONS, computeProgressPercent, formatWeight, type PeriodId } f
 import type { Colors } from '../../constants/theme';
 import { radii, spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useBadges } from '../../hooks/useBadges';
 import { useMealStats } from '../../hooks/useMealStats';
 import { useMissionStreak } from '../../hooks/useMissionStreak';
-import { PHOTO_SLOTS, SLOT_LABELS, useProgressPhotos, type PhotoSlot, type ProgressPhoto } from '../../hooks/useProgressPhotos';
+import { PHOTO_SLOTS, useProgressPhotos, type PhotoSlot, type ProgressPhoto } from '../../hooks/useProgressPhotos';
 import { useSettings } from '../../hooks/useSettings';
 import { useWaterLogs } from '../../hooks/useWaterLogs';
 import { useWeightLogs } from '../../hooks/useWeightLogs';
 import { showAlert } from '../../lib/alert';
 import { analyzeProgress, type ProgressAnalysis } from '../../lib/progressAnalysis';
 
-const PHOTOS_PERMISSION_DENIED_MESSAGE =
-  "GlowUp AI a besoin d'accéder à tes photos pour enregistrer ta progression. Active l'accès dans les réglages de ton téléphone.";
-
 export default function ProgressionScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { t, locale } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { profile, loading: profileLoading } = useProfile();
   const { logs, loading: logsLoading, saving, saveTodayWeight } = useWeightLogs(user?.id);
@@ -87,7 +86,7 @@ export default function ProgressionScreen() {
     if (ok) {
       setModalVisible(false);
     } else {
-      showAlert('Erreur', "Impossible d'enregistrer ton poids. Réessaie.");
+      showAlert(t('common.error'), t('progression.errors.saveWeightFailed'));
     }
   };
 
@@ -102,7 +101,7 @@ export default function ProgressionScreen() {
     if (existing !== 'granted') {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        showAlert('Accès à tes photos refusé', PHOTOS_PERMISSION_DENIED_MESSAGE);
+        showAlert(t('progression.photosPermission.deniedTitle'), t('progression.photosPermission.deniedMessage'));
         return;
       }
     }
@@ -115,7 +114,7 @@ export default function ProgressionScreen() {
     const outcome = await addPhoto(slot, asset.uri, asset.width, currentWeight);
     setUploadingSlot(null);
     if (!outcome.ok) {
-      showAlert('Erreur', outcome.error ?? "Impossible d'enregistrer cette photo. Réessaie.");
+      showAlert(t('common.error'), outcome.error ?? t('progression.photos.photoError'));
     }
   };
 
@@ -123,7 +122,7 @@ export default function ProgressionScreen() {
   const handleDeleteSlot = async (slot: PhotoSlot) => {
     const ok = await deletePhoto(slot);
     if (!ok) {
-      showAlert('Erreur', 'Impossible de supprimer cette photo. Réessaie.');
+      showAlert(t('common.error'), t('progression.photos.deleteError'));
     }
   };
 
@@ -131,15 +130,20 @@ export default function ProgressionScreen() {
     setAnalyzing(true);
     setAnalysisError(null);
     try {
-      const result = await analyzeProgress(presentPhotos, {
-        objectif: profile?.objectif ?? null,
-        poidsDepart: startWeight,
-        poidsActuel: currentWeight,
-        poidsObjectif: targetWeight,
-      });
+      const result = await analyzeProgress(
+        presentPhotos,
+        {
+          objectif: profile?.objectif ?? null,
+          poidsDepart: startWeight,
+          poidsActuel: currentWeight,
+          poidsObjectif: targetWeight,
+        },
+        locale,
+        t
+      );
       setAnalysis(result);
     } catch (err) {
-      setAnalysisError(err instanceof Error ? err.message : "Impossible d'analyser ta progression. Réessaie.");
+      setAnalysisError(err instanceof Error ? err.message : t('progression.analysis.genericError'));
     } finally {
       setAnalyzing(false);
     }
@@ -156,7 +160,7 @@ export default function ProgressionScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.pageTitle}>Progression</Text>
+        <Text style={styles.pageTitle}>{t('progression.pageTitle')}</Text>
 
         <WeightCard
           currentWeight={currentWeight}
@@ -171,7 +175,7 @@ export default function ProgressionScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Évolution</Text>
+            <Text style={styles.sectionTitle}>{t('progression.sections.evolution')}</Text>
             <View style={styles.periodRow}>
               {PERIOD_OPTIONS.map((option) => (
                 <Pressable
@@ -203,57 +207,57 @@ export default function ProgressionScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Statistiques</Text>
+          <Text style={styles.sectionTitle}>{t('progression.sections.statistics')}</Text>
           {logsLoading ? (
             <ActivityIndicator color={colors.accent} />
           ) : (
             <View style={styles.statsGrid}>
               <StatTile
                 Icon={Flag}
-                value={startWeight != null ? `${formatWeight(startWeight)} kg` : '-'}
-                label="Poids de départ"
+                value={startWeight != null ? `${formatWeight(startWeight, locale)} kg` : '-'}
+                label={t('progression.stats.startWeight')}
               />
               <StatTile
                 Icon={Target}
-                value={targetWeight != null ? `${formatWeight(targetWeight)} kg` : '-'}
-                label="Poids objectif"
+                value={targetWeight != null ? `${formatWeight(targetWeight, locale)} kg` : '-'}
+                label={t('progression.stats.targetWeight')}
               />
               <StatTile
                 Icon={Ruler}
-                value={gapRemaining != null ? `${formatWeight(gapRemaining)} kg` : '-'}
-                label="Écart restant"
+                value={gapRemaining != null ? `${formatWeight(gapRemaining, locale)} kg` : '-'}
+                label={t('progression.stats.gapRemaining')}
               />
               <StatTile
                 Icon={TrendingUp}
                 value={progressPercent != null ? `${progressPercent}%` : '-'}
-                label="Progression"
+                label={t('progression.stats.progress')}
               />
             </View>
           )}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>IMC</Text>
+          <Text style={styles.sectionTitle}>{t('progression.sections.bmi')}</Text>
           <BmiSummaryCard weightKg={currentWeight} heightCm={profile?.taille ?? null} />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Hydratation</Text>
+          <Text style={styles.sectionTitle}>{t('progression.sections.hydration')}</Text>
           <HydrationSummaryCard history={weeklyWaterHistory} goalMl={settings.objectifEauMl} />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Moyenne calorique</Text>
+          <Text style={styles.sectionTitle}>{t('progression.sections.calorieAverage')}</Text>
           <CalorieAverageCard average7={kcalAverage7} average30={kcalAverage30} target={calorieTarget} />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Énergie hebdomadaire</Text>
+          <Text style={styles.sectionTitle}>{t('progression.sections.weeklyEnergy')}</Text>
           <WeeklyEnergyCard days={weekDays} target={calorieTarget} />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Dépenses énergétiques</Text>
+          <Text style={styles.sectionTitle}>{t('progression.sections.energyExpenditure')}</Text>
           <EnergyExpenditureCard
             poidsKg={currentWeight}
             tailleCm={profile?.taille ?? null}
@@ -266,7 +270,7 @@ export default function ProgressionScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Régularité</Text>
+          <Text style={styles.sectionTitle}>{t('progression.sections.consistency')}</Text>
           {streakLoading ? (
             <ActivityIndicator color={colors.accent} />
           ) : (
@@ -286,7 +290,7 @@ export default function ProgressionScreen() {
         )}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Photos</Text>
+          <Text style={styles.sectionTitle}>{t('progression.sections.photos')}</Text>
           <PhotosCard
             photosBySlot={photosBySlot}
             loading={photosLoading}

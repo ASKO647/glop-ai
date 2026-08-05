@@ -11,7 +11,13 @@ export function showAlert(title: string, message?: string) {
   Alert.alert(title, message);
 }
 
-export function showConfirm(title: string, message: string, confirmLabel: string, onConfirm: () => void) {
+export function showConfirm(
+  title: string,
+  message: string,
+  confirmLabel: string,
+  onConfirm: () => void,
+  cancelLabel: string
+) {
   if (Platform.OS === 'web') {
     if (window.confirm(`${title}\n\n${message}`)) {
       onConfirm();
@@ -19,7 +25,7 @@ export function showConfirm(title: string, message: string, confirmLabel: string
     return;
   }
   Alert.alert(title, message, [
-    { text: 'Annuler', style: 'cancel' },
+    { text: cancelLabel, style: 'cancel' },
     { text: confirmLabel, style: 'destructive', onPress: onConfirm },
   ]);
 }

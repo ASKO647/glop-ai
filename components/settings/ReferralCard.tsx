@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 const COPY_CONFIRM_DURATION_MS = 1500;
@@ -16,6 +17,7 @@ type ReferralCardProps = {
 
 export default function ReferralCard({ code, referredCount, loading }: ReferralCardProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [justCopied, setJustCopied] = useState(false);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -32,7 +34,7 @@ export default function ReferralCard({ code, referredCount, loading }: ReferralC
     if (!code) return;
     try {
       await Share.share({
-        message: `Rejoins-moi sur GlowUp AI et obtiens 1 mois offert avec mon code ${code}`,
+        message: t('profile.referral.shareMessage', { code }),
       });
     } catch {
       // User dismissed the native share sheet — nothing to do.
@@ -41,8 +43,8 @@ export default function ReferralCard({ code, referredCount, loading }: ReferralC
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>Invite tes amis</Text>
-      <Text style={styles.subtitle}>Ils obtiennent 1 mois offert, tu gagnes 10€</Text>
+      <Text style={styles.title}>{t('profile.referral.title')}</Text>
+      <Text style={styles.subtitle}>{t('profile.referral.subtitle')}</Text>
 
       <View style={styles.codeBlock}>
         {loading || !code ? (
@@ -52,7 +54,7 @@ export default function ReferralCard({ code, referredCount, loading }: ReferralC
         )}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Copier le code"
+          accessibilityLabel={t('profile.referral.copyLabel')}
           onPress={handleCopy}
           disabled={!code}
           hitSlop={8}
@@ -61,7 +63,7 @@ export default function ReferralCard({ code, referredCount, loading }: ReferralC
           {justCopied ? <Check color={colors.accent} size={20} /> : <Copy color={colors.accent} size={20} />}
         </Pressable>
       </View>
-      {justCopied && <Text style={styles.copiedText}>Code copié</Text>}
+      {justCopied && <Text style={styles.copiedText}>{t('profile.referral.copiedText')}</Text>}
 
       <Pressable
         accessibilityRole="button"
@@ -70,12 +72,10 @@ export default function ReferralCard({ code, referredCount, loading }: ReferralC
         style={({ pressed }) => [styles.shareButton, pressed && styles.pressed]}
       >
         <Share2 color={colors.accent} size={16} />
-        <Text style={styles.shareLabel}>Partager mon code</Text>
+        <Text style={styles.shareLabel}>{t('profile.referral.shareLabel')}</Text>
       </Pressable>
 
-      <Text style={styles.friendsCount}>
-        {referredCount} ami{referredCount > 1 ? 's' : ''} parrainé{referredCount > 1 ? 's' : ''}
-      </Text>
+      <Text style={styles.friendsCount}>{t('profile.referral.friendsCount', { count: referredCount })}</Text>
     </View>
   );
 }

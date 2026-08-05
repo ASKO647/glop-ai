@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { WORKOUT_CATEGORY_IMAGES, type WorkoutSession } from '../../constants/dashboard';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import AppImage from '../ui/AppImage';
 
@@ -15,6 +16,7 @@ type WorkoutCardProps = {
 export default function WorkoutCard({ session }: WorkoutCardProps) {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
@@ -25,9 +27,9 @@ export default function WorkoutCard({ session }: WorkoutCardProps) {
     >
       <AppImage source={WORKOUT_CATEGORY_IMAGES[session.category]} style={styles.thumbnail} overlay={0.4} />
       <View style={styles.info}>
-        <Text style={styles.title}>{session.title}</Text>
+        <Text style={styles.title}>{t(session.titleKey)}</Text>
         <Text style={styles.muscles} numberOfLines={1}>
-          {session.muscles}
+          {t(session.musclesKey)}
         </Text>
         <View style={styles.metaRow}>
           <View style={styles.metaItem}>

@@ -7,6 +7,7 @@ import {
   todayISODate,
   type MissionKey,
 } from '../constants/dashboard';
+import { useLocale } from '../context/LocaleContext';
 import type { Profile } from '../context/ProfileContext';
 import { supabase } from '../lib/supabase';
 
@@ -33,6 +34,7 @@ export function useDailyMissions(
   profileLoading: boolean,
   date: string
 ) {
+  const { t, locale } = useLocale();
   const [missions, setMissions] = useState<DailyMission[]>([]);
   const [completionByDate, setCompletionByDate] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
@@ -89,7 +91,7 @@ export function useDailyMissions(
       let rows = rowsForDate ?? [];
 
       if (rows.length === 0 && date === todayISODate()) {
-        const templates = getDefaultMissionTemplates(profile);
+        const templates = getDefaultMissionTemplates(profile, t, locale);
         const inserts = templates.map((template) => ({
           user_id: userId,
           date,
@@ -117,7 +119,7 @@ export function useDailyMissions(
     return () => {
       cancelled = true;
     };
-  }, [userId, profileLoading, date]);
+  }, [userId, profileLoading, date, t, locale]);
 
   const incrementMission = async (mission: DailyMission) => {
     // Past days are read-only — this is also enforced in the UI (disabled cards).

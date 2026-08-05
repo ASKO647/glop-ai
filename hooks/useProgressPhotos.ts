@@ -1,6 +1,7 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { useCallback, useEffect, useState } from 'react';
 import { todayISODate } from '../constants/dashboard';
+import { useLocale } from '../context/LocaleContext';
 import { supabase } from '../lib/supabase';
 import { uploadBase64Image } from '../lib/storageUpload';
 
@@ -14,11 +15,12 @@ export type PhotoSlot = 'avant' | 'milieu' | 'apres';
 
 export const PHOTO_SLOTS: PhotoSlot[] = ['avant', 'milieu', 'apres'];
 
-export const SLOT_LABELS: Record<PhotoSlot, string> = {
-  avant: 'Avant',
-  milieu: 'Milieu',
-  apres: 'Après',
-};
+type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
+
+/** Callers pass their own `t` (from their own `useLocale()`) rather than this hook's — keeps the label helper usable outside the hook's instance (e.g. in `lib/progressAnalysis.ts`). */
+export function slotLabel(t: TranslateFn, slot: PhotoSlot): string {
+  return t(`progression.photos.slots.${slot}`);
+}
 
 export type ProgressPhoto = {
   id: string;
@@ -65,6 +67,7 @@ const EMPTY_SLOTS: PhotosBySlot = { avant: null, milieu: null, apres: null };
 
 /** Reads/writes `progress_photos` + the private `progress-photos` storage bucket — exactly one photo per slot (avant/milieu/après). */
 export function useProgressPhotos(userId: string | undefined) {
+  const { t } = useLocale();
   const [photosBySlot, setPhotosBySlot] = useState<PhotosBySlot>(EMPTY_SLOTS);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -112,7 +115,7 @@ export function useProgressPhotos(userId: string | undefined) {
 
       if (!result.base64) {
         console.error('Image compression did not return base64 data for the progress photo.');
-        return { ok: false, error: "Impossible de préparer cette image. Réessaie." };
+        return { ok: false, error: t('progression.photos.prepareError') };
       }
 
       const storagePath = `${userId}/${slot}.jpg`;
@@ -130,7 +133,7 @@ export function useProgressPhotos(userId: string | undefined) {
           .eq('id', existing.id);
         if (error) {
           console.error('Failed to update progress photo row:', error);
-          return { ok: false, error: "L'enregistrement de la photo a échoué. Réessaie." };
+          return { ok: false, error: t('progression.photos.saveError') };
         }
       } else {
         const { error } = await supabase
@@ -138,7 +141,7 @@ export function useProgressPhotos(userId: string | undefined) {
           .insert({ user_id: userId, slot, date: today, storage_path: storagePath, poids: poidsToday });
         if (error) {
           console.error('Failed to insert progress photo row:', error);
-          return { ok: false, error: "L'enregistrement de la photo a échoué. Réessaie." };
+          return { ok: false, error: t('progression.photos.saveError') };
         }
       }
 
@@ -146,7 +149,7 @@ export function useProgressPhotos(userId: string | undefined) {
       return { ok: true };
     } catch (err) {
       console.error('Failed to add progress photo:', err);
-      return { ok: false, error: "Impossible d'enregistrer cette photo. Réessaie." };
+      return { ok: false, error: t('progression.photos.photoError') };
     } finally {
       setUploading(false);
     }

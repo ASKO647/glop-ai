@@ -9,6 +9,7 @@ import {
 } from '../../constants/fasting';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import { hexToRgba } from '../../lib/color';
 import CalorieRing from './CalorieRing';
@@ -40,6 +41,7 @@ export default function FastingCard({
   onHistoryPress,
 }: FastingCardProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   if (activeSession) {
@@ -51,9 +53,13 @@ export default function FastingCard({
     return (
       <View style={styles.activeCard}>
         <View style={styles.activeTopRow}>
-          <Text style={styles.eyebrow}>JEÛNE EN COURS</Text>
+          <Text style={styles.eyebrow}>{t('dashboard.fasting.activeEyebrow')}</Text>
           <Pressable accessibilityRole="button" onPress={onHistoryPress} hitSlop={8}>
-            {({ pressed }) => <Text style={[styles.historyLinkActive, pressed && styles.pressed]}>Historique</Text>}
+            {({ pressed }) => (
+              <Text style={[styles.historyLinkActive, pressed && styles.pressed]}>
+                {t('dashboard.fasting.historyLink')}
+              </Text>
+            )}
           </Pressable>
         </View>
 
@@ -61,7 +67,9 @@ export default function FastingCard({
           <View style={styles.activeInfo}>
             <Text style={styles.elapsedValue}>{formatDurationHM(elapsedMs)}</Text>
             <Text style={styles.targetSubtitle}>
-              {targetReached ? 'Objectif atteint 🎉' : `sur ${activeSession.targetHours}h`}
+              {targetReached
+                ? t('dashboard.fasting.goalReached')
+                : t('dashboard.fasting.targetSubtitle', { hours: activeSession.targetHours })}
             </Text>
           </View>
           <CalorieRing percent={percent} size={72} />
@@ -72,8 +80,10 @@ export default function FastingCard({
         </View>
 
         <View style={styles.timesRow}>
-          <Text style={styles.timeText}>Débuté à {formatHourMinute(startDate)}</Text>
-          <Text style={styles.timeText}>Fin prévue à {formatHourMinute(expectedEnd)}</Text>
+          <Text style={styles.timeText}>{t('dashboard.fasting.startedAt', { time: formatHourMinute(startDate) })}</Text>
+          <Text style={styles.timeText}>
+            {t('dashboard.fasting.expectedEndAt', { time: formatHourMinute(expectedEnd) })}
+          </Text>
         </View>
 
         <Pressable
@@ -81,7 +91,7 @@ export default function FastingCard({
           onPress={onStop}
           style={({ pressed }) => [styles.stopButton, pressed && styles.stopButtonPressed]}
         >
-          <Text style={styles.stopButtonText}>Terminer le jeûne</Text>
+          <Text style={styles.stopButtonText}>{t('dashboard.fasting.stopButton')}</Text>
         </Pressable>
       </View>
     );
@@ -92,7 +102,7 @@ export default function FastingCard({
       <View style={styles.idleTopRow}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Jeûne intermittent — appui long pour changer de programme"
+          accessibilityLabel={t('dashboard.fasting.headerAccessibility')}
           onLongPress={onLongPressHeader}
           delayLongPress={400}
           style={({ pressed }) => [styles.idleHeader, pressed && styles.pressed]}
@@ -100,10 +110,14 @@ export default function FastingCard({
           <View style={styles.iconBox}>
             <Clock color={colors.accent} size={18} />
           </View>
-          <Text style={styles.idleTitle}>Jeûne intermittent</Text>
+          <Text style={styles.idleTitle}>{t('dashboard.fasting.idleTitle')}</Text>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={onHistoryPress} hitSlop={8}>
-          {({ pressed }) => <Text style={[styles.historyLinkIdle, pressed && styles.pressed]}>Historique</Text>}
+          {({ pressed }) => (
+            <Text style={[styles.historyLinkIdle, pressed && styles.pressed]}>
+              {t('dashboard.fasting.historyLink')}
+            </Text>
+          )}
         </Pressable>
       </View>
 
@@ -112,7 +126,9 @@ export default function FastingCard({
       </View>
 
       {lastCompletedTodayMs != null && (
-        <Text style={styles.lastCompletedText}>Dernier jeûne : {formatDurationHM(lastCompletedTodayMs)}</Text>
+        <Text style={styles.lastCompletedText}>
+          {t('dashboard.fasting.lastCompleted', { duration: formatDurationHM(lastCompletedTodayMs) })}
+        </Text>
       )}
 
       <Pressable
@@ -120,7 +136,7 @@ export default function FastingCard({
         onPress={onStart}
         style={({ pressed }) => [styles.startButton, pressed && styles.startButtonPressed]}
       >
-        <Text style={styles.startButtonText}>Démarrer un jeûne</Text>
+        <Text style={styles.startButtonText}>{t('dashboard.fasting.startCtaLong')}</Text>
       </Pressable>
     </View>
   );

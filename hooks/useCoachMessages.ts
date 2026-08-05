@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocale } from '../context/LocaleContext';
 import type { Profile } from '../context/ProfileContext';
 import { sendMessage, type ChatMessage } from '../lib/coach';
 import { supabase } from '../lib/supabase';
@@ -11,9 +12,9 @@ export type CoachMessage = {
 };
 
 const HISTORY_LIMIT = 50;
-const FALLBACK_ERROR_TEXT = "Le coach n'a pas pu répondre. Vérifie ta connexion et réessaie.";
 
 export function useCoachMessages(userId: string | undefined, profile: Profile | null) {
+  const { locale, t } = useLocale();
   const [messages, setMessages] = useState<CoachMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -85,7 +86,7 @@ export function useCoachMessages(userId: string | undefined, profile: Profile | 
           role: m.role === 'assistant' ? 'assistant' : 'user',
           content: m.content,
         }));
-      const reply = await sendMessage(chatHistory, profile);
+      const reply = await sendMessage(chatHistory, profile, locale, t);
       const savedAssistant = await persist('assistant', reply);
       setMessages((current) => [
         ...current,
@@ -100,7 +101,7 @@ export function useCoachMessages(userId: string | undefined, profile: Profile | 
       // sendMessage() throws distinct, French, status-specific messages (invalid key,
       // insufficient credit, rate limit, malformed request, ...) — show that instead of
       // a single generic string, or a 401 looks identical to a 429 to the user.
-      const content = error instanceof Error ? error.message : FALLBACK_ERROR_TEXT;
+      const content = error instanceof Error ? error.message : t('coach.errors.fallback');
       setMessages((current) => [
         ...current,
         {

@@ -3,6 +3,7 @@ import type { AnswerValue } from '../../context/OnboardingContext';
 import type { Question, QuestionOption } from '../../constants/questionnaire';
 import { appImage } from '../../constants/images';
 import { spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import NumericStepper from './NumericStepper';
 import OptionCard from './OptionCard';
 
@@ -22,6 +23,8 @@ type QuestionInputProps = {
 };
 
 export default function QuestionInput({ question, value, onChange }: QuestionInputProps) {
+  const { t } = useLocale();
+
   if (question.type === 'numeric') {
     const numericValue = typeof value === 'number' ? value : question.defaultValue;
     return (
@@ -30,7 +33,7 @@ export default function QuestionInput({ question, value, onChange }: QuestionInp
         min={question.min}
         max={question.max}
         step={question.step}
-        unit={question.unit}
+        unit={question.unitKey ? t(question.unitKey) : undefined}
         onChange={onChange}
       />
     );
@@ -43,7 +46,7 @@ export default function QuestionInput({ question, value, onChange }: QuestionInp
         {question.options.map((option) => (
           <OptionCard
             key={option.id}
-            label={option.label}
+            label={t(option.labelKey)}
             selected={selectedIds.includes(option.id)}
             onPress={() => onChange(toggleMultipleValue(question.options, selectedIds, option.id))}
           />
@@ -58,7 +61,7 @@ export default function QuestionInput({ question, value, onChange }: QuestionInp
       {question.options.map((option) => (
         <OptionCard
           key={option.id}
-          label={option.label}
+          label={t(option.labelKey)}
           selected={selectedId === option.id}
           onPress={() => onChange(option.id)}
           imageSource={question.id === 'goal' ? GOAL_IMAGES[option.id] : undefined}

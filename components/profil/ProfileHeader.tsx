@@ -4,6 +4,7 @@ import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'rea
 import { formatWeight } from '../../constants/progression';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 type ProfileHeaderProps = {
@@ -37,15 +38,14 @@ export default function ProfileHeader({
   onLongPressAvatar,
 }: ProfileHeaderProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
     <View style={styles.container}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={
-          avatarUrl ? 'Photo de profil — appui long pour la supprimer' : 'Ajouter une photo de profil'
-        }
+        accessibilityLabel={avatarUrl ? t('profile.avatar.label') : t('profile.avatar.addLabel')}
         onPress={onPressAvatar}
         onLongPress={avatarUrl ? onLongPressAvatar : undefined}
         style={styles.avatarWrap}
@@ -80,24 +80,24 @@ export default function ProfileHeader({
 
       <View style={[styles.badge, isSubscribed ? styles.badgePremium : styles.badgeFree]}>
         <Text style={[styles.badgeText, isSubscribed ? styles.badgeTextPremium : styles.badgeTextFree]}>
-          {isSubscribed ? 'Premium' : 'Gratuit'}
+          {isSubscribed ? t('profile.premiumBadge') : t('profile.freeBadge')}
         </Text>
       </View>
 
       <View style={styles.statsRow}>
         <View style={styles.stat}>
-          <Text style={styles.statValue}>{`Jour ${programDay} / ${programLength}`}</Text>
+          <Text style={styles.statValue}>{t('profile.programDay', { day: programDay, length: programLength })}</Text>
         </View>
         <View style={styles.divider} />
         <View style={styles.stat}>
           <Text style={styles.statValue}>
-            {statsLoading ? '…' : weightLost != null ? `${formatWeight(weightLost)} kg perdus` : '—'}
+            {statsLoading ? '…' : weightLost != null ? t('profile.weightLost', { weight: formatWeight(weightLost) }) : '—'}
           </Text>
         </View>
         <View style={styles.divider} />
         <View style={styles.stat}>
           <Text style={styles.statValue}>
-            {statsLoading ? '…' : `${streak} jour${streak > 1 ? 's' : ''} d'affilée`}
+            {statsLoading ? '…' : t('profile.streakDays', { count: streak })}
           </Text>
         </View>
       </View>

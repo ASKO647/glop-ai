@@ -13,6 +13,7 @@ import { appImage } from '../../constants/images';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import { showAlert } from '../../lib/alert';
 import { analyzeMeal, compressImage, type MealAnalysis } from '../../lib/foodScanner';
@@ -25,15 +26,11 @@ type ScreenState = 'idle' | 'analyzing' | 'result' | 'error';
 const TAB_BAR_BOTTOM_MIN = 24;
 const TAB_BAR_HEIGHT = 64;
 
-const CAMERA_DENIED_MESSAGE =
-  "GlowUp AI a besoin d'accéder à l'appareil photo pour analyser tes repas. Active l'accès dans les réglages de ton téléphone.";
-const LIBRARY_DENIED_MESSAGE =
-  "GlowUp AI a besoin d'accéder à tes photos pour analyser tes repas. Active l'accès dans les réglages de ton téléphone.";
-
 export default function ScannerScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { locale, t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const actionsBottomPadding = Math.max(TAB_BAR_BOTTOM_MIN, insets.bottom + 12) + TAB_BAR_HEIGHT + spacing.sm;
@@ -53,11 +50,11 @@ export default function ScannerScreen() {
     setErrorMessage(null);
 
     try {
-      const { base64, mimeType } = await compressImage(uri, width);
-      const result = await analyzeMeal(base64, mimeType);
+      const { base64, mimeType } = await compressImage(uri, width, t);
+      const result = await analyzeMeal(base64, mimeType, locale, t);
 
       if ('erreur' in result) {
-        setErrorMessage(result.erreur || 'Aucun aliment détecté sur cette photo.');
+        setErrorMessage(result.erreur || t('scanner.noFoodDetected'));
         setScreenState('error');
         return;
       }
@@ -65,7 +62,7 @@ export default function ScannerScreen() {
       setAnalysis(result);
       setScreenState('result');
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Une erreur est survenue. Réessaie.');
+      setErrorMessage(error instanceof Error ? error.message : t('errors.generic'));
       setScreenState('error');
     }
   };
@@ -85,7 +82,7 @@ export default function ScannerScreen() {
     if (existing !== 'granted') {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        showAlert("Accès à l'appareil photo refusé", CAMERA_DENIED_MESSAGE);
+        showAlert(t('scanner.cameraDeniedTitle'), t('scanner.cameraDeniedMessage'));
         return;
       }
     }
@@ -99,7 +96,7 @@ export default function ScannerScreen() {
     if (existing !== 'granted') {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        showAlert('Accès à tes photos refusé', LIBRARY_DENIED_MESSAGE);
+        showAlert(t('scanner.libraryDeniedTitle'), t('scanner.libraryDeniedMessage'));
         return;
       }
     }
@@ -136,11 +133,11 @@ export default function ScannerScreen() {
     setSaving(false);
 
     if (error) {
-      showAlert('Erreur', "Impossible d'enregistrer ce repas. Réessaie.");
+      showAlert(t('common.error'), t('scanner.saveErrorMessage'));
       return;
     }
 
-    showAlert('Repas enregistré', `${analysis.nom} a été ajouté à ton suivi du jour.`);
+    showAlert(t('scanner.savedTitle'), t('scanner.savedMessage', { name: analysis.nom }));
     router.replace('/');
   };
 
@@ -158,15 +155,15 @@ export default function ScannerScreen() {
             <View style={styles.iconCircle}>
               <CameraIcon color={colors.accent} size={32} />
             </View>
-            <Text style={styles.title}>Scanne ton repas</Text>
-            <Text style={styles.subtitle}>Prends ton plat en photo pour connaître ses calories</Text>
+            <Text style={styles.title}>{t('scanner.title')}</Text>
+            <Text style={styles.subtitle}>{t('scanner.subtitle')}</Text>
           </AppImage>
         )}
 
         {screenState === 'analyzing' && (
           <View style={styles.analyzing}>
             <ActivityIndicator color={colors.accent} size="large" />
-            <Text style={styles.analyzingText}>Analyse en cours...</Text>
+            <Text style={styles.analyzingText}>{t('scanner.analyzing')}</Text>
           </View>
         )}
 
@@ -186,9 +183,9 @@ export default function ScannerScreen() {
             </View>
 
             <View style={styles.macros}>
-              <MacroLine label="Protéines" grams={analysis.proteines} max={maxMacro} styles={styles} />
-              <MacroLine label="Glucides" grams={analysis.glucides} max={maxMacro} styles={styles} />
-              <MacroLine label="Lipides" grams={analysis.lipides} max={maxMacro} styles={styles} />
+              <MacroLine label={t('scanner.macros.proteins')} grams={analysis.proteines} max={maxMacro} styles={styles} />
+              <MacroLine label={t('scanner.macros.carbs')} grams={analysis.glucides} max={maxMacro} styles={styles} />
+              <MacroLine label={t('scanner.macros.fats')} grams={analysis.lipides} max={maxMacro} styles={styles} />
             </View>
 
             {analysis.aliments.length > 0 && (
@@ -205,7 +202,7 @@ export default function ScannerScreen() {
 
         {screenState === 'result' && (
           <View style={styles.mealTypeBlock}>
-            <Text style={styles.mealTypeLabel}>Ajouter à</Text>
+            <Text style={styles.mealTypeLabel}>{t('scanner.addTo')}</Text>
             <MealTypePills value={mealType} onChange={setMealType} />
           </View>
         )}
@@ -214,23 +211,23 @@ export default function ScannerScreen() {
       <View style={[styles.actions, { paddingBottom: actionsBottomPadding }]}>
         {screenState === 'result' ? (
           <>
-            <Button label="Enregistrer ce repas" onPress={handleSave} loading={saving} />
-            <Button label="Recommencer" variant="secondary" onPress={handleReset} disabled={saving} />
+            <Button label={t('scanner.saveButton')} onPress={handleSave} loading={saving} />
+            <Button label={t('scanner.restartButton')} variant="secondary" onPress={handleReset} disabled={saving} />
           </>
         ) : screenState === 'error' ? (
           <>
-            <Button label="Réessayer" onPress={handleRetry} />
-            <Button label="Recommencer" variant="secondary" onPress={handleReset} />
+            <Button label={t('common.retry')} onPress={handleRetry} />
+            <Button label={t('scanner.restartButton')} variant="secondary" onPress={handleReset} />
           </>
         ) : (
           <>
             <Button
-              label="Prendre une photo"
+              label={t('scanner.takePhotoButton')}
               onPress={handleTakePhoto}
               disabled={busy}
               loading={screenState === 'analyzing'}
             />
-            <Button label="Choisir dans la galerie" variant="secondary" onPress={handlePickFromLibrary} disabled={busy} />
+            <Button label={t('scanner.pickFromLibraryButton')} variant="secondary" onPress={handlePickFromLibrary} disabled={busy} />
           </>
         )}
       </View>

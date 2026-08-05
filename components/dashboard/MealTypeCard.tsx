@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { getMealTypeInfo, type MealType } from '../../constants/dashboard';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import type { Meal } from '../../hooks/useMeals';
 
@@ -27,8 +28,10 @@ export default function MealTypeCard({
   onLongPressFood,
 }: MealTypeCardProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const info = getMealTypeInfo(mealType);
+  const typeLabel = t(info.labelKey);
   const ChevronIcon = expanded ? ChevronUp : ChevronDown;
 
   return (
@@ -36,7 +39,7 @@ export default function MealTypeCard({
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ expanded }}
-        accessibilityLabel={`${info.label} — ${totalKcal} kcal`}
+        accessibilityLabel={t('dashboard.meals.typeHeaderAccessibility', { type: typeLabel, kcal: totalKcal })}
         onPress={onToggleExpand}
         style={({ pressed }) => [styles.header, pressed && styles.headerPressed]}
       >
@@ -44,7 +47,7 @@ export default function MealTypeCard({
           <info.Icon color={colors.accent} size={18} />
         </View>
         <Text style={styles.title} numberOfLines={1}>
-          {info.label}
+          {typeLabel}
         </Text>
         <Text style={styles.kcal}>{totalKcal} kcal</Text>
         <ChevronIcon color={colors.textTertiary} size={18} />
@@ -53,14 +56,14 @@ export default function MealTypeCard({
       {expanded && (
         <View style={styles.body}>
           {meals.length === 0 ? (
-            <Text style={styles.emptyText}>Aucun aliment</Text>
+            <Text style={styles.emptyText}>{t('dashboard.meals.emptyMealType')}</Text>
           ) : (
             <View style={styles.foodsList}>
               {meals.map((meal) => (
                 <Pressable
                   key={meal.id}
                   accessibilityRole="button"
-                  accessibilityLabel={`${meal.name} — appui long pour les options`}
+                  accessibilityLabel={t('dashboard.meals.itemAccessibility', { name: meal.name })}
                   onLongPress={() => onLongPressFood(meal)}
                   delayLongPress={350}
                   style={({ pressed }) => [styles.foodRow, pressed && styles.foodRowPressed]}
@@ -87,7 +90,7 @@ export default function MealTypeCard({
             style={({ pressed }) => [styles.addRow, pressed && styles.addRowPressed]}
           >
             <Plus color={colors.accent} size={14} strokeWidth={2.5} />
-            <Text style={styles.addText}>Ajouter un aliment</Text>
+            <Text style={styles.addText}>{t('dashboard.meals.addFoodLink')}</Text>
           </Pressable>
         </View>
       )}

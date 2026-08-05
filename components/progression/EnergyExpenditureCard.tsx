@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { computeBmr, computeTdee } from '../../constants/energy';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 type EnergyExpenditureCardProps = {
@@ -25,14 +26,13 @@ export default function EnergyExpenditureCard({
   consumedToday,
 }: EnergyExpenditureCardProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   if (poidsKg == null || tailleCm == null || age == null) {
     return (
       <View style={styles.card}>
-        <Text style={styles.missingText}>
-          Complète ton poids, ta taille et ton âge dans ton profil pour estimer tes dépenses énergétiques.
-        </Text>
+        <Text style={styles.missingText}>{t('progression.energyExpenditure.missing')}</Text>
       </View>
     );
   }
@@ -51,16 +51,18 @@ export default function EnergyExpenditureCard({
       <View style={styles.row}>
         <View style={styles.item}>
           <Text style={styles.itemValue}>{Math.round(bmr)} kcal</Text>
-          <Text style={styles.itemLabel}>Métabolisme de base</Text>
+          <Text style={styles.itemLabel}>{t('progression.energyExpenditure.bmr')}</Text>
         </View>
         <View style={styles.item}>
           <Text style={styles.itemValue}>{Math.round(tdee)} kcal</Text>
-          <Text style={styles.itemLabel}>Dépense totale estimée</Text>
+          <Text style={styles.itemLabel}>{t('progression.energyExpenditure.tdee')}</Text>
         </View>
       </View>
 
       <View style={styles.balanceRow}>
-        <Text style={styles.balanceLabel}>{isDeficit ? 'Déficit du jour' : 'Surplus du jour'}</Text>
+        <Text style={styles.balanceLabel}>
+          {isDeficit ? t('progression.energyExpenditure.deficitToday') : t('progression.energyExpenditure.surplusToday')}
+        </Text>
         <Text style={[styles.balanceValue, { color: balanceColor }]}>{Math.round(Math.abs(balance))} kcal</Text>
       </View>
     </View>

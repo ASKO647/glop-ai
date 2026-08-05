@@ -1,5 +1,6 @@
 import type { Profile } from '../context/ProfileContext';
-import { ANTHROPIC_API_URL, ANTHROPIC_MODEL, anthropicHeaders, describeAnthropicError } from './anthropic';
+import { ANTHROPIC_API_URL, ANTHROPIC_MODEL, anthropicHeaders, describeAnthropicError, languageInstruction } from './anthropic';
+import type { Locale } from './i18n';
 
 // No Anthropic SDK here on purpose: the SDK is a Node package (it pulls in
 // `node:fs` at import time), and React Native has no Node standard library —
@@ -18,6 +19,8 @@ export type ChatMessage = {
 type AnthropicMessageResponse = {
   content: { type: string; text?: string }[];
 };
+
+type Translate = (key: string, params?: Record<string, string | number>) => string;
 
 /**
  * The Messages API requires strict user/assistant alternation. A caller's history can break
@@ -38,7 +41,7 @@ function mergeConsecutiveRoles(history: ChatMessage[]): ChatMessage[] {
   return merged;
 }
 
-function buildSystemPrompt(profile: Profile | null): string {
+function buildSystemPrompt(profile: Profile | null, locale: Locale): string {
   const lines = [
     "Tu es GlowUp, le coach fitness et bien-être IA de l'application. Tu tutoies toujours l'utilisateur et tu réponds uniquement en français.",
     'Réponds en 2 à 4 phrases courtes maximum. Ton style est motivant mais direct : pas de blabla, pas de formules toutes faites, va droit au but.',
@@ -59,15 +62,20 @@ function buildSystemPrompt(profile: Profile | null): string {
     }
   }
 
+  lines.push(languageInstruction(locale));
+
   return lines.join('\n');
 }
 
-export async function sendMessage(history: ChatMessage[], profile: Profile | null): Promise<string> {
+export async function sendMessage(
+  history: ChatMessage[],
+  profile: Profile | null,
+  locale: Locale,
+  t: Translate
+): Promise<string> {
   const apiKey = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY;
   if (!apiKey) {
-    throw new Error(
-      "Clé API Anthropic manquante. Ajoute EXPO_PUBLIC_ANTHROPIC_API_KEY dans ton fichier .env."
-    );
+    throw new Error(t('coach.errors.missingApiKey'));
   }
 
   // Empty content is rejected outright; consecutive same-role turns are merged so the
@@ -82,28 +90,28 @@ export async function sendMessage(history: ChatMessage[], profile: Profile | nul
       body: JSON.stringify({
         model: ANTHROPIC_MODEL,
         max_tokens: MAX_TOKENS,
-        system: buildSystemPrompt(profile),
+        system: buildSystemPrompt(profile, locale),
         messages: messages.map((message) => ({ role: message.role, content: message.content })),
       }),
     });
   } catch {
-    throw new Error('Impossible de contacter le coach. Vérifie ta connexion internet et réessaie.');
+    throw new Error(t('coach.errors.networkError'));
   }
 
   if (!response.ok) {
-    throw new Error(await describeAnthropicError(response, "Le coach n'a pas pu répondre"));
+    throw new Error(await describeAnthropicError(t, response, t('coach.errors.failedAction')));
   }
 
   let data: AnthropicMessageResponse;
   try {
     data = (await response.json()) as AnthropicMessageResponse;
   } catch {
-    throw new Error('Réponse du coach illisible. Réessaie dans un instant.');
+    throw new Error(t('coach.errors.unreadableResponse'));
   }
 
   const text = data.content?.[0]?.text;
   if (!text) {
-    throw new Error('Le coach n’a pas renvoyé de réponse.');
+    throw new Error(t('coach.errors.emptyResponse'));
   }
 
   return text;

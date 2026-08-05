@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import CalorieRing from './CalorieRing';
 import MacroBar from './MacroBar';
@@ -26,23 +27,24 @@ export default function CalorieCard({
 }: CalorieCardProps) {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
         <View style={styles.info}>
-          <Text style={styles.eyebrow}>AUJOURD'HUI</Text>
+          <Text style={styles.eyebrow}>{t('common.today')}</Text>
           <Text style={styles.value}>{Math.max(0, Math.round(caloriesRemaining))}</Text>
-          <Text style={styles.unit}>kcal restantes</Text>
+          <Text style={styles.unit}>{t('dashboard.calories.remainingUnit')}</Text>
         </View>
         <CalorieRing percent={percent} />
       </View>
 
       <View style={styles.macros}>
-        <MacroBar label="Protéines" current={proteines.current} target={proteines.target} />
-        <MacroBar label="Glucides" current={glucides.current} target={glucides.target} />
-        <MacroBar label="Lipides" current={lipides.current} target={lipides.target} />
+        <MacroBar label={t('dashboard.macros.protein')} current={proteines.current} target={proteines.target} />
+        <MacroBar label={t('dashboard.macros.carbs')} current={glucides.current} target={glucides.target} />
+        <MacroBar label={t('dashboard.macros.fat')} current={lipides.current} target={lipides.target} />
       </View>
 
       <Pressable
@@ -50,7 +52,7 @@ export default function CalorieCard({
         onPress={() => router.push('/scanner')}
         style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
       >
-        <Text style={styles.ctaText}>Continuer</Text>
+        <Text style={styles.ctaText}>{t('dashboard.calories.continueCta')}</Text>
       </Pressable>
     </View>
   );

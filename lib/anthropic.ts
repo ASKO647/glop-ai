@@ -4,6 +4,8 @@
 // Every future Anthropic call must reuse this file rather than duplicating these
 // values or re-deriving its own error messages.
 
+import { LOCALE_NAME_FR, type Locale } from './i18n';
+
 export const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 export const ANTHROPIC_VERSION = '2023-06-01';
 
@@ -27,24 +29,35 @@ export function stripJsonFences(text: string): string {
 }
 
 /**
+ * Appended to every Anthropic system prompt (coach, scanner, recipes, progress analysis) so the
+ * model answers in the user's active app language — the prompts themselves stay authored in
+ * French, this is just an explicit language override for the reply.
+ */
+export function languageInstruction(locale: Locale): string {
+  return `Réponds toujours en ${LOCALE_NAME_FR[locale]}, quelle que soit la langue utilisée ci-dessus.`;
+}
+
+type Translate = (key: string, params?: Record<string, string | number>) => string;
+
+/**
  * Logs the full response body from a failed Anthropic call — the API's own error message
  * names the exact problem (bad field, broken role sequence, etc.), which a bare status code
- * never does — then returns a French message tailored to the status code for the UI.
+ * never does — then returns a localized message tailored to the status code for the UI.
  */
-export async function describeAnthropicError(response: Response, action: string): Promise<string> {
+export async function describeAnthropicError(t: Translate, response: Response, action: string): Promise<string> {
   const body = await response.text().catch(() => '');
   console.error(`[Anthropic] ${action} — HTTP ${response.status}:`, body);
 
   switch (response.status) {
     case 401:
-      return `${action} : clé API Anthropic invalide ou expirée.`;
+      return t('errors.anthropic.invalidKey', { action });
     case 402:
-      return `${action} : crédit Anthropic insuffisant. Recharge le compte Anthropic pour continuer.`;
+      return t('errors.anthropic.insufficientCredit', { action });
     case 429:
-      return `${action} : trop de requêtes envoyées à l'IA pour le moment. Réessaie dans quelques instants.`;
+      return t('errors.anthropic.rateLimited', { action });
     case 400:
-      return `${action} : la requête envoyée était invalide. Réessaie dans un instant.`;
+      return t('errors.anthropic.invalidRequest', { action });
     default:
-      return `${action} (erreur ${response.status}). Réessaie dans un instant.`;
+      return t('errors.anthropic.unknown', { action, status: response.status });
   }
 }

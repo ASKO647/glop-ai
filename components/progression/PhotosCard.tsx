@@ -5,8 +5,9 @@ import { formatDisplayDate } from '../../constants/dashboard';
 import { formatWeight } from '../../constants/progression';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
-import { PHOTO_SLOTS, SLOT_LABELS, type PhotoSlot, type ProgressPhoto } from '../../hooks/useProgressPhotos';
+import { PHOTO_SLOTS, slotLabel, type PhotoSlot, type ProgressPhoto } from '../../hooks/useProgressPhotos';
 import { showConfirm } from '../../lib/alert';
 
 type PhotosCardProps = {
@@ -19,6 +20,7 @@ type PhotosCardProps = {
 
 export default function PhotosCard({ photosBySlot, loading, uploadingSlot, onPressSlot, onDeleteSlot }: PhotosCardProps) {
   const { colors } = useTheme();
+  const { t, locale } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   if (loading) {
@@ -31,10 +33,11 @@ export default function PhotosCard({ photosBySlot, loading, uploadingSlot, onPre
 
   const confirmDelete = (slot: PhotoSlot) => {
     showConfirm(
-      'Supprimer cette photo ?',
-      `La photo "${SLOT_LABELS[slot]}" sera définitivement supprimée.`,
-      'Supprimer',
-      () => onDeleteSlot(slot)
+      t('progression.photos.deleteTitle'),
+      t('progression.photos.deleteMessage', { slot: slotLabel(t, slot) }),
+      t('progression.photos.deleteConfirmLabel'),
+      () => onDeleteSlot(slot),
+      t('common.cancel')
     );
   };
 
@@ -46,13 +49,13 @@ export default function PhotosCard({ photosBySlot, loading, uploadingSlot, onPre
 
         return (
           <View key={slot} style={styles.column}>
-            <Text style={styles.label}>{SLOT_LABELS[slot]}</Text>
+            <Text style={styles.label}>{slotLabel(t, slot)}</Text>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={
                 photo
-                  ? `Photo "${SLOT_LABELS[slot]}" — tap pour la remplacer, appui long pour la supprimer`
-                  : `Ajouter une photo "${SLOT_LABELS[slot]}"`
+                  ? t('progression.photos.replaceAccessibility', { slot: slotLabel(t, slot) })
+                  : t('progression.photos.addAccessibility', { slot: slotLabel(t, slot) })
               }
               onPress={() => onPressSlot(slot)}
               onLongPress={photo ? () => confirmDelete(slot) : undefined}
@@ -74,14 +77,16 @@ export default function PhotosCard({ photosBySlot, loading, uploadingSlot, onPre
                     <Text style={styles.overlayDate} numberOfLines={1}>
                       {formatDisplayDate(photo.date)}
                     </Text>
-                    {photo.poids != null && <Text style={styles.overlayWeight}>{formatWeight(photo.poids)} kg</Text>}
+                    {photo.poids != null && (
+                      <Text style={styles.overlayWeight}>{formatWeight(photo.poids, locale)} kg</Text>
+                    )}
                   </View>
                 </>
               ) : (
                 !isUploading && (
                   <View style={styles.emptyContent}>
                     <Plus color={colors.textTertiary} size={22} />
-                    <Text style={styles.emptyText}>Ajouter</Text>
+                    <Text style={styles.emptyText}>{t('progression.photos.add')}</Text>
                   </View>
                 )
               )}

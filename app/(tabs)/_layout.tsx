@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import NavigationSheet from '../../components/ui/NavigationSheet';
 import type { Colors } from '../../constants/theme';
 import { radii } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 const TAB_BAR_MARGIN = 20;
@@ -66,6 +67,7 @@ function TabBarButton({
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   // On devices with a home indicator, keep the bar (and the + button) clear of
   // the safe-area/system-gesture zone instead of sitting at a fixed 24px from
@@ -96,7 +98,7 @@ export default function TabsLayout() {
           name="index"
           options={{
             tabBarIcon: ({ focused }) => (
-              <TabIcon Icon={Home} label="Accueil" focused={focused} colors={colors} styles={styles} />
+              <TabIcon Icon={Home} label={t('common.tabs.home')} focused={focused} colors={colors} styles={styles} />
             ),
           }}
         />
@@ -104,7 +106,7 @@ export default function TabsLayout() {
           name="coach"
           options={{
             tabBarIcon: ({ focused }) => (
-              <TabIcon Icon={MessageCircle} label="Coach" focused={focused} colors={colors} styles={styles} />
+              <TabIcon Icon={MessageCircle} label={t('common.tabs.coach')} focused={focused} colors={colors} styles={styles} />
             ),
           }}
         />
@@ -112,7 +114,7 @@ export default function TabsLayout() {
           name="scanner"
           options={{
             tabBarIcon: ({ focused }) => (
-              <TabIcon Icon={Camera} label="Scanner" focused={focused} colors={colors} styles={styles} />
+              <TabIcon Icon={Camera} label={t('common.tabs.scanner')} focused={focused} colors={colors} styles={styles} />
             ),
           }}
         />
@@ -120,7 +122,7 @@ export default function TabsLayout() {
           name="profil"
           options={{
             tabBarIcon: ({ focused }) => (
-              <TabIcon Icon={User} label="Profil" focused={focused} colors={colors} styles={styles} />
+              <TabIcon Icon={User} label={t('common.tabs.profile')} focused={focused} colors={colors} styles={styles} />
             ),
           }}
         />
@@ -133,7 +135,7 @@ export default function TabsLayout() {
       <View pointerEvents="box-none" style={[styles.fabWrap, { bottom: barBottom }]}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Explorer"
+          accessibilityLabel={t('common.explore')}
           onPress={() => setSheetVisible(true)}
           style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
         >

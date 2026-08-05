@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 type RecipeCardData = {
@@ -32,13 +33,14 @@ export default function RecipeCard({
   onLongPress,
 }: RecipeCardProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
     <View style={styles.card}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+        accessibilityLabel={isFavorite ? t('recipes.favoriteToggle.remove') : t('recipes.favoriteToggle.add')}
         onPress={onToggleFavorite}
         hitSlop={8}
         style={({ pressed }) => [styles.favoriteButton, pressed && styles.favoriteButtonPressed]}
@@ -61,7 +63,7 @@ export default function RecipeCard({
 
         {missingIngredients && missingIngredients.length > 0 && (
           <Text style={styles.missing} numberOfLines={2}>
-            Ingrédients manquants : {missingIngredients.join(', ')}
+            {t('recipes.missingIngredients', { list: missingIngredients.join(', ') })}
           </Text>
         )}
 

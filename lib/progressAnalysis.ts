@@ -1,10 +1,20 @@
 import { formatDisplayDate } from '../constants/dashboard';
 import { formatWeight } from '../constants/progression';
-import { SLOT_LABELS, type ProgressPhoto } from '../hooks/useProgressPhotos';
-import { ANTHROPIC_API_URL, ANTHROPIC_MODEL, anthropicHeaders, describeAnthropicError, stripJsonFences } from './anthropic';
+import type { Locale } from '../context/LocaleContext';
+import { slotLabel, type ProgressPhoto } from '../hooks/useProgressPhotos';
+import {
+  ANTHROPIC_API_URL,
+  ANTHROPIC_MODEL,
+  anthropicHeaders,
+  describeAnthropicError,
+  languageInstruction,
+  stripJsonFences,
+} from './anthropic';
 
 // Same rule as lib/coach.ts and lib/foodScanner.ts: no Anthropic SDK, ever — raw `fetch` only.
 const MAX_TOKENS = 1000;
+
+type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
 
 const ANALYSIS_INSTRUCTIONS = `Compare ces photos de progression et décris l'évolution physique visible entre elles.
 
@@ -37,7 +47,7 @@ type AnthropicMessageResponse = {
   content: { type: string; text?: string }[];
 };
 
-function buildSystemPrompt(profile: ProfileSummary): string {
+function buildSystemPrompt(profile: ProfileSummary, locale: Locale): string {
   const lines = [
     "Tu es un coach fitness bienveillant qui compare des photos de progression prises par l'utilisateur au fil du temps.",
     '',
@@ -48,28 +58,28 @@ function buildSystemPrompt(profile: ProfileSummary): string {
     '- Réponds uniquement en JSON valide, sans aucun texte hors du JSON demandé.',
   ];
   if (profile.objectif) lines.push(`Objectif de l'utilisateur : ${profile.objectif}.`);
-  if (profile.poidsDepart != null) lines.push(`Poids de départ : ${formatWeight(profile.poidsDepart)} kg.`);
-  if (profile.poidsActuel != null) lines.push(`Poids actuel : ${formatWeight(profile.poidsActuel)} kg.`);
-  if (profile.poidsObjectif != null) lines.push(`Poids objectif : ${formatWeight(profile.poidsObjectif)} kg.`);
-  return lines.join('\n');
+  if (profile.poidsDepart != null) lines.push(`Poids de départ : ${formatWeight(profile.poidsDepart, locale)} kg.`);
+  if (profile.poidsActuel != null) lines.push(`Poids actuel : ${formatWeight(profile.poidsActuel, locale)} kg.`);
+  if (profile.poidsObjectif != null) lines.push(`Poids objectif : ${formatWeight(profile.poidsObjectif, locale)} kg.`);
+  return `${lines.join('\n')}\n\n${languageInstruction(locale)}`;
 }
 
 /** Fetches a (signed-URL) image and returns its raw base64 body, for photos already in Storage rather than a fresh local URI. */
-async function fetchImageAsBase64(url: string): Promise<string> {
+async function fetchImageAsBase64(url: string, t: TranslateFn): Promise<string> {
   let response: Response;
   try {
     response = await fetch(url);
   } catch {
-    throw new Error("Impossible de récupérer une des photos pour l'analyse. Vérifie ta connexion et réessaie.");
+    throw new Error(t('progression.errors.fetchPhotoNetwork'));
   }
   if (!response.ok) {
-    throw new Error("Impossible de récupérer une des photos pour l'analyse. Réessaie.");
+    throw new Error(t('progression.errors.fetchPhotoFailed'));
   }
   const blob = await response.blob();
 
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Impossible de lire une des photos pour l'analyse. Réessaie."));
+    reader.onerror = () => reject(new Error(t('progression.errors.readPhotoFailed')));
     reader.onloadend = () => {
       const result = reader.result as string;
       const base64 = result.split(',')[1] ?? '';
@@ -80,15 +90,20 @@ async function fetchImageAsBase64(url: string): Promise<string> {
 }
 
 /** Sends the given progress photos (in order) + profile context to Claude and returns the parsed comparison. */
-export async function analyzeProgress(photos: ProgressPhoto[], profile: ProfileSummary): Promise<ProgressAnalysis> {
+export async function analyzeProgress(
+  photos: ProgressPhoto[],
+  profile: ProfileSummary,
+  locale: Locale,
+  t: TranslateFn
+): Promise<ProgressAnalysis> {
   const apiKey = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY;
   if (!apiKey) {
-    throw new Error("Clé API Anthropic manquante. Ajoute EXPO_PUBLIC_ANTHROPIC_API_KEY dans ton fichier .env.");
+    throw new Error(t('progression.errors.missingApiKey'));
   }
 
   const withUrls = photos.filter((photo): photo is ProgressPhoto & { signedUrl: string } => !!photo.signedUrl);
   if (withUrls.length === 0) {
-    throw new Error('Aucune photo disponible pour lancer l\'analyse.');
+    throw new Error(t('progression.errors.noPhotosAvailable'));
   }
 
   const content: Array<
@@ -97,9 +112,9 @@ export async function analyzeProgress(photos: ProgressPhoto[], profile: ProfileS
   > = [];
 
   for (const photo of withUrls) {
-    const weightText = photo.poids != null ? `, poids : ${formatWeight(photo.poids)} kg` : '';
-    content.push({ type: 'text', text: `Photo "${SLOT_LABELS[photo.slot]}" — ${formatDisplayDate(photo.date)}${weightText}` });
-    const base64 = await fetchImageAsBase64(photo.signedUrl);
+    const weightText = photo.poids != null ? `, poids : ${formatWeight(photo.poids, locale)} kg` : '';
+    content.push({ type: 'text', text: `Photo "${slotLabel(t, photo.slot)}" — ${formatDisplayDate(photo.date)}${weightText}` });
+    const base64 = await fetchImageAsBase64(photo.signedUrl, t);
     content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } });
   }
   content.push({ type: 'text', text: ANALYSIS_INSTRUCTIONS });
@@ -112,33 +127,33 @@ export async function analyzeProgress(photos: ProgressPhoto[], profile: ProfileS
       body: JSON.stringify({
         model: ANTHROPIC_MODEL,
         max_tokens: MAX_TOKENS,
-        system: buildSystemPrompt(profile),
+        system: buildSystemPrompt(profile, locale),
         messages: [{ role: 'user', content }],
       }),
     });
   } catch {
-    throw new Error("Impossible d'analyser ta progression. Vérifie ta connexion internet et réessaie.");
+    throw new Error(t('progression.errors.analyzeNetworkError'));
   }
 
   if (!response.ok) {
-    throw new Error(await describeAnthropicError(response, "L'analyse a échoué"));
+    throw new Error(await describeAnthropicError(t, response, t('progression.actions.analysisFailed')));
   }
 
   let data: AnthropicMessageResponse;
   try {
     data = (await response.json()) as AnthropicMessageResponse;
   } catch {
-    throw new Error('Réponse illisible. Réessaie dans un instant.');
+    throw new Error(t('progression.errors.unreadableResponse'));
   }
 
   const text = data.content?.[0]?.text;
   if (!text) {
-    throw new Error("L'analyse n'a renvoyé aucun résultat. Réessaie.");
+    throw new Error(t('progression.errors.noAnalysisResult'));
   }
 
   try {
     return JSON.parse(stripJsonFences(text)) as ProgressAnalysis;
   } catch {
-    throw new Error("Impossible de lire le résultat de l'analyse. Réessaie.");
+    throw new Error(t('progression.errors.unreadableResult'));
   }
 }

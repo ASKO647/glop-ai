@@ -9,6 +9,7 @@ import { formatDurationHM } from '../constants/fasting';
 import type { Colors } from '../constants/theme';
 import { radii, spacing, typography } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
+import { useLocale } from '../context/LocaleContext';
 import { useTheme } from '../context/ThemeContext';
 import { useFasting, type FastingSession } from '../hooks/useFasting';
 import { showConfirm } from '../lib/alert';
@@ -22,15 +23,17 @@ export default function FastingHistoryScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { t, locale } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { history, stats, loading, deleteSession } = useFasting(user?.id);
 
   const handleDelete = (session: FastingSession) => {
     showConfirm(
-      'Supprimer ce jeûne ?',
-      "Cette session sera retirée de ton historique.",
-      'Supprimer',
-      () => deleteSession(session.id)
+      t('dashboard.fasting.deleteConfirmTitle'),
+      t('dashboard.fasting.deleteConfirmMessage'),
+      t('dashboard.actions.delete'),
+      () => deleteSession(session.id),
+      t('common.cancel')
     );
   };
 
@@ -45,25 +48,37 @@ export default function FastingHistoryScreen() {
         >
           <ArrowLeft color={colors.textPrimary} size={22} />
         </Pressable>
-        <Text style={styles.headerTitle}>Historique du jeûne</Text>
+        <Text style={styles.headerTitle}>{t('dashboard.fasting.historyTitle')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.statsGrid}>
-          <StatTile Icon={Hourglass} value={String(stats.totalCount)} label="Jeûnes réalisés" />
-          <StatTile Icon={Clock3} value={formatAverage(stats.averageDurationMs)} label="Durée moyenne" />
-          <StatTile Icon={Trophy} value={formatAverage(stats.longestDurationMs)} label="Plus long jeûne" />
-          <StatTile Icon={Flame} value={`${stats.currentStreakDays} j`} label="Série en cours" />
+          <StatTile Icon={Hourglass} value={String(stats.totalCount)} label={t('dashboard.fasting.stats.totalCount')} />
+          <StatTile
+            Icon={Clock3}
+            value={formatAverage(stats.averageDurationMs)}
+            label={t('dashboard.fasting.stats.averageDuration')}
+          />
+          <StatTile
+            Icon={Trophy}
+            value={formatAverage(stats.longestDurationMs)}
+            label={t('dashboard.fasting.stats.longest')}
+          />
+          <StatTile
+            Icon={Flame}
+            value={t('dashboard.fasting.stats.streakValue', { days: stats.currentStreakDays })}
+            label={t('dashboard.fasting.stats.currentStreak')}
+          />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sessions</Text>
+          <Text style={styles.sectionTitle}>{t('dashboard.fasting.sessionsTitle')}</Text>
 
           {loading ? (
             <ActivityIndicator color={colors.accent} />
           ) : history.length === 0 ? (
-            <Text style={styles.emptyText}>Aucun jeûne enregistré pour l'instant.</Text>
+            <Text style={styles.emptyText}>{t('dashboard.fasting.emptyHistory')}</Text>
           ) : (
             <View style={styles.sessionsList}>
               {history.map((session) => {
@@ -73,13 +88,17 @@ export default function FastingHistoryScreen() {
                   <Pressable
                     key={session.id}
                     accessibilityRole="button"
-                    accessibilityLabel={`Jeûne du ${formatDisplayDate(toISODate(new Date(session.debut)))}, appui long pour supprimer`}
+                    accessibilityLabel={t('dashboard.fasting.sessionAccessibility', {
+                      date: formatDisplayDate(toISODate(new Date(session.debut)), locale),
+                    })}
                     onLongPress={() => handleDelete(session)}
                     delayLongPress={500}
                     style={({ pressed }) => [styles.sessionRow, pressed && styles.pressed]}
                   >
                     <View style={styles.sessionInfo}>
-                      <Text style={styles.sessionDate}>{formatDisplayDate(toISODate(new Date(session.debut)))}</Text>
+                      <Text style={styles.sessionDate}>
+                        {formatDisplayDate(toISODate(new Date(session.debut)), locale)}
+                      </Text>
                       <Text style={styles.sessionProgram}>{session.programme}</Text>
                     </View>
                     <View style={styles.sessionRight}>

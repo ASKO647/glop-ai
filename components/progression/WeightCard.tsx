@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { computeWeightTrend, formatSignedWeight, formatWeight, type WeightTrend } from '../../constants/progression';
 import type { Colors } from '../../constants/theme';
 import { radii } from '../../constants/theme';
+import { useLocale, type Locale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 type WeightCardProps = {
@@ -18,7 +19,17 @@ type WeightCardProps = {
 // The card's background is the accent color, so a literal "green" arrow would
 // vanish against it. Good direction stays onAccent (like the rest of the
 // card's text); only the "wrong direction" case gets a color of its own.
-function TrendLine({ colors, trend, suffix }: { colors: Colors; trend: WeightTrend; suffix: string }) {
+function TrendLine({
+  colors,
+  trend,
+  suffix,
+  locale,
+}: {
+  colors: Colors;
+  trend: WeightTrend;
+  suffix: string;
+  locale: Locale;
+}) {
   const Icon = trend.direction === 'up' ? ArrowUp : trend.direction === 'down' ? ArrowDown : null;
   const color = trend.isGood ? colors.onAccent : colors.warning;
 
@@ -26,7 +37,7 @@ function TrendLine({ colors, trend, suffix }: { colors: Colors; trend: WeightTre
     <View style={styles(colors).trendRow}>
       {Icon && <Icon color={color} size={13} strokeWidth={3} />}
       <Text style={[styles(colors).delta, { color }]}>
-        {formatSignedWeight(trend.diff)} {suffix}
+        {formatSignedWeight(trend.diff, locale)} {suffix}
       </Text>
     </View>
   );
@@ -41,6 +52,7 @@ export default function WeightCard({
   onAddPress,
 }: WeightCardProps) {
   const { colors } = useTheme();
+  const { t, locale } = useLocale();
   const cardStyles = useMemo(() => styles(colors), [colors]);
   const sinceLastTrend =
     !loading && currentWeight != null && previousWeight != null
@@ -54,26 +66,30 @@ export default function WeightCard({
   return (
     <View style={cardStyles.card}>
       <View style={cardStyles.info}>
-        <Text style={cardStyles.label}>POIDS ACTUEL</Text>
+        <Text style={cardStyles.label}>{t('progression.weightCard.currentLabel')}</Text>
 
         {loading ? (
           <Text style={cardStyles.value}>—</Text>
         ) : currentWeight != null ? (
           <View style={cardStyles.valueRow}>
-            <Text style={cardStyles.value}>{formatWeight(currentWeight)}</Text>
+            <Text style={cardStyles.value}>{formatWeight(currentWeight, locale)}</Text>
             <Text style={cardStyles.unit}>kg</Text>
           </View>
         ) : (
           <Text style={cardStyles.value}>—</Text>
         )}
 
-        {sinceLastTrend && <TrendLine colors={colors} trend={sinceLastTrend} suffix="depuis la dernière pesée" />}
-        {sinceStartTrend && <TrendLine colors={colors} trend={sinceStartTrend} suffix="depuis le départ" />}
+        {sinceLastTrend && (
+          <TrendLine colors={colors} trend={sinceLastTrend} suffix={t('progression.weightCard.sinceLast')} locale={locale} />
+        )}
+        {sinceStartTrend && (
+          <TrendLine colors={colors} trend={sinceStartTrend} suffix={t('progression.weightCard.sinceStart')} locale={locale} />
+        )}
       </View>
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Ajouter la pesée du jour"
+        accessibilityLabel={t('progression.weightCard.addAccessibility')}
         onPress={onAddPress}
         style={({ pressed }) => [cardStyles.addButton, pressed && cardStyles.pressed]}
       >

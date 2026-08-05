@@ -7,17 +7,10 @@ import BadgeMedal from '../components/badges/BadgeMedal';
 import BadgeUnlockModal from '../components/badges/BadgeUnlockModal';
 import type { Colors } from '../constants/theme';
 import { radii, spacing, typography } from '../constants/theme';
+import { useLocale } from '../context/LocaleContext';
 import { useTheme } from '../context/ThemeContext';
 import { useBadges, type BadgeWithStatus } from '../hooks/useBadges';
-
-const MONTHS_FR = [
-  'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.',
-];
-
-function formatUnlockedDate(iso: string): string {
-  const date = new Date(iso);
-  return `${date.getDate()} ${MONTHS_FR[date.getMonth()]} ${date.getFullYear()}`;
-}
+import { formatFullDate } from '../lib/format';
 
 function chunkPairs<T>(items: T[]): T[][] {
   const rows: T[][] = [];
@@ -30,6 +23,7 @@ function chunkPairs<T>(items: T[]): T[][] {
 export default function BadgesScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t, locale } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { badges, earnedCount, totalCount, pendingUnlock, dismissPendingUnlock } = useBadges();
 
@@ -47,14 +41,14 @@ export default function BadgesScreen() {
         >
           <ArrowLeft color={colors.textPrimary} size={22} />
         </Pressable>
-        <Text style={styles.headerTitle}>Mes badges</Text>
+        <Text style={styles.headerTitle}>{t('badges.title')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.progressBlock}>
           <Text style={styles.progressLabel}>
-            {earnedCount} / {totalCount} badges débloqués
+            {t('badges.progress', { count: earnedCount, total: totalCount })}
           </Text>
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
@@ -71,13 +65,13 @@ export default function BadgesScreen() {
                     style={[styles.badgeName, badge.unlockedAt ? styles.badgeNameUnlocked : styles.badgeNameLocked]}
                     numberOfLines={1}
                   >
-                    {badge.name}
+                    {t(badge.nameKey)}
                   </Text>
                   <Text
                     style={[styles.badgeSub, badge.unlockedAt ? styles.badgeSubUnlocked : styles.badgeSubLocked]}
                     numberOfLines={2}
                   >
-                    {badge.unlockedAt ? formatUnlockedDate(badge.unlockedAt) : badge.description}
+                    {badge.unlockedAt ? formatFullDate(new Date(badge.unlockedAt), locale) : t(badge.descriptionKey)}
                   </Text>
                 </View>
               ))}

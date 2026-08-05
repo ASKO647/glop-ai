@@ -6,6 +6,7 @@ import Button from './ui/Button';
 import Card from './ui/Card';
 import type { Colors } from '../constants/theme';
 import { spacing, typography } from '../constants/theme';
+import { useLocale } from '../context/LocaleContext';
 import { useTheme } from '../context/ThemeContext';
 
 type OnboardingStepProps = {
@@ -21,9 +22,10 @@ export default function OnboardingStep({
   title,
   description,
   nextHref,
-  nextLabel = 'Continuer',
+  nextLabel,
 }: OnboardingStepProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
@@ -35,13 +37,13 @@ export default function OnboardingStep({
 
       <Card style={styles.card}>
         <Text style={styles.description}>
-          {description ?? 'Cet écran sera implémenté prochainement.'}
+          {description ?? t('onboarding.step.defaultDescription')}
         </Text>
       </Card>
 
       <View style={styles.actions}>
         <Link href={nextHref} asChild>
-          <Button label={nextLabel} variant="primary" />
+          <Button label={nextLabel ?? t('onboarding.common.continue')} variant="primary" />
         </Link>
       </View>
     </SafeAreaView>

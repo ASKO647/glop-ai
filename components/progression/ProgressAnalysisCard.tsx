@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import type { ProgressAnalysis } from '../../lib/progressAnalysis';
 import Button from '../ui/Button';
@@ -30,14 +31,20 @@ function BulletList({ items, dotColor, styles }: { items: string[]; dotColor: st
 
 export default function ProgressAnalysisCard({ analysis, loading, error, canAnalyze, onAnalyze }: ProgressAnalysisCardProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
     <View style={styles.container}>
       {!analysis && (
         <>
-          <Button label="Analyser ma progression" onPress={onAnalyze} loading={loading} disabled={!canAnalyze || loading} />
-          {!canAnalyze && <Text style={styles.hint}>Ajoute au moins deux photos pour lancer l'analyse.</Text>}
+          <Button
+            label={t('progression.analysis.analyzeButton')}
+            onPress={onAnalyze}
+            loading={loading}
+            disabled={!canAnalyze || loading}
+          />
+          {!canAnalyze && <Text style={styles.hint}>{t('progression.analysis.hint')}</Text>}
         </>
       )}
 
@@ -52,19 +59,25 @@ export default function ProgressAnalysisCard({ analysis, loading, error, canAnal
 
           {analysis.points_positifs.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Points positifs</Text>
+              <Text style={styles.sectionTitle}>{t('progression.analysis.positivePoints')}</Text>
               <BulletList items={analysis.points_positifs} dotColor={colors.accent} styles={styles} />
             </View>
           )}
 
           {analysis.axes_travail.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Axes de travail</Text>
+              <Text style={styles.sectionTitle}>{t('progression.analysis.workAxes')}</Text>
               <BulletList items={analysis.axes_travail} dotColor={colors.warning} styles={styles} />
             </View>
           )}
 
-          <Button label="Réanalyser" variant="secondary" onPress={onAnalyze} loading={loading} disabled={loading} />
+          <Button
+            label={t('progression.analysis.reanalyzeButton')}
+            variant="secondary"
+            onPress={onAnalyze}
+            loading={loading}
+            disabled={loading}
+          />
         </View>
       )}
     </View>

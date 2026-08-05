@@ -5,6 +5,7 @@ import BadgeMedal from '../../components/badges/BadgeMedal';
 import type { BadgeWithStatus } from '../../hooks/useBadges';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 type BadgesSummaryCardProps = {
@@ -17,6 +18,7 @@ type BadgesSummaryCardProps = {
 export default function BadgesSummaryCard({ badges, earnedCount, totalCount }: BadgesSummaryCardProps) {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const unlocked = badges.filter((badge) => badge.unlockedAt);
 
@@ -27,7 +29,7 @@ export default function BadgesSummaryCard({ badges, earnedCount, totalCount }: B
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
     >
       <View style={styles.header}>
-        <Text style={styles.title}>Badges obtenus</Text>
+        <Text style={styles.title}>{t('progression.badgesSummary.title')}</Text>
         <Text style={styles.counter}>
           {earnedCount} / {totalCount}
         </Text>

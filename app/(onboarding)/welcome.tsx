@@ -8,10 +8,12 @@ import Button from '../../components/ui/Button';
 import { appImage } from '../../constants/images';
 import type { Colors } from '../../constants/theme';
 import { spacing, typography } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function WelcomeScreen() {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
@@ -31,18 +33,16 @@ export default function WelcomeScreen() {
 
       <View style={styles.hero}>
         <Text style={styles.brand}>GlowUp AI</Text>
-        <Text style={styles.title}>Ta transformation, guidée par l'IA.</Text>
-        <Text style={styles.subtitle}>
-          Coaching fitness personnalisé, suivi de progression et plan sur mesure.
-        </Text>
+        <Text style={styles.title}>{t('onboarding.welcome.title')}</Text>
+        <Text style={styles.subtitle}>{t('onboarding.welcome.subtitle')}</Text>
       </View>
 
       <View style={styles.actions}>
         <Link href="/questionnaire" asChild>
-          <Button label="Commencer" variant="primary" />
+          <Button label={t('onboarding.welcome.start')} variant="primary" />
         </Link>
         <Link href="/login" asChild>
-          <Button label="J'ai déjà un compte" variant="ghost" />
+          <Button label={t('onboarding.welcome.haveAccount')} variant="ghost" />
         </Link>
       </View>
     </SafeAreaView>

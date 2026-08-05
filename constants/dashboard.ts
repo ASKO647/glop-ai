@@ -1,8 +1,14 @@
 import { Apple, Moon, Sun, Sunrise, type LucideIcon } from 'lucide-react-native';
 import type { ImageSourcePropType } from 'react-native';
 import type { Profile } from '../context/ProfileContext';
+import { formatDecimal, formatInteger, formatLongDate } from '../lib/format';
+import type { Locale } from '../lib/i18n';
 import { computeBmr, computeTdee } from './energy';
 import { appImage } from './images';
+
+/** Same shape as `useLocale()`'s `t` — declared locally so this non-component module doesn't
+ * need to import the (React-only) LocaleContext just for a type. */
+type TFunction = (key: string, params?: Record<string, string | number>) => string;
 
 // ---------------------------------------------------------------------------
 // Program day count
@@ -52,10 +58,14 @@ export function shiftISODate(iso: string, days: number): string {
   return toISODate(date);
 }
 
-/** "mardi 28 juillet" — used mid-sentence (e.g. "Tu consultes le ..."), so not capitalized. */
-export function formatDisplayDate(iso: string): string {
+/**
+ * "mardi 28 juillet" — used mid-sentence (e.g. "Tu consultes le ..."), so not capitalized.
+ * `locale` is optional (defaulting to French) so call sites outside the dashboard domain that
+ * haven't been threaded with a locale yet keep working unchanged.
+ */
+export function formatDisplayDate(iso: string, locale?: Locale): string {
   const date = new Date(`${iso}T00:00:00`);
-  return date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  return formatLongDate(date, locale ?? 'fr');
 }
 
 function getDayOfYear(date: Date): number {
@@ -90,9 +100,14 @@ export type WeekDayInfo = {
 };
 
 const WEEKDAY_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+const WEEKDAY_INITIAL_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
-/** The current Monday-to-Sunday week, each day tagged relative to today. */
-export function getCurrentWeekDays(): WeekDayInfo[] {
+/**
+ * The current Monday-to-Sunday week, each day tagged relative to today.
+ * `t` is optional — when omitted (call sites outside the dashboard domain), falls back to the
+ * original hardcoded French single-letter labels so those callers keep working unchanged.
+ */
+export function getCurrentWeekDays(t?: TFunction): WeekDayInfo[] {
   const today = new Date();
   const todayISO = toISODate(today);
   const mondayOffset = (today.getDay() + 6) % 7; // getDay(): 0=Sunday..6=Saturday
@@ -105,7 +120,7 @@ export function getCurrentWeekDays(): WeekDayInfo[] {
     const iso = toISODate(date);
     return {
       date: iso,
-      label: WEEKDAY_LABELS[i],
+      label: t ? t(`dashboard.weekdayInitials.${WEEKDAY_INITIAL_KEYS[i]}`) : WEEKDAY_LABELS[i],
       isToday: iso === todayISO,
       isFuture: iso > todayISO,
       isPast: iso < todayISO,
@@ -125,6 +140,8 @@ export type MissionTemplate = {
   target: number;
 };
 
+// NOTE: these Record keys are matched against `profile.frequence_entrainement` / `profile.objectif`,
+// which are French free-text values stored in Supabase — they must stay exactly as-is, not translated.
 const STEPS_TARGET_BY_FREQUENCY: Record<string, number> = {
   '1-2': 6000,
   '3-4': 8000,
@@ -141,10 +158,6 @@ const WATER_TARGET_BY_GOAL: Record<string, number> = {
 };
 const DEFAULT_WATER_TARGET = 3;
 
-function formatLiters(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
-}
-
 /** Per-tap increment for each mission, in the same unit as its target. */
 export const MISSION_INCREMENT: Record<MissionKey, number> = {
   water: 0.5,
@@ -153,23 +166,41 @@ export const MISSION_INCREMENT: Record<MissionKey, number> = {
   skincare: 1,
 };
 
-export function getDefaultMissionTemplates(profile: Profile | null): MissionTemplate[] {
+/** Translated display label for a mission, given its key and current target — used both to seed
+ * a freshly-created mission row's `label` column and to render `MissionCard` (which recomputes
+ * from `mission_key`/`target` rather than trusting the possibly-stale/other-locale stored label). */
+export function getMissionLabel(key: MissionKey, target: number, t: TFunction, locale: Locale): string {
+  switch (key) {
+    case 'water':
+      return t('dashboard.missions.water', { amount: formatDecimal(target, locale, { maximumFractionDigits: 1 }) });
+    case 'steps':
+      return t('dashboard.missions.steps', { count: formatInteger(target, locale) });
+    case 'workout':
+      return t('dashboard.missions.workout');
+    case 'skincare':
+      return t('dashboard.missions.skincare');
+    default:
+      return '';
+  }
+}
+
+export function getDefaultMissionTemplates(profile: Profile | null, t: TFunction, locale: Locale): MissionTemplate[] {
   const stepsTarget = STEPS_TARGET_BY_FREQUENCY[profile?.frequence_entrainement ?? ''] ?? DEFAULT_STEPS_TARGET;
   const waterTarget = WATER_TARGET_BY_GOAL[profile?.objectif ?? ''] ?? DEFAULT_WATER_TARGET;
 
   return [
-    { key: 'water', label: `Boire ${formatLiters(waterTarget)}L d'eau`, target: waterTarget },
-    { key: 'steps', label: `${stepsTarget.toLocaleString('fr-FR')} pas`, target: stepsTarget },
-    { key: 'workout', label: 'Séance du jour', target: 1 },
-    { key: 'skincare', label: 'Routine skincare', target: 1 },
+    { key: 'water', label: getMissionLabel('water', waterTarget, t, locale), target: waterTarget },
+    { key: 'steps', label: getMissionLabel('steps', stepsTarget, t, locale), target: stepsTarget },
+    { key: 'workout', label: getMissionLabel('workout', 1, t, locale), target: 1 },
+    { key: 'skincare', label: getMissionLabel('skincare', 1, t, locale), target: 1 },
   ];
 }
 
 export const MISSION_ORDER: MissionKey[] = ['water', 'steps', 'workout', 'skincare'];
 
-export function formatMissionValue(key: MissionKey, value: number): string {
-  if (key === 'steps') return value.toLocaleString('fr-FR');
-  if (key === 'water') return formatLiters(value);
+export function formatMissionValue(key: MissionKey, value: number, locale: Locale): string {
+  if (key === 'steps') return formatInteger(value, locale);
+  if (key === 'water') return formatDecimal(value, locale, { maximumFractionDigits: 1 });
   return String(value);
 }
 
@@ -179,13 +210,13 @@ export function formatMissionValue(key: MissionKey, value: number): string {
 
 export type MealType = 'petit-dejeuner' | 'dejeuner' | 'diner' | 'collation';
 
-export type MealTypeInfo = { id: MealType; label: string; Icon: LucideIcon };
+export type MealTypeInfo = { id: MealType; labelKey: string; Icon: LucideIcon };
 
 export const MEAL_TYPES: MealTypeInfo[] = [
-  { id: 'petit-dejeuner', label: 'Petit-déjeuner', Icon: Sunrise },
-  { id: 'dejeuner', label: 'Déjeuner', Icon: Sun },
-  { id: 'diner', label: 'Dîner', Icon: Moon },
-  { id: 'collation', label: 'Collation', Icon: Apple },
+  { id: 'petit-dejeuner', labelKey: 'dashboard.mealTypes.petitDejeuner', Icon: Sunrise },
+  { id: 'dejeuner', labelKey: 'dashboard.mealTypes.dejeuner', Icon: Sun },
+  { id: 'diner', labelKey: 'dashboard.mealTypes.diner', Icon: Moon },
+  { id: 'collation', labelKey: 'dashboard.mealTypes.collation', Icon: Apple },
 ];
 
 export function getMealTypeInfo(mealType: MealType): MealTypeInfo {
@@ -212,6 +243,8 @@ export function defaultExpandedMealTypes(): Record<MealType, boolean> {
 // Calories & macros
 // ---------------------------------------------------------------------------
 
+// NOTE: these Record keys are matched against `profile.objectif` / `profile.vitesse`, French
+// free-text values stored in Supabase — they must stay exactly as-is, not translated.
 const GOAL_CALORIE_ADJUSTMENT: Record<string, Record<string, number>> = {
   'Perte de poids': { Progressif: -300, Modéré: -500, Rapide: -750 },
   'Prise de muscle': { Progressif: 200, Modéré: 350, Rapide: 500 },
@@ -254,16 +287,19 @@ export function computeMacroTargets(calorieTarget: number): MacroTargets {
 
 export type WorkoutCategoryId = 'all' | 'full_body' | 'upper' | 'lower' | 'cardio';
 
-export const WORKOUT_CATEGORIES: { id: WorkoutCategoryId; label: string }[] = [
-  { id: 'all', label: 'Tout' },
-  { id: 'full_body', label: 'Full body' },
-  { id: 'upper', label: 'Haut du corps' },
-  { id: 'lower', label: 'Bas du corps' },
-  { id: 'cardio', label: 'Cardio' },
+export const WORKOUT_CATEGORIES: { id: WorkoutCategoryId; labelKey: string }[] = [
+  { id: 'all', labelKey: 'dashboard.workoutCategories.all' },
+  { id: 'full_body', labelKey: 'dashboard.workoutCategories.fullBody' },
+  { id: 'upper', labelKey: 'dashboard.workoutCategories.upper' },
+  { id: 'lower', labelKey: 'dashboard.workoutCategories.lower' },
+  { id: 'cardio', labelKey: 'dashboard.workoutCategories.cardio' },
 ];
 
 export type WorkoutExercise = {
+  /** Internal French name — never displayed directly; kept only so `getExerciseThumbnail`'s
+   * keyword matching keeps working regardless of the active display locale. Use `nameKey` for UI. */
   name: string;
+  nameKey: string;
   sets: number;
   reps: string;
 };
@@ -273,8 +309,8 @@ export type WorkoutLocation = 'gym' | 'home' | 'both';
 
 export type WorkoutSession = {
   id: string;
-  title: string;
-  muscles: string;
+  titleKey: string;
+  musclesKey: string;
   duration: number;
   kcal: number;
   category: Exclude<WorkoutCategoryId, 'all'>;
@@ -285,122 +321,132 @@ export type WorkoutSession = {
 export const WORKOUT_SESSIONS: WorkoutSession[] = [
   {
     id: 'full-body-express',
-    title: 'Full Body Express',
-    muscles: 'Jambes, dos, épaules',
+    titleKey: 'dashboard.workoutSessions.fullBodyExpress.title',
+    musclesKey: 'dashboard.workoutSessions.fullBodyExpress.muscles',
     duration: 30,
     kcal: 280,
     category: 'full_body',
     location: 'both',
     exercises: [
-      { name: 'Squats', sets: 3, reps: '15' },
-      { name: 'Rowing haltères', sets: 3, reps: '12' },
-      { name: 'Développé épaules', sets: 3, reps: '12' },
-      { name: 'Gainage', sets: 3, reps: '40s' },
+      { name: 'Squats', nameKey: 'dashboard.exercises.squats', sets: 3, reps: '15' },
+      { name: 'Rowing haltères', nameKey: 'dashboard.exercises.rowingHalteres', sets: 3, reps: '12' },
+      { name: 'Développé épaules', nameKey: 'dashboard.exercises.developpeEpaules', sets: 3, reps: '12' },
+      { name: 'Gainage', nameKey: 'dashboard.exercises.gainage', sets: 3, reps: '40s' },
     ],
   },
   {
     id: 'push-power',
-    title: 'Push Power',
-    muscles: 'Pectoraux, épaules, triceps',
+    titleKey: 'dashboard.workoutSessions.pushPower.title',
+    musclesKey: 'dashboard.workoutSessions.pushPower.muscles',
     duration: 40,
     kcal: 320,
     category: 'upper',
     location: 'gym',
     exercises: [
-      { name: 'Développé couché', sets: 4, reps: '10' },
-      { name: 'Développé incliné haltères', sets: 3, reps: '12' },
-      { name: 'Élévations latérales', sets: 3, reps: '15' },
-      { name: 'Extensions triceps', sets: 3, reps: '12' },
+      { name: 'Développé couché', nameKey: 'dashboard.exercises.developpeCouche', sets: 4, reps: '10' },
+      {
+        name: 'Développé incliné haltères',
+        nameKey: 'dashboard.exercises.developpeInclineHalteres',
+        sets: 3,
+        reps: '12',
+      },
+      { name: 'Élévations latérales', nameKey: 'dashboard.exercises.elevationsLaterales', sets: 3, reps: '15' },
+      { name: 'Extensions triceps', nameKey: 'dashboard.exercises.extensionsTriceps', sets: 3, reps: '12' },
     ],
   },
   {
     id: 'pull-strength',
-    title: 'Pull Strength',
-    muscles: 'Dos, biceps',
+    titleKey: 'dashboard.workoutSessions.pullStrength.title',
+    musclesKey: 'dashboard.workoutSessions.pullStrength.muscles',
     duration: 35,
     kcal: 260,
     category: 'upper',
     location: 'gym',
     exercises: [
-      { name: 'Tractions', sets: 4, reps: '8' },
-      { name: 'Rowing barre', sets: 3, reps: '10' },
-      { name: 'Tirage vertical', sets: 3, reps: '12' },
-      { name: 'Curl biceps', sets: 3, reps: '12' },
+      { name: 'Tractions', nameKey: 'dashboard.exercises.tractions', sets: 4, reps: '8' },
+      { name: 'Rowing barre', nameKey: 'dashboard.exercises.rowingBarre', sets: 3, reps: '10' },
+      { name: 'Tirage vertical', nameKey: 'dashboard.exercises.tirageVertical', sets: 3, reps: '12' },
+      { name: 'Curl biceps', nameKey: 'dashboard.exercises.curlBiceps', sets: 3, reps: '12' },
     ],
   },
   {
     id: 'leg-day',
-    title: 'Leg Day',
-    muscles: 'Quadriceps, ischios, fessiers',
+    titleKey: 'dashboard.workoutSessions.legDay.title',
+    musclesKey: 'dashboard.workoutSessions.legDay.muscles',
     duration: 45,
     kcal: 380,
     category: 'lower',
     location: 'gym',
     exercises: [
-      { name: 'Squats barre', sets: 4, reps: '10' },
-      { name: 'Fentes marchées', sets: 3, reps: '12' },
-      { name: 'Soulevé de terre jambes tendues', sets: 3, reps: '10' },
-      { name: 'Mollets debout', sets: 4, reps: '15' },
+      { name: 'Squats barre', nameKey: 'dashboard.exercises.squatsBarre', sets: 4, reps: '10' },
+      { name: 'Fentes marchées', nameKey: 'dashboard.exercises.fentesMarchees', sets: 3, reps: '12' },
+      {
+        name: 'Soulevé de terre jambes tendues',
+        nameKey: 'dashboard.exercises.souleveDeTerreJambesTendues',
+        sets: 3,
+        reps: '10',
+      },
+      { name: 'Mollets debout', nameKey: 'dashboard.exercises.molletsDebout', sets: 4, reps: '15' },
     ],
   },
   {
     id: 'glutes-core',
-    title: 'Glutes & Core',
-    muscles: 'Fessiers, abdominaux',
+    titleKey: 'dashboard.workoutSessions.glutesCore.title',
+    musclesKey: 'dashboard.workoutSessions.glutesCore.muscles',
     duration: 25,
     kcal: 220,
     category: 'lower',
     location: 'both',
     exercises: [
-      { name: 'Hip thrust', sets: 4, reps: '15' },
-      { name: 'Fentes bulgares', sets: 3, reps: '12' },
-      { name: 'Crunchs', sets: 3, reps: '20' },
-      { name: 'Relevé de jambes', sets: 3, reps: '15' },
+      { name: 'Hip thrust', nameKey: 'dashboard.exercises.hipThrust', sets: 4, reps: '15' },
+      { name: 'Fentes bulgares', nameKey: 'dashboard.exercises.fentesBulgares', sets: 3, reps: '12' },
+      { name: 'Crunchs', nameKey: 'dashboard.exercises.crunchs', sets: 3, reps: '20' },
+      { name: 'Relevé de jambes', nameKey: 'dashboard.exercises.releveDeJambes', sets: 3, reps: '15' },
     ],
   },
   {
     id: 'hiit-cardio',
-    title: 'HIIT Cardio',
-    muscles: 'Corps entier, cardio',
+    titleKey: 'dashboard.workoutSessions.hiitCardio.title',
+    musclesKey: 'dashboard.workoutSessions.hiitCardio.muscles',
     duration: 20,
     kcal: 300,
     category: 'cardio',
     location: 'both',
     exercises: [
-      { name: 'Jumping jacks', sets: 4, reps: '40s' },
-      { name: 'Burpees', sets: 4, reps: '30s' },
-      { name: 'Mountain climbers', sets: 4, reps: '40s' },
-      { name: 'Squat jumps', sets: 4, reps: '30s' },
+      { name: 'Jumping jacks', nameKey: 'dashboard.exercises.jumpingJacks', sets: 4, reps: '40s' },
+      { name: 'Burpees', nameKey: 'dashboard.exercises.burpees', sets: 4, reps: '30s' },
+      { name: 'Mountain climbers', nameKey: 'dashboard.exercises.mountainClimbers', sets: 4, reps: '40s' },
+      { name: 'Squat jumps', nameKey: 'dashboard.exercises.squatJumps', sets: 4, reps: '30s' },
     ],
   },
   {
     id: 'fat-burn-circuit',
-    title: 'Fat Burn Circuit',
-    muscles: 'Corps entier, cardio',
+    titleKey: 'dashboard.workoutSessions.fatBurnCircuit.title',
+    musclesKey: 'dashboard.workoutSessions.fatBurnCircuit.muscles',
     duration: 30,
     kcal: 340,
     category: 'cardio',
     location: 'both',
     exercises: [
-      { name: 'Corde à sauter', sets: 5, reps: '60s' },
-      { name: 'Squats sautés', sets: 4, reps: '15' },
-      { name: 'Pompes', sets: 4, reps: '12' },
-      { name: 'Gainage dynamique', sets: 3, reps: '45s' },
+      { name: 'Corde à sauter', nameKey: 'dashboard.exercises.cordeASauter', sets: 5, reps: '60s' },
+      { name: 'Squats sautés', nameKey: 'dashboard.exercises.squatsSautes', sets: 4, reps: '15' },
+      { name: 'Pompes', nameKey: 'dashboard.exercises.pompes', sets: 4, reps: '12' },
+      { name: 'Gainage dynamique', nameKey: 'dashboard.exercises.gainageDynamique', sets: 3, reps: '45s' },
     ],
   },
   {
     id: 'total-body-strength',
-    title: 'Total Body Strength',
-    muscles: 'Corps entier',
+    titleKey: 'dashboard.workoutSessions.totalBodyStrength.title',
+    musclesKey: 'dashboard.workoutSessions.totalBodyStrength.muscles',
     duration: 40,
     kcal: 310,
     category: 'full_body',
     location: 'gym',
     exercises: [
-      { name: 'Deadlift', sets: 4, reps: '8' },
-      { name: 'Pompes', sets: 3, reps: '15' },
-      { name: 'Fentes', sets: 3, reps: '12' },
-      { name: 'Tirage horizontal', sets: 3, reps: '12' },
+      { name: 'Deadlift', nameKey: 'dashboard.exercises.deadlift', sets: 4, reps: '8' },
+      { name: 'Pompes', nameKey: 'dashboard.exercises.pompes', sets: 3, reps: '15' },
+      { name: 'Fentes', nameKey: 'dashboard.exercises.fentes', sets: 3, reps: '12' },
+      { name: 'Tirage horizontal', nameKey: 'dashboard.exercises.tirageHorizontal', sets: 3, reps: '12' },
     ],
   },
 ];
@@ -409,6 +455,8 @@ export const WORKOUT_SESSIONS: WorkoutSession[] = [
 // Today's workout
 // ---------------------------------------------------------------------------
 
+// NOTE: these Record keys are matched against `profile.objectif` / `profile.frequence_entrainement`,
+// French free-text values stored in Supabase — they must stay exactly as-is, not translated.
 const GOAL_CATEGORY: Record<string, (dayOfYear: number) => Exclude<WorkoutCategoryId, 'all'>> = {
   'Perte de poids': () => 'cardio',
   'Prise de muscle': (dayOfYear) => (dayOfYear % 2 === 0 ? 'upper' : 'lower'),
@@ -469,7 +517,11 @@ export const WORKOUT_CATEGORY_IMAGES: Record<Exclude<WorkoutCategoryId, 'all'>, 
 const LOWER_BODY_KEYWORDS = /squat|fente|soulevé|mollet|hip thrust|jambe/i;
 const CARDIO_KEYWORDS = /jumping|burpee|mountain|corde|sauté|dynamique/i;
 
-/** Best-effort classification of a single exercise by name, for its own thumbnail (distinct from the session's overall category image). */
+/**
+ * Best-effort classification of a single exercise by name, for its own thumbnail (distinct from
+ * the session's overall category image). Takes the internal French `exercise.name` (not the
+ * translated `nameKey`) so the classification stays correct regardless of display locale.
+ */
 export function getExerciseThumbnail(exerciseName: string): ImageSourcePropType {
   if (LOWER_BODY_KEYWORDS.test(exerciseName)) return EXERCISE_SQUAT_IMAGE;
   if (CARDIO_KEYWORDS.test(exerciseName)) return EXERCISE_CARDIO_IMAGE;
@@ -481,58 +533,40 @@ export function getExerciseThumbnail(exerciseName: string): ImageSourcePropType 
 // ---------------------------------------------------------------------------
 
 type Tip = {
-  text: string;
+  textKey: string;
   goals?: string[];
 };
 
+// NOTE: `goals` entries are matched against `profile.objectif`, a French free-text value stored
+// in Supabase — they must stay exactly as-is, not translated.
 const TIPS: Tip[] = [
-  { text: "Bois un grand verre d'eau dès le réveil pour relancer ton métabolisme." },
-  { text: 'Prépare tes repas de la semaine à l’avance pour éviter les écarts de dernière minute.' },
-  { text: "Le sommeil compte autant que l'entraînement : vise 7 à 8h par nuit." },
-  { text: 'Ajoute 5 minutes de marche après chaque repas pour améliorer la digestion.' },
-  { text: 'Étire-toi 5 minutes après chaque séance pour accélérer la récupération.' },
-  { text: 'La régularité bat toujours l’intensité : une petite séance vaut mieux que rien.' },
-  { text: "Note ce que tu manges aujourd'hui, même approximativement — la conscience change tout." },
-  {
-    text: 'Augmente progressivement les charges dès que tu termines tes séries sans difficulté.',
-    goals: ['Prise de muscle'],
-  },
-  {
-    text: "Vise 1,6 à 2g de protéines par kilo de poids de corps pour soutenir la prise de muscle.",
-    goals: ['Prise de muscle'],
-  },
-  {
-    text: 'Un léger déficit calorique suffit — pas besoin de te priver pour progresser.',
-    goals: ['Perte de poids'],
-  },
-  {
-    text: 'Privilégie les protéines et les fibres à chaque repas pour tenir plus facilement ton déficit.',
-    goals: ['Perte de poids'],
-  },
-  {
-    text: 'La cohérence sur 90 jours compte plus que la perfection sur une semaine.',
-    goals: ['Être plus discipliné'],
-  },
-  {
-    text: 'Prépare tes affaires de sport la veille pour supprimer les excuses du matin.',
-    goals: ['Être plus discipliné'],
-  },
-  {
-    text: 'Une routine skincare simple et régulière bat une routine compliquée abandonnée après 3 jours.',
-    goals: ['Glow up & esthétique'],
-  },
-  { text: 'Le soleil et le sommeil font autant pour ta peau que n’importe quel soin.', goals: ['Glow up & esthétique'] },
-  { text: 'Bouge un minimum 30 minutes par jour, même en dehors de tes séances.' },
-  { text: 'Limite les écrans 30 minutes avant de dormir pour améliorer la qualité de ton sommeil.' },
-  { text: 'Un échauffement de 5 minutes réduit nettement le risque de blessure.' },
-  { text: 'Fixe-toi un seul objectif à la fois : la régularité vient de la simplicité.' },
-  { text: 'Célèbre les petites victoires — elles construisent la motivation à long terme.' },
-  { text: 'Respire profondément 1 minute avant chaque repas pour mieux écouter ta faim.' },
+  { textKey: 'dashboard.tips.tip01' },
+  { textKey: 'dashboard.tips.tip02' },
+  { textKey: 'dashboard.tips.tip03' },
+  { textKey: 'dashboard.tips.tip04' },
+  { textKey: 'dashboard.tips.tip05' },
+  { textKey: 'dashboard.tips.tip06' },
+  { textKey: 'dashboard.tips.tip07' },
+  { textKey: 'dashboard.tips.tip08', goals: ['Prise de muscle'] },
+  { textKey: 'dashboard.tips.tip09', goals: ['Prise de muscle'] },
+  { textKey: 'dashboard.tips.tip10', goals: ['Perte de poids'] },
+  { textKey: 'dashboard.tips.tip11', goals: ['Perte de poids'] },
+  { textKey: 'dashboard.tips.tip12', goals: ['Être plus discipliné'] },
+  { textKey: 'dashboard.tips.tip13', goals: ['Être plus discipliné'] },
+  { textKey: 'dashboard.tips.tip14', goals: ['Glow up & esthétique'] },
+  { textKey: 'dashboard.tips.tip15', goals: ['Glow up & esthétique'] },
+  { textKey: 'dashboard.tips.tip16' },
+  { textKey: 'dashboard.tips.tip17' },
+  { textKey: 'dashboard.tips.tip18' },
+  { textKey: 'dashboard.tips.tip19' },
+  { textKey: 'dashboard.tips.tip20' },
+  { textKey: 'dashboard.tips.tip21' },
 ];
 
+/** Returns a translation key (not translated text) — callers translate it with `t()`. */
 export function getTipOfTheDay(objectif: string | null): string {
   const relevant = objectif ? TIPS.filter((t) => t.goals?.includes(objectif)) : [];
   const pool = relevant.length > 0 ? relevant : TIPS;
   const dayOfYear = getDayOfYear(new Date());
-  return pool[dayOfYear % pool.length].text;
+  return pool[dayOfYear % pool.length].textKey;
 }

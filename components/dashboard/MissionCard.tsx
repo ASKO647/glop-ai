@@ -1,9 +1,10 @@
 import { Check, Droplet, Dumbbell, Footprints, Sparkles } from 'lucide-react-native';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { formatMissionValue, type MissionKey } from '../../constants/dashboard';
+import { formatMissionValue, getMissionLabel, type MissionKey } from '../../constants/dashboard';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import ProgressBar from '../ui/ProgressBar';
 
@@ -16,7 +17,6 @@ const MISSION_ICON: Record<MissionKey, typeof Droplet> = {
 
 type MissionCardProps = {
   missionKey: MissionKey;
-  label: string;
   current: number;
   target: number;
   completed: boolean;
@@ -27,7 +27,6 @@ type MissionCardProps = {
 
 export default function MissionCard({
   missionKey,
-  label,
   current,
   target,
   completed,
@@ -35,8 +34,10 @@ export default function MissionCard({
   disabled = false,
 }: MissionCardProps) {
   const { colors } = useTheme();
+  const { t, locale } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const Icon = MISSION_ICON[missionKey];
+  const label = getMissionLabel(missionKey, target, t, locale);
   const progress = target > 0 ? current / target : 0;
   const isInteractive = !completed && !disabled;
 
@@ -66,7 +67,7 @@ export default function MissionCard({
       </View>
 
       <Text style={styles.value}>
-        {formatMissionValue(missionKey, current)}/{formatMissionValue(missionKey, target)}
+        {formatMissionValue(missionKey, current, locale)}/{formatMissionValue(missionKey, target, locale)}
       </Text>
     </Pressable>
   );

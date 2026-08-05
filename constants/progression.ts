@@ -1,3 +1,5 @@
+import type { Locale } from '../context/LocaleContext';
+import { formatDecimal, formatLongDate } from '../lib/format';
 import { isoDaysAgo, toISODate } from './dashboard';
 
 export type PeriodId = '3' | '7' | '14' | '30' | '90';
@@ -12,14 +14,16 @@ export const PERIOD_OPTIONS: PeriodOption[] = [
   { id: '90', label: '90j', days: 90 },
 ];
 
-export function formatWeight(value: number): string {
-  return value.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+// `locale` defaults to 'fr' so callers that haven't been threaded through yet (outside the
+// progression/recipes domains) keep compiling and rendering exactly as before.
+export function formatWeight(value: number, locale: Locale = 'fr'): string {
+  return formatDecimal(value, locale);
 }
 
 /** "−2,4 kg" / "+1,2 kg" / "0,0 kg" — real minus sign, not a hyphen. */
-export function formatSignedWeight(diff: number): string {
+export function formatSignedWeight(diff: number, locale: Locale = 'fr'): string {
   const sign = diff > 0 ? '+' : diff < 0 ? '−' : '';
-  return `${sign}${formatWeight(Math.abs(diff))} kg`;
+  return `${sign}${formatWeight(Math.abs(diff), locale)} kg`;
 }
 
 export type WeightTrend = {
@@ -112,7 +116,7 @@ export function computeGoalEstimate(logs: WeightLogLike[], targetWeight: number 
 }
 
 /** "14 novembre 2026" */
-export function formatEstimateDate(iso: string): string {
+export function formatEstimateDate(iso: string, locale: Locale = 'fr'): string {
   const date = new Date(`${iso}T00:00:00`);
-  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  return formatLongDate(date, locale);
 }

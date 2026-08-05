@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { recipeImage } from '../../constants/images';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import type { Recipe } from '../../lib/recipes';
 import AppImage from '../ui/AppImage';
@@ -20,6 +21,7 @@ type RecipeIdeaCardProps = {
 /** Vertical, image-led recipe card used by the Suggestions tab's category browsing. */
 export default function RecipeIdeaCard({ recipe, isFavorite, onToggleFavorite, onPress }: RecipeIdeaCardProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
@@ -31,7 +33,7 @@ export default function RecipeIdeaCard({ recipe, isFavorite, onToggleFavorite, o
       <AppImage source={recipeImage(recipe.categorie_visuelle)} style={styles.image} overlay={0.25}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+          accessibilityLabel={isFavorite ? t('recipes.favoriteToggle.remove') : t('recipes.favoriteToggle.add')}
           onPress={onToggleFavorite}
           hitSlop={8}
           style={({ pressed }) => [styles.favoriteButton, pressed && styles.favoriteButtonPressed]}

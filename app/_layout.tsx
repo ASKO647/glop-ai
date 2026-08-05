@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import type { Colors } from '../constants/theme';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { LocaleProvider } from '../context/LocaleContext';
 import { ProfileProvider } from '../context/ProfileContext';
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
 
@@ -52,6 +53,9 @@ function RootNavigator() {
           <Stack.Screen name="badges" />
           <Stack.Screen name="recipes" />
           <Stack.Screen name="recipe/[id]" />
+          <Stack.Screen name="groups" />
+          <Stack.Screen name="group/[id]" />
+          <Stack.Screen name="group/[id]/info" />
           <Stack.Screen name="legal/terms" />
           <Stack.Screen name="legal/privacy" />
         </Stack.Protected>
@@ -65,9 +69,11 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthProvider>
-          <ThemeProvider>
-            <RootNavigator />
-          </ThemeProvider>
+          <LocaleProvider>
+            <ThemeProvider>
+              <RootNavigator />
+            </ThemeProvider>
+          </LocaleProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

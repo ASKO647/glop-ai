@@ -1,5 +1,6 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
-import { ANTHROPIC_API_URL, ANTHROPIC_MODEL, anthropicHeaders, describeAnthropicError, stripJsonFences } from './anthropic';
+import { ANTHROPIC_API_URL, ANTHROPIC_MODEL, anthropicHeaders, describeAnthropicError, languageInstruction, stripJsonFences } from './anthropic';
+import type { Locale } from './i18n';
 
 // Same rule as lib/coach.ts: no Anthropic SDK, ever — it pulls in `node:fs`
 // and breaks the React Native bundle. Raw `fetch` only.
@@ -42,8 +43,10 @@ export type CompressedImage = {
   mimeType: string;
 };
 
+type Translate = (key: string, params?: Record<string, string | number>) => string;
+
 /** Downscales to at most 1024px wide (never upscales), re-encodes as JPEG at 0.5 quality. */
-export async function compressImage(uri: string, originalWidth: number): Promise<CompressedImage> {
+export async function compressImage(uri: string, originalWidth: number, t: Translate): Promise<CompressedImage> {
   const targetWidth = originalWidth > 0 ? Math.min(originalWidth, MAX_WIDTH) : MAX_WIDTH;
 
   const context = ImageManipulator.manipulate(uri).resize({ width: targetWidth });
@@ -55,18 +58,21 @@ export async function compressImage(uri: string, originalWidth: number): Promise
   });
 
   if (!result.base64) {
-    throw new Error("Impossible de préparer la photo. Réessaie.");
+    throw new Error(t('scanner.errors.prepareFailed'));
   }
 
   return { base64: result.base64, mimeType: 'image/jpeg' };
 }
 
-export async function analyzeMeal(base64Image: string, mimeType: string): Promise<MealAnalysis | MealAnalysisError> {
+export async function analyzeMeal(
+  base64Image: string,
+  mimeType: string,
+  locale: Locale,
+  t: Translate
+): Promise<MealAnalysis | MealAnalysisError> {
   const apiKey = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY;
   if (!apiKey) {
-    throw new Error(
-      "Clé API Anthropic manquante. Ajoute EXPO_PUBLIC_ANTHROPIC_API_KEY dans ton fichier .env."
-    );
+    throw new Error(t('scanner.errors.missingApiKey'));
   }
 
   // Defensive: strip a data-URI prefix if one ever slips in — Anthropic expects raw base64
@@ -81,6 +87,7 @@ export async function analyzeMeal(base64Image: string, mimeType: string): Promis
       body: JSON.stringify({
         model: ANTHROPIC_MODEL,
         max_tokens: MAX_TOKENS,
+        system: languageInstruction(locale),
         messages: [
           {
             role: 'user',
@@ -93,28 +100,28 @@ export async function analyzeMeal(base64Image: string, mimeType: string): Promis
       }),
     });
   } catch {
-    throw new Error("Impossible d'analyser la photo. Vérifie ta connexion internet et réessaie.");
+    throw new Error(t('scanner.errors.networkError'));
   }
 
   if (!response.ok) {
-    throw new Error(await describeAnthropicError(response, "L'analyse a échoué"));
+    throw new Error(await describeAnthropicError(t, response, t('scanner.errors.failedAction')));
   }
 
   let data: AnthropicMessageResponse;
   try {
     data = (await response.json()) as AnthropicMessageResponse;
   } catch {
-    throw new Error('Réponse illisible. Réessaie dans un instant.');
+    throw new Error(t('scanner.errors.unreadableResponse'));
   }
 
   const text = data.content?.[0]?.text;
   if (!text) {
-    throw new Error("L'analyse n'a renvoyé aucun résultat. Réessaie.");
+    throw new Error(t('scanner.errors.emptyResult'));
   }
 
   try {
     return JSON.parse(stripJsonFences(text)) as MealAnalysis | MealAnalysisError;
   } catch {
-    throw new Error("Impossible de lire le résultat de l'analyse. Réessaie.");
+    throw new Error(t('scanner.errors.unparsableResult'));
   }
 }

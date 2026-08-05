@@ -10,11 +10,13 @@ import TextField from '../../components/ui/TextField';
 import type { Colors } from '../../constants/theme';
 import { spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import { mapAuthError } from '../../lib/authErrors';
 
 export default function LoginScreen() {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { signIn, signInWithApple, signInWithGoogle } = useAuth();
 
@@ -33,11 +35,11 @@ export default function LoginScreen() {
     setFormError(undefined);
 
     if (!email.trim()) {
-      setEmailError("L'email est requis.");
+      setEmailError(t('onboarding.auth.emailRequired'));
       return;
     }
     if (!password) {
-      setPasswordError('Le mot de passe est requis.');
+      setPasswordError(t('onboarding.auth.passwordRequired'));
       return;
     }
 
@@ -46,7 +48,7 @@ export default function LoginScreen() {
     setSubmitting(false);
 
     if (error) {
-      const mapped = mapAuthError(error);
+      const mapped = mapAuthError(t, error);
       if (mapped.field === 'email') setEmailError(mapped.message);
       else if (mapped.field === 'password') setPasswordError(mapped.message);
       else setFormError(mapped.message);
@@ -64,16 +66,16 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Content de te revoir</Text>
+          <Text style={styles.title}>{t('onboarding.login.title')}</Text>
           <Text style={[typography.body, { color: colors.textSecondary }]}>
-            Connecte-toi pour retrouver ton plan.
+            {t('onboarding.login.subtitle')}
           </Text>
         </View>
 
         <View style={styles.middle}>
           <View style={styles.socialButtons}>
             <SocialButton
-              label="Continuer avec Apple"
+              label={t('onboarding.auth.continueWithApple')}
               // The "white" SocialButton variant is a fixed white surface regardless of theme
               // (see SocialButton.tsx), so this icon must stay a fixed dark color too —
               // colors.background would turn near-white in light mode and vanish on it.
@@ -82,7 +84,7 @@ export default function LoginScreen() {
               onPress={signInWithApple}
             />
             <SocialButton
-              label="Continuer avec Google"
+              label={t('onboarding.auth.continueWithGoogle')}
               icon={<GoogleIcon size={18} />}
               variant="outline"
               onPress={signInWithGoogle}
@@ -91,17 +93,17 @@ export default function LoginScreen() {
 
           <View style={styles.separatorRow}>
             <View style={styles.separatorLine} />
-            <Text style={styles.separatorText}>ou</Text>
+            <Text style={styles.separatorText}>{t('onboarding.auth.or')}</Text>
             <View style={styles.separatorLine} />
           </View>
 
           <View style={styles.form}>
             <TextField
-              label="Email"
+              label={t('onboarding.auth.emailLabel')}
               value={email}
               onChangeText={setEmail}
               error={emailError}
-              placeholder="toi@exemple.com"
+              placeholder={t('onboarding.auth.emailPlaceholder')}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -110,11 +112,11 @@ export default function LoginScreen() {
             />
             <View>
               <TextField
-                label="Mot de passe"
+                label={t('onboarding.auth.passwordLabel')}
                 value={password}
                 onChangeText={setPassword}
                 error={passwordError}
-                placeholder="Ton mot de passe"
+                placeholder={t('onboarding.login.passwordPlaceholder')}
                 secureTextEntry
                 autoCapitalize="none"
                 textContentType="password"
@@ -122,7 +124,7 @@ export default function LoginScreen() {
               />
               <Link href="/forgot-password" asChild>
                 <Pressable style={styles.forgotPasswordLink}>
-                  <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+                  <Text style={styles.forgotPasswordText}>{t('onboarding.login.forgotPassword')}</Text>
                 </Pressable>
               </Link>
             </View>
@@ -132,7 +134,7 @@ export default function LoginScreen() {
 
         <View style={styles.footer}>
           <Button
-            label="Se connecter"
+            label={t('onboarding.login.submit')}
             variant="primary"
             disabled={isDisabled}
             loading={submitting}
@@ -140,7 +142,7 @@ export default function LoginScreen() {
           />
           <Link href="/signup" asChild>
             <Pressable style={styles.signupLink}>
-              <Text style={styles.signupLinkText}>Pas encore de compte ? Créer un compte</Text>
+              <Text style={styles.signupLinkText}>{t('onboarding.login.noAccount')}</Text>
             </Pressable>
           </Link>
         </View>

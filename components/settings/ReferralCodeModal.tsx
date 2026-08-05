@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import Button from '../ui/Button';
 
@@ -14,6 +15,7 @@ type ReferralCodeModalProps = {
 
 export default function ReferralCodeModal({ visible, redeeming, onCancel, onSubmit }: ReferralCodeModalProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -28,17 +30,17 @@ export default function ReferralCodeModal({ visible, redeeming, onCancel, onSubm
   const handleSubmit = async () => {
     const result = await onSubmit(code);
     if (!result.ok) {
-      setError(result.error ?? 'Code invalide.');
+      setError(result.error ?? t('profile.referral.invalidCode'));
     }
   };
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel="Fermer" onPress={onCancel} />
+        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={onCancel} />
 
         <View style={styles.sheet}>
-          <Text style={styles.title}>Saisir un code de parrainage</Text>
+          <Text style={styles.title}>{t('profile.sections.enterReferralCode')}</Text>
 
           <TextInput
             value={code}
@@ -46,7 +48,7 @@ export default function ReferralCodeModal({ visible, redeeming, onCancel, onSubm
               setCode(value.toUpperCase());
               setError(null);
             }}
-            placeholder="EX: LUCAS4K2"
+            placeholder={t('profile.referral.codePlaceholder')}
             placeholderTextColor={colors.textTertiary}
             autoCapitalize="characters"
             autoCorrect={false}
@@ -58,9 +60,9 @@ export default function ReferralCodeModal({ visible, redeeming, onCancel, onSubm
           {error && <Text style={styles.error}>{error}</Text>}
 
           <View style={styles.actions}>
-            <Button label="Annuler" variant="secondary" onPress={onCancel} disabled={redeeming} style={styles.actionButton} />
+            <Button label={t('common.cancel')} variant="secondary" onPress={onCancel} disabled={redeeming} style={styles.actionButton} />
             <Button
-              label="Valider"
+              label={t('profile.referral.submit')}
               onPress={handleSubmit}
               loading={redeeming}
               disabled={!code.trim()}

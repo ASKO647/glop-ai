@@ -1,6 +1,14 @@
 import type { RecipeVisualCategory } from '../constants/images';
+import type { Locale } from '../context/LocaleContext';
 import type { Profile } from '../context/ProfileContext';
-import { ANTHROPIC_API_URL, ANTHROPIC_MODEL, anthropicHeaders, describeAnthropicError, stripJsonFences } from './anthropic';
+import {
+  ANTHROPIC_API_URL,
+  ANTHROPIC_MODEL,
+  anthropicHeaders,
+  describeAnthropicError,
+  languageInstruction,
+  stripJsonFences,
+} from './anthropic';
 
 // Same rule as lib/coach.ts, lib/foodScanner.ts and lib/progressAnalysis.ts: no Anthropic SDK,
 // ever — raw `fetch` only. Detailed multi-sentence steps need more headroom than the
@@ -8,6 +16,8 @@ import { ANTHROPIC_API_URL, ANTHROPIC_MODEL, anthropicHeaders, describeAnthropic
 const MAX_TOKENS = 4096;
 // 10 category recipes (vs. 4 fridge recipes) need proportionally more room.
 const CATEGORY_MAX_TOKENS = 6800;
+
+type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
 
 export type RecipeIngredient = { nom: string; quantite: string };
 
@@ -75,7 +85,7 @@ type AnthropicMessageResponse = {
   content: { type: string; text?: string }[];
 };
 
-function buildSystemPrompt(profile: RecipeProfile): string {
+function buildSystemPrompt(profile: RecipeProfile, locale: Locale): string {
   const lines = [
     'Tu es un chef nutritionniste qui propose des recettes savoureuses, réalistes et faciles à réaliser à la maison.',
     '',
@@ -91,7 +101,7 @@ function buildSystemPrompt(profile: RecipeProfile): string {
   if (profile.restrictions && profile.restrictions.length > 0) {
     lines.push(`Restrictions alimentaires à respecter impérativement : ${profile.restrictions.join(', ')}.`);
   }
-  return lines.join('\n');
+  return `${lines.join('\n')}\n\n${languageInstruction(locale)}`;
 }
 
 const STEPS_INSTRUCTION =
@@ -129,41 +139,46 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans aucun texte avant ou après,
 
 Si aucun ingrédient n'est identifiable sur les photos, réponds avec : {"ingredients_detectes":[],"recettes":[]}`;
 
-function requireApiKey(): string {
+function requireApiKey(t: TranslateFn): string {
   const apiKey = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY;
   if (!apiKey) {
-    throw new Error("Clé API Anthropic manquante. Ajoute EXPO_PUBLIC_ANTHROPIC_API_KEY dans ton fichier .env.");
+    throw new Error(t('recipes.errors.missingApiKey'));
   }
   return apiKey;
 }
 
-async function parseAnthropicJson<T>(response: Response, action: string): Promise<T> {
+async function parseAnthropicJson<T>(t: TranslateFn, response: Response, action: string): Promise<T> {
   if (!response.ok) {
-    throw new Error(await describeAnthropicError(response, action));
+    throw new Error(await describeAnthropicError(t, response, action));
   }
 
   let data: AnthropicMessageResponse;
   try {
     data = (await response.json()) as AnthropicMessageResponse;
   } catch {
-    throw new Error('Réponse illisible. Réessaie dans un instant.');
+    throw new Error(t('recipes.errors.unreadableResponse'));
   }
 
   const text = data.content?.[0]?.text;
   if (!text) {
-    throw new Error(`${action} n'a renvoyé aucun résultat. Réessaie.`);
+    throw new Error(t('recipes.errors.noResult', { action }));
   }
 
   try {
     return JSON.parse(stripJsonFences(text)) as T;
   } catch {
-    throw new Error('Impossible de lire le résultat. Réessaie.');
+    throw new Error(t('recipes.errors.unreadableResult'));
   }
 }
 
 /** Generates 10 recipes for a given meal-time category (`RecipeCategoryInfo.promptLabel`), matching the user's goal and dietary restrictions. */
-export async function generateCategoryRecipes(categoryPromptLabel: string, profile: RecipeProfile): Promise<SuggestionsResult> {
-  const apiKey = requireApiKey();
+export async function generateCategoryRecipes(
+  categoryPromptLabel: string,
+  profile: RecipeProfile,
+  locale: Locale,
+  t: TranslateFn
+): Promise<SuggestionsResult> {
+  const apiKey = requireApiKey(t);
 
   let response: Response;
   try {
@@ -173,22 +188,27 @@ export async function generateCategoryRecipes(categoryPromptLabel: string, profi
       body: JSON.stringify({
         model: ANTHROPIC_MODEL,
         max_tokens: CATEGORY_MAX_TOKENS,
-        system: buildSystemPrompt(profile),
+        system: buildSystemPrompt(profile, locale),
         messages: [{ role: 'user', content: buildCategoryPrompt(categoryPromptLabel) }],
       }),
     });
   } catch {
-    throw new Error('Impossible de générer des recettes. Vérifie ta connexion internet et réessaie.');
+    throw new Error(t('recipes.errors.generateNetworkError'));
   }
 
-  return parseAnthropicJson<SuggestionsResult>(response, 'La génération de recettes');
+  return parseAnthropicJson<SuggestionsResult>(t, response, t('recipes.actions.generate'));
 }
 
 /** Sends up to 3 fridge/pantry photos + profile context and returns detected ingredients + 4 feasible recipes. */
-export async function analyzeFridge(images: RecipeImage[], profile: RecipeProfile): Promise<FridgeAnalysis> {
-  const apiKey = requireApiKey();
+export async function analyzeFridge(
+  images: RecipeImage[],
+  profile: RecipeProfile,
+  locale: Locale,
+  t: TranslateFn
+): Promise<FridgeAnalysis> {
+  const apiKey = requireApiKey(t);
   if (images.length === 0) {
-    throw new Error('Ajoute au moins une photo pour lancer l’analyse.');
+    throw new Error(t('recipes.errors.noImageForAnalysis'));
   }
 
   const content: Array<
@@ -208,13 +228,13 @@ export async function analyzeFridge(images: RecipeImage[], profile: RecipeProfil
       body: JSON.stringify({
         model: ANTHROPIC_MODEL,
         max_tokens: MAX_TOKENS,
-        system: buildSystemPrompt(profile),
+        system: buildSystemPrompt(profile, locale),
         messages: [{ role: 'user', content }],
       }),
     });
   } catch {
-    throw new Error('Impossible d’analyser tes ingrédients. Vérifie ta connexion internet et réessaie.');
+    throw new Error(t('recipes.errors.fridgeNetworkError'));
   }
 
-  return parseAnthropicJson<FridgeAnalysis>(response, "L'analyse de tes ingrédients");
+  return parseAnthropicJson<FridgeAnalysis>(t, response, t('recipes.actions.fridgeAnalysis'));
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { detectSupportedLocale } from '../lib/i18n';
 import { supabase } from '../lib/supabase';
 
 export type WeightUnit = 'kg' | 'lb';
@@ -23,7 +24,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   rappelMatin: '08:00',
   rappelSoir: '20:00',
   unitePoids: 'kg',
-  langue: 'Français',
+  langue: 'fr',
   themeMode: 'system',
   objectifEauMl: 2000,
   programmeJeune: '16:8',
@@ -99,9 +100,11 @@ export function useSettings(userId: string | undefined) {
         return;
       }
 
+      // First visit: no row yet — seed `langue` from the device's language (if supported) rather
+      // than always defaulting to French, per the "detect phone language on first launch" spec.
       const { data: created } = await supabase
         .from('user_settings')
-        .insert({ user_id: userId, ...toRow(DEFAULT_SETTINGS) })
+        .insert({ user_id: userId, ...toRow({ ...DEFAULT_SETTINGS, langue: detectSupportedLocale() }) })
         .select(SETTINGS_COLUMNS)
         .single();
 

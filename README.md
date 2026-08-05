@@ -972,6 +972,45 @@ create policy "Users can delete their own avatar folder"
   );
 ```
 
+## Internationalisation (i18n)
+
+Six langues : français (référence), anglais, espagnol, allemand, italien, portugais — via [i18n-js](https://github.com/fnando/i18n) (`lib/i18n.ts`, `context/LocaleContext.tsx`).
+
+- **`locales/{fr,en,es,de,it,pt}.ts`** — un objet imbriqué par domaine (`common`, `errors`, `onboarding`, `dashboard`, `coach`, `scanner`, `progression`, `recipes`, `profile`, `badges`, `groups`). `fr.ts` est la référence : `export type TranslationSchema = typeof fr` force les 5 autres fichiers à porter exactement les mêmes clés (vérification à la compilation) — `scripts/check-locale-keys.js` fait la même vérification à l'exécution (`npm run check-locales`), à lancer après toute modification d'un fichier de locale.
+- **Placeholders** : i18n-js interpole `%{nom}` (ou `{{nom}}`), jamais `{nom}` seul — `t('dashboard.greeting', { name })`. Jamais de concaténation de chaîne pour une valeur dynamique.
+- **Pluriels** : une valeur pluralisée est un objet `{ one: '...', other: '...' }` (parfois `zero`) plutôt qu'une chaîne ICU — c'est le mécanisme réel d'i18n-js. Passer `count` dans les params sélectionne automatiquement la bonne forme : `t('groups.info.removeMemberConfirmMessage', { count })`.
+- **`context/LocaleContext.tsx`** expose `useLocale()` → `{ locale, setLocale, t }`. `locale` vient de `user_settings.langue` (résolu via `resolveStoredLocale`, qui retombe sur `detectSupportedLocale()` — langue du téléphone via `expo-localization` si supportée, sinon français — pour une valeur absente ou héritée de l'ancien format `'Français'`). `setLocale` écrit dans `user_settings.langue` et s'applique immédiatement (pas de redémarrage).
+- **Fichiers non-composants** (`constants/*.ts`, `lib/*.ts`) ne peuvent pas appeler `useLocale()` — ils reçoivent `t` (et `locale` si besoin) en paramètre explicite depuis l'appelant. Même règle pour tout module `lib/` ajouté à l'avenir.
+- **Constantes affichées vs valeurs stockées** : certains champs de `constants/questionnaire.ts`, `constants/dashboard.ts`, `constants/badges.ts` etc. sont à la fois affichés ET comparés à des valeurs Supabase (`profile.objectif`, `profile.niveau_activite`, `daily_missions.mission_key`...). Ces valeurs stockées restent en français, intactes ; seul l'affichage passe par une clé `<champ>Key` séparée (ex. `titleKey`, `labelKey`, `nameKey`) résolue via `t()`.
+- **`lib/format.ts`** — formatage sensible à la locale (`Intl` sous le capot) : `formatLongDate`, `formatFullDate`, `formatShortDate`, `formatDecimal`, `formatInteger`, `formatWeight`.
+- **Prompts IA** — les 4 appels Anthropic (coach, scanner, recettes, analyse de progression) gardent leurs prompts système en français, mais `lib/anthropic.ts`'s `languageInstruction(locale)` y ajoute une ligne demandant explicitement une réponse dans la langue active de l'utilisateur.
+- **Sélecteur de langue** — Profil > Préférences > Langue ouvre une `ChoiceModal` listant les 6 langues (`lib/i18n.ts`'s `LANGUAGE_OPTIONS`), chacune avec son drapeau et son nom dans sa propre langue (jamais traduits).
+
+SQL (si `user_settings.langue` existe déjà, ce qui est le cas dans ce projet — ajouté lors d'une tâche antérieure comme un `text` stockant un mot d'affichage) :
+
+```sql
+alter table user_settings alter column langue set default 'fr';
+update user_settings set langue = 'fr' where langue = 'Français';
+```
+
+## Groupes
+
+`app/groups.tsx` (liste), `app/group/[id].tsx` (conversation), `app/group/[id]/info.tsx` (infos/membres) — accessibles depuis la carte « Groupes » du menu **+** (`NavigationSheet.tsx`, jusque-là `comingSoon`, pointe maintenant vers `/groups`).
+
+**Tables Supabase** (voir la migration complète donnée dans la conversation qui a introduit cette fonctionnalité) : `groups`, `group_members` (unique sur `(group_id, user_id)`, `role` `admin`/`membre`, `last_read_at` pour les compteurs de non-lus), `group_messages` (suppression douce via `deleted_at`, `reply_to_id` pour les réponses citées), `message_reactions` (unique sur `(message_id, user_id, emoji)`), `message_reports`, `blocked_users`. RLS sur les six tables, avec une fonction `is_group_member(gid uuid) security definer` pour éviter la récursion des policies de `group_members` (une policy de lecture sur `group_members` qui interrogerait elle-même `group_members` retriggerait indéfiniment la même policy). Bucket privé `group-images` (objets préfixés `{group_id}/...`), policies utilisant la même fonction `is_group_member`.
+
+**`hooks/useGroups.ts`** — liste des groupes de l'utilisateur (rôle, nombre de membres, aperçu du dernier message, compteur de non-lus calculé côté client depuis `last_read_at`), `joinByCode` (vérifie l'existence du code et la non-appartenance avant d'insérer), `createGroup` (génère un code à 6 caractères alphanumériques uniques via `lib/groups.ts`, insère le créateur comme `admin`).
+
+**`hooks/useGroupMessages.ts`** — messages paginés (50 par page, `loadMore` sur scroll), abonnement Supabase Realtime (`postgres_changes` sur `group_messages`, filtré par `group_id`, nettoyé au démontage), envoi optimiste (message local affiché avant confirmation serveur, retiré en cas d'échec), suppression douce, signalement. Les URLs signées des images (bucket privé) sont résolues par lot via `createSignedUrls`. `markAsRead()` met à jour `last_read_at` à l'ouverture et à la sortie de l'écran.
+
+**`hooks/useMessageReactions.ts`** — réactions en temps réel groupées par message + emoji, avec la liste des prénoms de ceux qui ont réagi (appui long sur une pilule). `toggleReaction` ajoute ou retire la réaction de l'utilisateur courant.
+
+**`hooks/useBlockedUsers.ts`** — liste de blocage de l'utilisateur courant ; les messages d'un membre bloqué sont filtrés côté client dans `app/group/[id].tsx`, jamais supprimés côté serveur (le blocage est local et réversible seulement en supprimant la ligne `blocked_users`, sans interface de déblocage pour l'instant).
+
+**Écran conversation** — liste inversée avec séparateurs de date (« Aujourd'hui »/« Hier »/date) et regroupement des messages consécutifs du même auteur, calculés dans `buildListItems` (parcours chronologique puis ré-inversion, pour raisonner simplement sur l'ordre plutôt que sur l'arithmétique d'index d'une liste inversée). Bulles avec bandeau de réponse citée (tap pour défiler jusqu'à l'original et le surligner brièvement), image 200px tapable pour un aperçu plein écran (`ImageViewerModal`), pilules de réactions. Un appui long ouvre `MessageActionSheet` — une feuille modale en bas d'écran (même famille que `ChoiceModal`) plutôt qu'une barre flottante positionnée au-dessus de la bulle : plus robuste dans une liste qui défile, cohérent avec le reste des interactions "appui long" de l'app. Répondre est accessible depuis ce menu (le glissement latéral décrit dans la demande n'a pas été implémenté — aucune autre interaction de l'app ne repose sur un geste de balayage, et `react-native-gesture-handler`/`react-native-reanimated` ne sont utilisés nulle part ailleurs dans le code ; le menu long-press couvre le même besoin sans introduire un nouveau pattern d'interaction). Envoi d'image via `expo-image-picker` (galerie) + `expo-image-manipulator` (compression) + `lib/storageUpload.ts`.
+
+**Écran infos** — nom/description, code avec copie et partage natif, liste des membres (initiale, badge admin). Actions destructrices avec double confirmation (même pattern que la réinitialisation de progression dans `profil.tsx` : deux `showConfirm` enchaînés) pour retirer un membre et supprimer le groupe ; confirmation simple pour bloquer et quitter.
+
 ## Visuels
 
 `app.json` référence `./assets/icon.png`, `./assets/splash-icon.png` (splash, `resizeMode: "contain"`, fond `#0a0d0c`) et `./assets/adaptive-icon.png` (icône adaptative Android, même fond).
@@ -1020,3 +1059,5 @@ Toutes les couleurs sont importées depuis `constants/theme.ts` — aucune coule
 - Brancher `expo-notifications` sur les préférences de `profil.tsx` (switch + rappels matin/soir) — pour l'instant elles s'enregistrent sans déclencher aucune notification.
 - Brancher RevenueCat pour que "Formule" et "Prochain renouvellement" (`components/profil/SubscriptionCard.tsx`) affichent de vraies données plutôt que des valeurs provisoires.
 - Décider si/où réutiliser `AppImage.tsx`.
+- Groupes : pas d'interface de déblocage (`blocked_users` n'a qu'un insert), pas d'écran de modération pour `message_reports`, pas de promotion d'un membre au rôle admin après la création du groupe.
+- Le classement et les défis entre groupes (mentionnés comme fonctionnalité liée aux Groupes) restent à spécifier séparément.

@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 type ChatInputProps = {
@@ -14,6 +15,7 @@ type ChatInputProps = {
 
 export default function ChatInput({ value, onChangeText, onSend, disabled }: ChatInputProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const canSend = value.trim().length > 0 && !disabled;
 
@@ -22,7 +24,7 @@ export default function ChatInput({ value, onChangeText, onSend, disabled }: Cha
       <TextInput
         value={value}
         onChangeText={onChangeText}
-        placeholder="Écris un message..."
+        placeholder={t('coach.inputPlaceholder')}
         placeholderTextColor={colors.textTertiary}
         style={styles.input}
         multiline
@@ -30,7 +32,7 @@ export default function ChatInput({ value, onChangeText, onSend, disabled }: Cha
       />
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Envoyer"
+        accessibilityLabel={t('coach.send')}
         onPress={onSend}
         disabled={!canSend}
         style={({ pressed }) => [

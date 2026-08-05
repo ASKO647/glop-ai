@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { computeGlassCount, formatLiters, WATER_GLASS_ML } from '../../constants/hydration';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 type HydrationCardProps = {
@@ -22,6 +23,7 @@ export default function HydrationCard({
   onLongPressHeader,
 }: HydrationCardProps) {
   const { colors } = useTheme();
+  const { t, locale } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const glassCount = computeGlassCount(goalMl);
   const filledGlasses = Math.min(glassCount, Math.round(totalMl / WATER_GLASS_ML));
@@ -38,7 +40,10 @@ export default function HydrationCard({
     <View style={styles.card}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Hydratation — ${formatLiters(totalMl)} sur ${formatLiters(goalMl)} litres — appui long pour modifier l'objectif`}
+        accessibilityLabel={t('dashboard.hydration.headerAccessibility', {
+          current: formatLiters(totalMl, locale),
+          goal: formatLiters(goalMl, locale),
+        })}
         onLongPress={onLongPressHeader}
         delayLongPress={400}
         style={({ pressed }) => [styles.header, pressed && styles.headerPressed]}
@@ -46,9 +51,9 @@ export default function HydrationCard({
         <View style={styles.iconBox}>
           <Droplet color={colors.accent} size={18} />
         </View>
-        <Text style={styles.title}>Hydratation</Text>
+        <Text style={styles.title}>{t('dashboard.hydration.title')}</Text>
         <Text style={styles.value}>
-          {formatLiters(totalMl)} / {formatLiters(goalMl)} L
+          {t('dashboard.hydration.valueDisplay', { current: formatLiters(totalMl, locale), goal: formatLiters(goalMl, locale) })}
         </Text>
       </Pressable>
 
@@ -63,7 +68,7 @@ export default function HydrationCard({
             <Pressable
               key={index}
               accessibilityRole="button"
-              accessibilityLabel={`Verre ${index + 1} sur ${glassCount}`}
+              accessibilityLabel={t('dashboard.hydration.glassAccessibility', { index: index + 1, total: glassCount })}
               accessibilityState={{ selected: filled }}
               onPress={() => handleGlassPress(index)}
               hitSlop={4}
@@ -86,14 +91,14 @@ export default function HydrationCard({
           onPress={() => onQuickAdd(250)}
           style={({ pressed }) => [styles.quickPill, pressed && styles.quickPillPressed]}
         >
-          <Text style={styles.quickLabel}>+ 250 ml</Text>
+          <Text style={styles.quickLabel}>{t('dashboard.hydration.quickAdd', { ml: 250 })}</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
           onPress={() => onQuickAdd(500)}
           style={({ pressed }) => [styles.quickPill, pressed && styles.quickPillPressed]}
         >
-          <Text style={styles.quickLabel}>+ 500 ml</Text>
+          <Text style={styles.quickLabel}>{t('dashboard.hydration.quickAdd', { ml: 500 })}</Text>
         </Pressable>
       </View>
     </View>

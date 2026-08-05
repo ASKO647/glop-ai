@@ -11,6 +11,7 @@ import { appImage } from '../../constants/images';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useWeeklyWorkouts } from '../../hooks/useWeeklyWorkouts';
@@ -19,6 +20,7 @@ export default function WorkoutTabScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { profile, loading: profileLoading } = useProfile();
   const { completedByDate, loading: historyLoading, refetch: refetchHistory } = useWeeklyWorkouts(user?.id);
@@ -45,9 +47,12 @@ export default function WorkoutTabScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <AppImage source={appImage('plan-hero.jpg')} style={styles.banner} overlay={0.5} />
 
-        <Text style={styles.pageTitle}>Séance du jour</Text>
+        <Text style={styles.pageTitle}>{t('dashboard.workout.todayTitle')}</Text>
         <Text style={styles.subtitle}>
-          Recommandée selon ton objectif{profile?.frequence_entrainement ? ` · ${profile.frequence_entrainement}/sem` : ''}
+          {t('dashboard.workout.subtitle')}
+          {profile?.frequence_entrainement
+            ? t('dashboard.workout.perWeekSuffix', { frequency: profile.frequence_entrainement })
+            : ''}
           {profile?.lieu_entrainement ? ` · ${profile.lieu_entrainement}` : ''}
         </Text>
 
@@ -55,12 +60,12 @@ export default function WorkoutTabScreen() {
           {doneToday && (
             <View style={styles.doneBadge}>
               <CheckCircle2 color={colors.accent} size={14} />
-              <Text style={styles.doneBadgeText}>Terminée aujourd'hui</Text>
+              <Text style={styles.doneBadgeText}>{t('dashboard.workout.doneToday')}</Text>
             </View>
           )}
 
-          <Text style={styles.sessionTitle}>{session.title}</Text>
-          <Text style={styles.muscles}>{session.muscles}</Text>
+          <Text style={styles.sessionTitle}>{t(session.titleKey)}</Text>
+          <Text style={styles.muscles}>{t(session.musclesKey)}</Text>
 
           <View style={styles.metaRow}>
             <View style={styles.metaItem}>
@@ -75,9 +80,9 @@ export default function WorkoutTabScreen() {
 
           <View style={styles.exercisesList}>
             {session.exercises.map((exercise) => (
-              <View key={exercise.name} style={styles.exerciseRow}>
+              <View key={exercise.nameKey} style={styles.exerciseRow}>
                 <AppImage source={getExerciseThumbnail(exercise.name)} style={styles.exerciseThumbnail} overlay={0.3} />
-                <Text style={styles.exerciseName}>{exercise.name}</Text>
+                <Text style={styles.exerciseName}>{t(exercise.nameKey)}</Text>
                 <Text style={styles.exerciseDetail}>
                   {exercise.sets} x {exercise.reps}
                 </Text>
@@ -86,14 +91,14 @@ export default function WorkoutTabScreen() {
           </View>
 
           <Button
-            label={doneToday ? 'Refaire la séance' : 'Commencer'}
+            label={doneToday ? t('dashboard.workout.redo') : t('dashboard.workout.start')}
             variant={doneToday ? 'secondary' : 'primary'}
             onPress={() => router.push(`/workout/session/${session.id}`)}
           />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Cette semaine</Text>
+          <Text style={styles.sectionTitle}>{t('dashboard.workout.thisWeek')}</Text>
           {historyLoading ? (
             <ActivityIndicator color={colors.accent} />
           ) : (

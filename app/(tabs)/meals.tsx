@@ -9,7 +9,9 @@ import { appImage } from '../../constants/images';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale, type Locale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { formatLongDate } from '../../lib/format';
 import { supabase } from '../../lib/supabase';
 
 const MEAL_BREAKFAST_IMAGE = appImage('meal-breakfast.jpg');
@@ -39,14 +41,14 @@ type DayGroup = {
   meals: Meal[];
 };
 
-function formatDayLabel(iso: string): string {
-  if (iso === todayISODate()) return "Aujourd'hui";
-  if (iso === isoDaysAgo(1)) return 'Hier';
-  const label = new Date(iso).toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
+function formatDayLabel(
+  iso: string,
+  t: (key: string, params?: Record<string, string | number>) => string,
+  locale: Locale
+): string {
+  if (iso === todayISODate()) return t('common.today');
+  if (iso === isoDaysAgo(1)) return t('profile.meals.yesterday');
+  const label = formatLongDate(new Date(iso), locale);
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
@@ -54,6 +56,7 @@ export default function MealsScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { t, locale } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [groups, setGroups] = useState<DayGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,7 +86,7 @@ export default function MealsScreen() {
         });
         const result: DayGroup[] = Array.from(byDate.entries()).map(([date, meals]) => ({
           date,
-          label: formatDayLabel(date),
+          label: formatDayLabel(date, t, locale),
           totalKcal: meals.reduce((sum, meal) => sum + meal.kcal, 0),
           meals,
         }));
@@ -108,7 +111,7 @@ export default function MealsScreen() {
         >
           <ArrowLeft color={colors.textPrimary} size={22} />
         </Pressable>
-        <Text style={styles.headerTitle}>Mes repas</Text>
+        <Text style={styles.headerTitle}>{t('common.navItems.meals')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -119,8 +122,8 @@ export default function MealsScreen() {
       ) : groups.length === 0 ? (
         <View style={styles.centered}>
           <UtensilsCrossed color={colors.textTertiary} size={32} />
-          <Text style={styles.emptyTitle}>Aucun repas enregistré</Text>
-          <Text style={styles.emptyText}>Scanne un repas pour commencer à suivre ton alimentation.</Text>
+          <Text style={styles.emptyTitle}>{t('profile.meals.emptyTitle')}</Text>
+          <Text style={styles.emptyText}>{t('profile.meals.emptyText')}</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>

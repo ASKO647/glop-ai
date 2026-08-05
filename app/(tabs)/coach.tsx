@@ -8,16 +8,18 @@ import TypingIndicator from '../../components/coach/TypingIndicator';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useCoachMessages } from '../../hooks/useCoachMessages';
 
-const SUGGESTIONS = ['Comment perdre du gras ?', 'Que manger ce soir ?', 'Je manque de motivation'];
+const SUGGESTION_KEYS = ['loseFat', 'dinner', 'motivation'] as const;
 
 export default function CoachScreen() {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { messages, loading, sending, send } = useCoachMessages(user?.id, profile);
   const [draft, setDraft] = useState('');
@@ -35,10 +37,10 @@ export default function CoachScreen() {
           <Text style={styles.avatarText}>C</Text>
         </View>
         <View>
-          <Text style={styles.headerTitle}>Coach IA</Text>
+          <Text style={styles.headerTitle}>{t('coach.headerTitle')}</Text>
           <View style={styles.statusRow}>
             <View style={styles.statusDot} />
-            <Text style={styles.statusText}>En ligne</Text>
+            <Text style={styles.statusText}>{t('coach.online')}</Text>
           </View>
         </View>
       </View>
@@ -50,12 +52,13 @@ export default function CoachScreen() {
           </View>
         ) : messages.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>Pose ta première question</Text>
-            <Text style={styles.emptyText}>Ton coach IA est là pour t'aider, à tout moment.</Text>
+            <Text style={styles.emptyTitle}>{t('coach.emptyTitle')}</Text>
+            <Text style={styles.emptyText}>{t('coach.emptyText')}</Text>
             <View style={styles.suggestions}>
-              {SUGGESTIONS.map((suggestion) => (
-                <SuggestionChip key={suggestion} label={suggestion} onPress={() => handleSend(suggestion)} />
-              ))}
+              {SUGGESTION_KEYS.map((key) => {
+                const label = t(`coach.suggestions.${key}`);
+                return <SuggestionChip key={key} label={label} onPress={() => handleSend(label)} />;
+              })}
             </View>
           </View>
         ) : (
