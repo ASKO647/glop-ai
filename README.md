@@ -318,6 +318,9 @@ components/
     NumberStepperModal.tsx       Stepper numérique sans clavier (±step, appui long pour défiler,
                               pilules de raccourci optionnelles) — partagé par le poids du jour
                               (Progression) et le poids objectif (Profil)
+    TextInputModal.tsx            Modale d'édition texte générique (titre, sous-titre facultatif,
+                              champ, Annuler/Enregistrer, erreur async sous le champ, spinner) —
+                              Prénom/Nom/Nom d'utilisateur (Profil)
     index.ts
   profil/
     ProfileHeader.tsx           Avatar (initiale) + email + badge Premium/Gratuit + 3 stats
@@ -334,12 +337,17 @@ components/
     ReferralCard.tsx              Carte de parrainage (code, copie, partage, nombre de filleuls)
     ReferralCodeModal.tsx         Saisie d'un code de parrainage à rédimer
     DeleteAccountModal.tsx        Confirmation par saisie du mot "SUPPRIMER"
+    EmailChangeModal.tsx          Explication + nouvel email + `supabase.auth.updateUser` ; reste
+                              ouverte après l'envoi pour afficher la confirmation, contrairement à
+                              `TextInputModal`
 
 constants/
   theme.ts                   Couleurs, rayons, espacements, typographie — source unique de vérité
+  profile.ts                   `getDisplayName(profile, user)` — prénom, sinon nom d'utilisateur,
+                              sinon partie locale de l'email dérivée et capitalisée ; utilisé par
+                              le dashboard et l'en-tête du profil
   questionnaire.ts            Les 15 questions (id, type, options)
-  dashboard.ts                 Logique/données pures du dashboard : nom d'affichage (dérivé de
-                              l'email, pas de champ prénom en base), jour du programme (90j),
+  dashboard.ts                 Logique/données pures du dashboard : jour du programme (90j),
                               missions par défaut (cibles adaptées à `frequence_entrainement` et
                               `objectif`), cibles calories/macros (Mifflin-St Jeor + multiplicateur
                               d'activité + ajustement objectif/vitesse), catégories et séances de
@@ -416,7 +424,7 @@ Le bouton "Supprimer mon compte" (`profil.tsx`, zone de danger) appelle `deleteA
 
 Le dashboard (`(tabs)/index.tsx`) affiche un écran de chargement tant que `ProfileContext` charge la ligne `profiles`, puis un état vide propre si aucun profil n'est trouvé (pas de crash, pas d'écran blanc).
 
-Comme `profiles` n'a pas de champ prénom, la salutation ("Salut, X") dérive un nom depuis la partie locale de l'email (`getDisplayName` dans `constants/dashboard.ts`) — à remplacer si un vrai champ nom est ajouté un jour.
+La salutation ("Salut, X") utilise `getDisplayName(profile, user)` (`constants/profile.ts`) : prénom (`profiles.prenom`) en priorité, puis nom d'utilisateur (`profiles.username`), puis repli sur la partie locale de l'email dérivée et capitalisée si aucun des deux n'est renseigné.
 
 Aucune table de streak dédiée : le streak et les 7 cercles de la semaine sont tous les deux dérivés du même historique `daily_missions` sur 30 jours (un jour compte comme "complété" si toutes les missions de ce jour-là le sont).
 
@@ -754,9 +762,11 @@ create policy "Users can delete their own saved recipes"
 
 `(tabs)/profil.tsx` fusionne l'ancien écran Paramètres (`app/settings.tsx`, supprimé) directement dans l'onglet Profil — plus d'icône engrenage, plus d'écran séparé, plus de route `/settings`. `ProfileProvider` était déjà remonté de `(tabs)/_layout.tsx` vers `app/_layout.tsx` pour cet ancien écran racine ; il reste à cet endroit (inutile de le redescendre) même si tout son contenu vit maintenant dans `(tabs)/` — ça n'a aucun effet visible, `useProfile()` fonctionne pareil dans les deux cas.
 
-Neuf sections empilées, dans l'ordre : en-tête (avatar, email, badge d'abonnement, stats), Mon abonnement, carte de parrainage, Mes objectifs, Compte, Notifications, Préférences, À propos, Mes données, Zone de danger.
+Dix sections empilées, dans l'ordre : en-tête (avatar, email, badge d'abonnement, stats), Informations personnelles, Mon abonnement, carte de parrainage, Mes objectifs, Compte, Notifications, Préférences, À propos, Mes données, Zone de danger.
 
-**En-tête** (`components/profil/ProfileHeader.tsx`) : cercle 72px avec l'initiale (dérivée de l'email via `getDisplayName`, comme sur le dashboard) ou la photo de profil si `profile.avatar_path` est renseigné, badge Premium/Gratuit, puis trois stats séparées par des traits verticaux — "Jour X / 90" (`getProgramDay`, `profile.created_at`), "X kg perdus" (`profile.poids_actuel` de l'onboarding moins la dernière entrée de `weight_logs`, jamais négatif), "X jours d'affilée" (`useMissionStreak`). Les deux dernières stats affichent "…" tant que `useWeightLogs`/`useMissionStreak` chargent, plutôt que de flasher "0" avant la vraie valeur.
+**En-tête** (`components/profil/ProfileHeader.tsx`) : cercle 72px avec l'initiale (première lettre de `getDisplayName(profile, user)`, comme sur le dashboard) ou la photo de profil si `profile.avatar_path` est renseigné, badge Premium/Gratuit, puis trois stats séparées par des traits verticaux — "Jour X / 90" (`getProgramDay`, `profile.created_at`), "X kg perdus" (`profile.poids_actuel` de l'onboarding moins la dernière entrée de `weight_logs`, jamais négatif), "X jours d'affilée" (`useMissionStreak`). Les deux dernières stats affichent "…" tant que `useWeightLogs`/`useMissionStreak` chargent, plutôt que de flasher "0" avant la vraie valeur.
+
+**Informations personnelles**, juste après l'en-tête. Quatre lignes `SettingsRow` (même carte/séparateurs que toutes les autres sections `SettingsSection` de cet écran — pas un composant dédié, le rendu demandé était déjà exactement celui-là) : Prénom, Nom, Nom d'utilisateur (affiché `@pseudo`), Email. Prénom/Nom/Nom d'utilisateur ouvrent `components/ui/TextInputModal.tsx` — modale générique réutilisable (titre, sous-titre facultatif, champ, Annuler/Enregistrer, erreur sous le champ, spinner pendant l'écriture) que n'importe quel futur champ texte du profil peut réutiliser sans nouveau composant. `onSave` est asynchrone et renvoie un message d'erreur pour garder la modale ouverte (ex. pseudo déjà pris) ou rien pour la fermer — ce qui permet à la validation de format (2-30 caractères, lettres/espaces/tirets/apostrophes pour Prénom/Nom via `\p{L}` pour couvrir les accents ; 3-20 caractères minuscules/chiffres/underscore pour le pseudo, converti en minuscules au fil de la frappe) et à la vérification d'unicité réseau du pseudo de partager le même mécanisme d'erreur. La vérification d'unicité (`eq('username', value).neq('id', user.id)`) tourne juste avant l'écriture ; une violation de contrainte unique côté base (code Postgres `23505`, en cas de course avec un autre appareil) retombe sur le même message "Ce nom d'utilisateur est déjà pris" plutôt qu'une erreur générique. La ligne Email n'est pas éditable directement : un tap ouvre `components/settings/EmailChangeModal.tsx`, qui explique qu'un changement d'email nécessite une confirmation, demande la nouvelle adresse et appelle `supabase.auth.updateUser({ email })` — contrairement à `TextInputModal`, cette modale ne se ferme pas après un envoi réussi, elle bascule sur un état "Un lien de confirmation a été envoyé à cette adresse" avec un bouton Fermer.
 
 **Photo de profil.** Le cercle d'avatar est tapable (badge appareil photo en bas à droite) et ouvre toujours `expo-image-picker` (galerie, même demande de permission que les photos de progression), qu'une photo existe déjà ou non — remplacer l'avatar est juste un nouveau tap. `hooks/useAvatar.ts` reprend exactement le pattern de `useProgressPhotos.ts` : compression `expo-image-manipulator` (512px max, JPEG qualité 0.7, `base64: true`), upload vers le bucket privé `avatars` sous `{user_id}/avatar.jpg` via `lib/storageUpload.ts` (`upsert: true` — une nouvelle photo écrase toujours l'ancienne, fichier revérifié par `.list()` avant d'écrire quoi que ce soit), chemin enregistré dans la nouvelle colonne `profiles.avatar_path`, puis affichage via `createSignedUrl` (24h). Le hook ne gère que le stockage/la colonne — c'est l'écran qui appelle `refreshProfile()` après un upload ou une suppression réussis, comme pour tout autre champ de `profiles` modifié depuis cet onglet (`updateProfileField`). Un appui long sur l'avatar (uniquement quand une photo existe) propose de la supprimer (`showConfirm`) ; `uploadAvatar` renvoie `{ ok, error? }` et l'écran affiche `error` dans une alerte en cas d'échec, même pattern que les photos de progression.
 
@@ -767,6 +777,8 @@ Comme le chemin de stockage de l'avatar est fixe (`{user_id}/avatar.jpg`, jamais
 Chaque changement s'écrit immédiatement en base : `hooks/useSettings.ts` (sur le modèle de `useWeightLogs`/`useDailyMissions`) lit `user_settings`, crée une ligne par défaut si elle n'existe pas encore, et applique chaque `update()` de façon optimiste (revert local si l'écriture échoue). Les notifications ne sont pas branchées : le switch et les rappels enregistrent la préférence sans déclencher quoi que ce soit (`// TODO: brancher expo-notifications`). Les modales de sélection à choix unique (Objectif principal, Vitesse, Entraînements par semaine) réutilisent directement les options de `constants/questionnaire.ts` via `components/settings/ChoiceModal.tsx`. La modale "Poids objectif" réutilise le stepper sans clavier de l'écran Progression (`components/ui/NumberStepperModal.tsx`, extrait pour être partagé avec `components/progression/WeightEntryModal.tsx`). "Rappel du matin"/"Rappel du soir" utilisent un stepper heure/minute maison (`components/settings/TimePickerModal.tsx`) plutôt qu'un date-picker natif — pas de nouvelle dépendance, et ça reste testable sur web.
 
 **Parrainage.** À l'inscription (`app/(onboarding)/signup.tsx`), `lib/referral.ts` génère un code de 8 caractères dérivé de l'email (ex. `LUCAS4K2` — jusqu'à 5 lettres/chiffres de la partie locale de l'email + un suffixe aléatoire complétant à 8 caractères), en vérifiant l'unicité en base avant de l'utiliser (jusqu'à 10 tentatives, puis repli sur un code entièrement aléatoire). `hooks/useReferral.ts` lit le nombre de filleuls (`referrals` où `parrain_id` = l'utilisateur) et regénère un code au vol si un profil plus ancien n'en a pas ; `redeemCode()` refuse le propre code de l'utilisateur et refuse un second parrainage (`profiles.parraine_par` déjà renseigné) avant d'insérer la ligne dans `referrals` et de mettre à jour `parraine_par`. Le bouton copie (`expo-clipboard`) et le bouton partage (`Share` de React Native) sont sur `components/settings/ReferralCard.tsx`.
+
+**Nom d'utilisateur généré à l'inscription.** `lib/username.ts` suit le même principe que `lib/referral.ts` mais avec une politique plus économe : la base dérivée de l'email (partie locale, minuscules, lettres/chiffres/underscore uniquement, tronquée à 17 caractères) est essayée seule en premier — un suffixe de 3 chiffres aléatoires n'est ajouté, puis retenté jusqu'à 10 fois, que si cette base est déjà prise. `generateUniqueUsername` tourne en parallèle de `generateUniqueReferralCode` à l'inscription (`Promise.all`) et le résultat est écrit dans `profiles.username` dès l'insertion initiale de la ligne.
 
 **Mes données.** "Exporter mes données" réunit `profile` et toutes les lignes de l'utilisateur (`weight_logs`, `daily_missions`, `meals`, `progress_photos` — métadonnées seulement, pas les fichiers Storage eux-mêmes —, `messages`, `user_settings`, `referrals`) dans un objet JSON, partagé via `Share.share()` (pas de fichier généré, le JSON est envoyé directement comme texte). "Réinitialiser ma progression" efface `weight_logs`, `daily_missions`, `meals` et `progress_photos` (+ leurs fichiers Storage) mais garde `profiles`/`messages`/`user_settings` intacts — double confirmation (deux `showConfirm` imbriqués) avant d'exécuter, contrairement à la suppression de compte qui exige de taper un mot précis ; c'est une action moins grave puisque le compte survit. `hooks/useWeightLogs.ts` et `hooks/useMissionStreak.ts` exposent maintenant un `refetch()` (leur fonction de chargement, extraite en `useCallback`) uniquement pour que l'en-tête se mette à jour juste après une réinitialisation — sans ça, "X kg perdus" et "X jours d'affilée" resteraient affichées avec les anciennes valeurs jusqu'au prochain montage de l'écran.
 
@@ -922,7 +934,11 @@ create policy "Users can delete referrals they're part of"
 alter table profiles add column code_parrainage text unique;
 alter table profiles add column parraine_par uuid references auth.users(id);
 alter table profiles add column avatar_path text;
+alter table profiles add column nom text;
+alter table profiles add column username text unique;
 ```
+
+`profiles.prenom` existait déjà avant cette colonne `nom`/`username` (ajouté hors des migrations trackées ici). `username` porte une contrainte `unique` au niveau base en plus de la vérification applicative dans `TextInputModal`/`handleSaveUsername` (`app/(tabs)/profil.tsx`) — la vérification applicative évite l'aller-retour d'erreur pour le cas courant, la contrainte base couvre la course entre deux appareils qui valideraient le même pseudo au même instant.
 
 Puis, comme pour `progress-photos`, crée un bucket **privé** nommé `avatars` (Storage → New bucket, "Public bucket" décochée) et ses policies (objets préfixés `{user_id}/...`) :
 

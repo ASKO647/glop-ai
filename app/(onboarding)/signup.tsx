@@ -16,6 +16,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { mapAuthError } from '../../lib/authErrors';
 import { generateUniqueReferralCode } from '../../lib/referral';
 import { supabase } from '../../lib/supabase';
+import { generateUniqueUsername } from '../../lib/username';
 
 const MIN_PASSWORD_LENGTH = 6;
 
@@ -65,12 +66,16 @@ export default function SignupScreen() {
       .map((id) => getOptionLabel('dietary_restrictions', id))
       .filter((label): label is string => Boolean(label));
 
-    const codeParrainage = await generateUniqueReferralCode(email.trim());
+    const [codeParrainage, username] = await Promise.all([
+      generateUniqueReferralCode(email.trim()),
+      generateUniqueUsername(email.trim()),
+    ]);
 
     const { error: profileError } = await supabase.from('profiles').insert({
       id: userId,
       email: email.trim(),
       code_parrainage: codeParrainage,
+      username,
       objectif: getOptionLabel('goal', asString(answers.goal)) ?? null,
       sexe: getOptionLabel('gender', asString(answers.gender)) ?? null,
       age: typeof answers.age === 'number' ? answers.age : null,
