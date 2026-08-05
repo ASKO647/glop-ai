@@ -9,6 +9,7 @@ import { WORKOUT_SESSIONS, todayISODate } from '../../../constants/dashboard';
 import type { Colors } from '../../../constants/theme';
 import { radii, spacing, typography } from '../../../constants/theme';
 import { useAuth } from '../../../context/AuthContext';
+import { useLocale } from '../../../context/LocaleContext';
 import { useProfile } from '../../../context/ProfileContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { useDailyMissions } from '../../../hooks/useDailyMissions';
@@ -18,8 +19,8 @@ const REST_STEP_SECONDS = 15;
 const MIN_REST_SECONDS = 0;
 const MAX_REST_SECONDS = 300;
 
-function formatTargetReps(reps: string): string {
-  return /^\d+$/.test(reps) ? `${reps} répétitions` : reps;
+function formatTargetReps(reps: string, t: (key: string, params?: Record<string, string | number>) => string): string {
+  return /^\d+$/.test(reps) ? t('dashboard.workoutSession.repsCount', { count: parseInt(reps, 10) }) : reps;
 }
 
 function formatCountdown(seconds: number): string {
@@ -33,6 +34,7 @@ export default function WorkoutSessionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = WORKOUT_SESSIONS.find((s) => s.id === id);
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const { user } = useAuth();
@@ -114,33 +116,38 @@ export default function WorkoutSessionScreen() {
           <ArrowLeft color={colors.textPrimary} size={22} />
         </Pressable>
         <Text style={styles.headerTitle} numberOfLines={1}>
-          {session?.title ?? 'Séance'}
+          {session ? t(session.titleKey) : t('dashboard.workout.fallbackTitle')}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
 
       {!session || !currentExercise ? (
         <View style={styles.centered}>
-          <Text style={styles.emptyText}>Cette séance est introuvable.</Text>
+          <Text style={styles.emptyText}>{t('dashboard.workout.notFound')}</Text>
         </View>
       ) : (
         <View style={styles.content}>
           <ProgressBar progress={overallProgress} />
           <Text style={styles.progressLabel}>
-            {completedTotal}/{totalSets} séries complétées
+            {t('dashboard.workoutSession.setsCompleted', { done: completedTotal, total: totalSets })}
           </Text>
 
           <View style={styles.exerciseCard}>
-            <Text style={styles.exerciseName}>{currentExercise.name}</Text>
+            <Text style={styles.exerciseName}>{t(currentExercise.nameKey)}</Text>
             <Text style={styles.setLabel}>
-              Série {Math.min(currentSet, currentExercise.sets)} sur {currentExercise.sets}
+              {t('dashboard.workoutSession.setProgress', {
+                current: Math.min(currentSet, currentExercise.sets),
+                total: currentExercise.sets,
+              })}
             </Text>
-            <Text style={styles.repsLabel}>Objectif : {formatTargetReps(currentExercise.reps)}</Text>
+            <Text style={styles.repsLabel}>
+              {t('dashboard.workoutSession.objective', { value: formatTargetReps(currentExercise.reps, t) })}
+            </Text>
           </View>
 
           {phase === 'resting' ? (
             <View style={styles.restCard}>
-              <Text style={styles.restTitle}>Repos</Text>
+              <Text style={styles.restTitle}>{t('dashboard.workoutSession.restTitle')}</Text>
               <Text style={styles.restCountdown}>{formatCountdown(restRemaining)}</Text>
               <View style={styles.restControls}>
                 <Pressable
@@ -160,11 +167,11 @@ export default function WorkoutSessionScreen() {
                   <Text style={styles.restStepText}>15s</Text>
                 </Pressable>
               </View>
-              <Button label="Passer le repos" variant="secondary" onPress={skipRest} />
+              <Button label={t('dashboard.workoutSession.skipRest')} variant="secondary" onPress={skipRest} />
             </View>
           ) : (
             <Button
-              label="Série terminée"
+              label={t('dashboard.workoutSession.setDone')}
               onPress={handleSetComplete}
               disabled={exerciseSetsDone}
             />
@@ -172,7 +179,7 @@ export default function WorkoutSessionScreen() {
 
           <View style={styles.navRow}>
             <Button
-              label="Précédent"
+              label={t('dashboard.workoutSession.previous')}
               variant="secondary"
               disabled={exerciseIndex === 0}
               onPress={() => goToExercise(exerciseIndex - 1)}
@@ -180,14 +187,14 @@ export default function WorkoutSessionScreen() {
             />
             {isLastExercise ? (
               <Button
-                label="Terminer"
+                label={t('dashboard.workoutSession.finish')}
                 onPress={handleFinish}
                 loading={finishing}
                 style={styles.navButton}
               />
             ) : (
               <Button
-                label="Suivant"
+                label={t('dashboard.workoutSession.next')}
                 onPress={() => goToExercise(exerciseIndex + 1)}
                 style={styles.navButton}
               />

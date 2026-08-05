@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MEAL_TYPES, type MealType } from '../../constants/dashboard';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 type MealTypePillsProps = {
@@ -13,6 +14,7 @@ type MealTypePillsProps = {
 /** Lets the user pick which of the 4 meals to log a scanned photo or recipe into, before saving. */
 export default function MealTypePills({ value, onChange }: MealTypePillsProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
@@ -29,7 +31,7 @@ export default function MealTypePills({ value, onChange }: MealTypePillsProps) {
           >
             <meal.Icon color={active ? colors.onAccent : colors.textSecondary} size={14} />
             <Text style={[styles.label, active && styles.labelActive]} numberOfLines={1}>
-              {meal.label}
+              {t(meal.labelKey)}
             </Text>
           </Pressable>
         );

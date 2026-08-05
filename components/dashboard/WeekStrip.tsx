@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View, type TextStyle, type ViewStyle } fro
 import { getCurrentWeekDays } from '../../constants/dashboard';
 import type { Colors } from '../../constants/theme';
 import { radii } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 type WeekStripProps = {
@@ -13,8 +14,9 @@ type WeekStripProps = {
 
 export default function WeekStrip({ completionByDate, selectedDate, onSelectDate }: WeekStripProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const days = getCurrentWeekDays();
+  const days = getCurrentWeekDays(t);
 
   return (
     <View style={styles.row}>

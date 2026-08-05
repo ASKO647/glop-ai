@@ -4,6 +4,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { computeExpectedEnd, formatHourMinute } from '../../constants/fasting';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import Button from '../ui/Button';
 
@@ -28,6 +29,7 @@ export default function FastingStartModal({
   onStart,
 }: FastingStartModalProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [minutesAgo, setMinutesAgo] = useState(0);
   const [anchor, setAnchor] = useState(() => new Date());
@@ -88,20 +90,22 @@ export default function FastingStartModal({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleCancel}>
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel="Fermer" onPress={handleCancel} />
+        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={handleCancel} />
 
         <View style={styles.sheet}>
-          <Text style={styles.title}>Démarrer un jeûne</Text>
+          <Text style={styles.title}>{t('dashboard.fasting.startCtaLong')}</Text>
 
           <View style={styles.startBlock}>
-            <Text style={styles.startLabel}>Début</Text>
-            <Text style={styles.startValue}>{minutesAgo === 0 ? 'Maintenant' : formatHourMinute(startAt)}</Text>
+            <Text style={styles.startLabel}>{t('dashboard.fasting.startLabel')}</Text>
+            <Text style={styles.startValue}>
+              {minutesAgo === 0 ? t('dashboard.fasting.now') : formatHourMinute(startAt)}
+            </Text>
           </View>
 
           <View style={styles.stepperRow}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Décaler le début de ${STEP_MINUTES} minutes plus tôt`}
+              accessibilityLabel={t('dashboard.fasting.shiftEarlier', { minutes: STEP_MINUTES })}
               disabled={minutesAgo >= MAX_MINUTES_AGO}
               onPressIn={() => handlePressIn(STEP_MINUTES)}
               onPressOut={() => handlePressOut(STEP_MINUTES)}
@@ -111,12 +115,12 @@ export default function FastingStartModal({
             </Pressable>
 
             <Text style={styles.minutesAgoText}>
-              {minutesAgo === 0 ? 'maintenant' : `il y a ${minutesAgo} min`}
+              {minutesAgo === 0 ? t('dashboard.fasting.agoNow') : t('dashboard.fasting.minutesAgo', { minutes: minutesAgo })}
             </Text>
 
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Décaler le début de ${STEP_MINUTES} minutes plus tard`}
+              accessibilityLabel={t('dashboard.fasting.shiftLater', { minutes: STEP_MINUTES })}
               disabled={minutesAgo <= 0}
               onPressIn={() => handlePressIn(-STEP_MINUTES)}
               onPressOut={() => handlePressOut(-STEP_MINUTES)}
@@ -127,11 +131,11 @@ export default function FastingStartModal({
           </View>
 
           <View style={styles.endBlock}>
-            <Text style={styles.endLabel}>Fin prévue à</Text>
+            <Text style={styles.endLabel}>{t('dashboard.fasting.endLabelStandalone')}</Text>
             <Text style={styles.endValue}>{formatHourMinute(expectedEnd)}</Text>
           </View>
 
-          <Button label="Démarrer" onPress={handleStart} loading={saving} />
+          <Button label={t('dashboard.fasting.startShort')} onPress={handleStart} loading={saving} />
         </View>
       </View>
     </Modal>

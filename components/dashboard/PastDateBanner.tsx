@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 type PastDateBannerProps = {
@@ -11,16 +12,17 @@ type PastDateBannerProps = {
 
 export default function PastDateBanner({ label, onReset }: PastDateBannerProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
     <View style={styles.row}>
       <Text style={styles.text} numberOfLines={1}>
-        Tu consultes le {label}
+        {t('dashboard.pastDate.viewing', { date: label })}
       </Text>
       <Pressable accessibilityRole="button" onPress={onReset} hitSlop={8}>
         {({ pressed }) => (
-          <Text style={[styles.link, pressed && styles.linkPressed]}>Revenir à aujourd'hui</Text>
+          <Text style={[styles.link, pressed && styles.linkPressed]}>{t('dashboard.pastDate.reset')}</Text>
         )}
       </Pressable>
     </View>

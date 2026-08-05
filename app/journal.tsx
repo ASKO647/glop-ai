@@ -24,19 +24,23 @@ import {
 import type { Colors } from '../constants/theme';
 import { radii, spacing, typography } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
+import { useLocale } from '../context/LocaleContext';
 import { useProfile } from '../context/ProfileContext';
 import { useTheme } from '../context/ThemeContext';
 import { useMeals, type Meal } from '../hooks/useMeals';
 import { showAlert, showConfirm } from '../lib/alert';
-
-const MOVE_TO_OPTIONS: ChoiceOption[] = MEAL_TYPES.map((m) => ({ id: m.id, label: m.label }));
 
 export default function JournalScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { profile } = useProfile();
   const { colors } = useTheme();
+  const { t, locale } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const MOVE_TO_OPTIONS: ChoiceOption[] = useMemo(
+    () => MEAL_TYPES.map((m) => ({ id: m.id, label: t(m.labelKey) })),
+    [t]
+  );
 
   const [selectedDate, setSelectedDate] = useState(todayISODate());
   const isToday = selectedDate === todayISODate();
@@ -76,7 +80,7 @@ export default function JournalScreen() {
     const ok = await addMeal({ ...input, mealType: addFoodMealType });
     setAddingFood(false);
     if (ok) setAddFoodMealType(null);
-    else showAlert('Erreur', "Impossible d'ajouter cet aliment. Réessaie.");
+    else showAlert(t('common.error'), t('dashboard.errors.addFoodFailed'));
   };
 
   const handleEditSave = async (patch: { portion: string; kcal: number }) => {
@@ -85,14 +89,19 @@ export default function JournalScreen() {
     const ok = await updateMeal(editMeal.id, patch);
     setSavingEdit(false);
     if (ok) setEditMeal(null);
-    else showAlert('Erreur', 'Impossible de modifier cet aliment. Réessaie.');
+    else showAlert(t('common.error'), t('dashboard.errors.editFoodFailed'));
   };
 
   const handleDeleteMeal = (meal: Meal) => {
-    showConfirm('Supprimer cet aliment ?', `"${meal.name}" sera retiré de ton journal.`, 'Supprimer', async () => {
-      const ok = await deleteMeal(meal.id);
-      if (!ok) showAlert('Erreur', 'Impossible de supprimer cet aliment. Réessaie.');
-    });
+    showConfirm(
+      t('dashboard.meals.deleteConfirmTitle'),
+      t('dashboard.meals.deleteConfirmMessage', { name: meal.name }),
+      t('dashboard.actions.delete'),
+      async () => {
+        const ok = await deleteMeal(meal.id);
+        if (!ok) showAlert(t('common.error'), t('dashboard.errors.deleteFoodFailed'));
+      }
+    );
   };
 
   const handleMoveMeal = async (option: ChoiceOption) => {
@@ -117,7 +126,7 @@ export default function JournalScreen() {
         >
           <ArrowLeft color={colors.textPrimary} size={22} />
         </Pressable>
-        <Text style={styles.headerTitle}>Journal alimentaire</Text>
+        <Text style={styles.headerTitle}>{t('dashboard.journal.title')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -125,7 +134,7 @@ export default function JournalScreen() {
         <View style={styles.dateNav}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Jour précédent"
+            accessibilityLabel={t('dashboard.journal.prevDay')}
             onPress={() => setSelectedDate((d) => shiftISODate(d, -1))}
             hitSlop={8}
             style={({ pressed }) => [styles.dateArrow, pressed && styles.pressed]}
@@ -135,12 +144,12 @@ export default function JournalScreen() {
 
           <View style={styles.dateCenter}>
             <Text style={styles.dateLabel} numberOfLines={1}>
-              {isToday ? "Aujourd'hui" : formatDisplayDate(selectedDate)}
+              {isToday ? t('common.today') : formatDisplayDate(selectedDate, locale)}
             </Text>
             {!isToday && (
               <Pressable accessibilityRole="button" onPress={() => setSelectedDate(todayISODate())} hitSlop={6}>
                 {({ pressed }) => (
-                  <Text style={[styles.todayLink, pressed && styles.todayLinkPressed]}>Aujourd'hui</Text>
+                  <Text style={[styles.todayLink, pressed && styles.todayLinkPressed]}>{t('common.today')}</Text>
                 )}
               </Pressable>
             )}
@@ -148,7 +157,7 @@ export default function JournalScreen() {
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Jour suivant"
+            accessibilityLabel={t('dashboard.journal.nextDay')}
             accessibilityState={{ disabled: isToday }}
             disabled={isToday}
             onPress={() => setSelectedDate((d) => shiftISODate(d, 1))}
@@ -163,18 +172,18 @@ export default function JournalScreen() {
           <View style={styles.summaryTopRow}>
             <View style={styles.summaryInfo}>
               <Text style={styles.summaryEyebrow}>
-                {isToday ? "AUJOURD'HUI" : formatDisplayDate(selectedDate).toUpperCase()}
+                {isToday ? t('common.today') : formatDisplayDate(selectedDate, locale)}
               </Text>
               <Text style={styles.summaryValue}>{Math.max(0, Math.round(caloriesRemaining))}</Text>
-              <Text style={styles.summaryUnit}>kcal restantes</Text>
+              <Text style={styles.summaryUnit}>{t('dashboard.calories.remainingUnit')}</Text>
             </View>
             <CalorieRing percent={percent} />
           </View>
 
           <View style={styles.summaryMacros}>
-            <MacroBar label="Protéines" current={totals.proteines} target={macroTargets.proteines} />
-            <MacroBar label="Glucides" current={totals.glucides} target={macroTargets.glucides} />
-            <MacroBar label="Lipides" current={totals.lipides} target={macroTargets.lipides} />
+            <MacroBar label={t('dashboard.macros.protein')} current={totals.proteines} target={macroTargets.proteines} />
+            <MacroBar label={t('dashboard.macros.carbs')} current={totals.glucides} target={macroTargets.glucides} />
+            <MacroBar label={t('dashboard.macros.fat')} current={totals.lipides} target={macroTargets.lipides} />
           </View>
         </View>
 
@@ -198,7 +207,7 @@ export default function JournalScreen() {
         )}
 
         <View style={styles.totalsCard}>
-          <Text style={styles.totalsTitle}>Total du jour</Text>
+          <Text style={styles.totalsTitle}>{t('dashboard.journal.totalsTitle')}</Text>
           <View style={styles.totalsRow}>
             <View style={styles.totalItem}>
               <Text style={styles.totalValue}>{totals.kcal}</Text>
@@ -206,15 +215,15 @@ export default function JournalScreen() {
             </View>
             <View style={styles.totalItem}>
               <Text style={styles.totalValue}>{totals.proteines}g</Text>
-              <Text style={styles.totalLabel}>Protéines</Text>
+              <Text style={styles.totalLabel}>{t('dashboard.macros.protein')}</Text>
             </View>
             <View style={styles.totalItem}>
               <Text style={styles.totalValue}>{totals.glucides}g</Text>
-              <Text style={styles.totalLabel}>Glucides</Text>
+              <Text style={styles.totalLabel}>{t('dashboard.macros.carbs')}</Text>
             </View>
             <View style={styles.totalItem}>
               <Text style={styles.totalValue}>{totals.lipides}g</Text>
-              <Text style={styles.totalLabel}>Lipides</Text>
+              <Text style={styles.totalLabel}>{t('dashboard.macros.fat')}</Text>
             </View>
           </View>
         </View>
@@ -256,9 +265,9 @@ export default function JournalScreen() {
 
       <ChoiceModal
         visible={moveMealTarget !== null}
-        title="Déplacer vers"
+        title={t('dashboard.actions.moveTo')}
         options={MOVE_TO_OPTIONS}
-        selectedLabel={moveMealTarget ? getMealTypeInfo(moveMealTarget.mealType).label : null}
+        selectedLabel={moveMealTarget ? t(getMealTypeInfo(moveMealTarget.mealType).labelKey) : null}
         onCancel={() => setMoveMealTarget(null)}
         onSelect={handleMoveMeal}
       />

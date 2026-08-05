@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { getMealTypeInfo, type MealType } from '../../constants/dashboard';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import Button from '../ui/Button';
 import TextField from '../ui/TextField';
@@ -32,6 +33,7 @@ function toInt(text: string): number {
 /** Manual food entry, scoped to whichever meal's "+ Ajouter un aliment" row opened it. Macros are optional. */
 export default function AddFoodModal({ visible, mealType, saving, onCancel, onSave }: AddFoodModalProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [name, setName] = useState('');
   const [portion, setPortion] = useState('');
@@ -69,50 +71,62 @@ export default function AddFoodModal({ visible, mealType, saving, onCancel, onSa
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel="Fermer" onPress={onCancel} />
+        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={onCancel} />
 
         <View style={styles.sheet}>
           <Text style={styles.title}>
-            {mealType ? `Ajouter à ${getMealTypeInfo(mealType).label.toLowerCase()}` : 'Ajouter un aliment'}
+            {mealType
+              ? t('dashboard.addFood.titleWithMealType', { mealType: t(getMealTypeInfo(mealType).labelKey) })
+              : t('dashboard.addFood.titleGeneric')}
           </Text>
 
           <ScrollView style={styles.form} contentContainerStyle={styles.formContent} showsVerticalScrollIndicator={false}>
-            <TextField label="Nom" value={name} onChangeText={setName} placeholder="ex : Poulet grillé" />
-            <TextField label="Portion" value={portion} onChangeText={setPortion} placeholder="ex : 150 g, 1 bol..." />
             <TextField
-              label="Calories"
+              label={t('dashboard.addFood.nameLabel')}
+              value={name}
+              onChangeText={setName}
+              placeholder={t('dashboard.addFood.namePlaceholder')}
+            />
+            <TextField
+              label={t('dashboard.meals.portionLabel')}
+              value={portion}
+              onChangeText={setPortion}
+              placeholder={t('dashboard.meals.portionPlaceholder')}
+            />
+            <TextField
+              label={t('dashboard.meals.caloriesLabel')}
               value={kcalText}
               onChangeText={setKcalText}
               keyboardType="number-pad"
-              placeholder="kcal"
+              placeholder={t('dashboard.meals.kcalPlaceholder')}
             />
 
-            <Text style={styles.macrosLabel}>Macros (facultatif)</Text>
+            <Text style={styles.macrosLabel}>{t('dashboard.addFood.macrosLabel')}</Text>
             <View style={styles.macrosRow}>
               <TextField
-                label="Protéines"
+                label={t('dashboard.macros.protein')}
                 value={proteinesText}
                 onChangeText={setProteinesText}
                 keyboardType="number-pad"
-                placeholder="g"
+                placeholder={t('dashboard.meals.gramsPlaceholder')}
                 style={styles.macroInput}
                 containerStyle={styles.macroField}
               />
               <TextField
-                label="Glucides"
+                label={t('dashboard.macros.carbs')}
                 value={glucidesText}
                 onChangeText={setGlucidesText}
                 keyboardType="number-pad"
-                placeholder="g"
+                placeholder={t('dashboard.meals.gramsPlaceholder')}
                 style={styles.macroInput}
                 containerStyle={styles.macroField}
               />
               <TextField
-                label="Lipides"
+                label={t('dashboard.macros.fat')}
                 value={lipidesText}
                 onChangeText={setLipidesText}
                 keyboardType="number-pad"
-                placeholder="g"
+                placeholder={t('dashboard.meals.gramsPlaceholder')}
                 style={styles.macroInput}
                 containerStyle={styles.macroField}
               />
@@ -120,9 +134,15 @@ export default function AddFoodModal({ visible, mealType, saving, onCancel, onSa
           </ScrollView>
 
           <View style={styles.actions}>
-            <Button label="Annuler" variant="secondary" onPress={onCancel} disabled={saving} style={styles.actionButton} />
             <Button
-              label="Ajouter"
+              label={t('common.cancel')}
+              variant="secondary"
+              onPress={onCancel}
+              disabled={saving}
+              style={styles.actionButton}
+            />
+            <Button
+              label={t('dashboard.addFood.addButton')}
               onPress={handleSave}
               loading={saving}
               disabled={!isValid}

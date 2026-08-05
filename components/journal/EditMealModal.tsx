@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import type { Meal } from '../../hooks/useMeals';
 import Button from '../ui/Button';
@@ -18,6 +19,7 @@ type EditMealModalProps = {
 /** Editing a logged food is scoped to quantity/calories — everything else (name, macros) stays as scanned/entered. */
 export default function EditMealModal({ visible, meal, saving, onCancel, onSave }: EditMealModalProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [portion, setPortion] = useState('');
   const [kcalText, setKcalText] = useState('');
@@ -40,26 +42,37 @@ export default function EditMealModal({ visible, meal, saving, onCancel, onSave 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel="Fermer" onPress={onCancel} />
+        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={onCancel} />
 
         <View style={styles.sheet}>
           <Text style={styles.title} numberOfLines={1}>
-            {meal?.name ?? 'Modifier'}
+            {meal?.name ?? t('dashboard.editMeal.fallbackTitle')}
           </Text>
 
-          <TextField label="Portion" value={portion} onChangeText={setPortion} placeholder="ex : 150 g, 1 bol..." />
           <TextField
-            label="Calories"
+            label={t('dashboard.meals.portionLabel')}
+            value={portion}
+            onChangeText={setPortion}
+            placeholder={t('dashboard.meals.portionPlaceholder')}
+          />
+          <TextField
+            label={t('dashboard.meals.caloriesLabel')}
             value={kcalText}
             onChangeText={setKcalText}
             keyboardType="number-pad"
-            placeholder="kcal"
+            placeholder={t('dashboard.meals.kcalPlaceholder')}
           />
 
           <View style={styles.actions}>
-            <Button label="Annuler" variant="secondary" onPress={onCancel} disabled={saving} style={styles.actionButton} />
             <Button
-              label="Enregistrer"
+              label={t('common.cancel')}
+              variant="secondary"
+              onPress={onCancel}
+              disabled={saving}
+              style={styles.actionButton}
+            />
+            <Button
+              label={t('common.save')}
               onPress={handleSave}
               loading={saving}
               disabled={!isValid}

@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 type DashboardHeaderProps = {
@@ -23,6 +24,7 @@ export default function DashboardHeader({
 }: DashboardHeaderProps) {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
@@ -39,9 +41,7 @@ export default function DashboardHeader({
           <Text style={styles.greeting} numberOfLines={1}>
             {greeting}
           </Text>
-          <Text style={styles.day}>
-            Jour {programDay} sur {programLength}
-          </Text>
+          <Text style={styles.day}>{t('dashboard.header.day', { day: programDay, length: programLength })}</Text>
         </View>
       </Pressable>
 

@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 
 type MealItemMenuModalProps = {
@@ -24,12 +25,13 @@ export default function MealItemMenuModal({
   onDelete,
 }: MealItemMenuModalProps) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel="Fermer" onPress={onCancel} />
+        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={onCancel} />
 
         <View style={styles.sheet}>
           {mealName ? (
@@ -45,7 +47,7 @@ export default function MealItemMenuModal({
               style={({ pressed }) => [styles.option, pressed && styles.pressed]}
             >
               <Pencil color={colors.textPrimary} size={18} />
-              <Text style={styles.optionLabel}>Modifier</Text>
+              <Text style={styles.optionLabel}>{t('dashboard.actions.edit')}</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -53,7 +55,7 @@ export default function MealItemMenuModal({
               style={({ pressed }) => [styles.option, pressed && styles.pressed]}
             >
               <ArrowRightLeft color={colors.textPrimary} size={18} />
-              <Text style={styles.optionLabel}>Déplacer vers</Text>
+              <Text style={styles.optionLabel}>{t('dashboard.actions.moveTo')}</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -61,7 +63,7 @@ export default function MealItemMenuModal({
               style={({ pressed }) => [styles.option, pressed && styles.pressed]}
             >
               <Trash2 color={colors.danger} size={18} />
-              <Text style={[styles.optionLabel, styles.optionLabelDanger]}>Supprimer</Text>
+              <Text style={[styles.optionLabel, styles.optionLabelDanger]}>{t('dashboard.actions.delete')}</Text>
             </Pressable>
           </View>
 
@@ -70,7 +72,7 @@ export default function MealItemMenuModal({
             onPress={onCancel}
             style={({ pressed }) => [styles.cancel, pressed && styles.pressed]}
           >
-            <Text style={styles.cancelLabel}>Annuler</Text>
+            <Text style={styles.cancelLabel}>{t('common.cancel')}</Text>
           </Pressable>
         </View>
       </View>

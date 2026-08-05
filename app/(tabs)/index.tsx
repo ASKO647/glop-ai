@@ -52,6 +52,7 @@ import { getDisplayName } from '../../constants/profile';
 import type { Colors } from '../../constants/theme';
 import { spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { useProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useBadges } from '../../hooks/useBadges';
@@ -62,17 +63,29 @@ import { useSettings } from '../../hooks/useSettings';
 import { useWaterLogs } from '../../hooks/useWaterLogs';
 import { useWeightLogs } from '../../hooks/useWeightLogs';
 import { showAlert, showConfirm } from '../../lib/alert';
+import { formatWeight } from '../../lib/format';
 
 const RECOMMENDED_COUNT = 3;
-const MOVE_TO_OPTIONS: ChoiceOption[] = MEAL_TYPES.map((m) => ({ id: m.id, label: m.label }));
-const FASTING_PROGRAM_OPTIONS: ChoiceOption[] = FASTING_PROGRAMS.map((p) => ({ id: p.id, label: p.label }));
 
 export default function DashboardScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { t, locale } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { profile, loading: profileLoading } = useProfile();
+  const MOVE_TO_OPTIONS: ChoiceOption[] = useMemo(
+    () => MEAL_TYPES.map((m) => ({ id: m.id, label: t(m.labelKey) })),
+    [t]
+  );
+  const FASTING_PROGRAM_OPTIONS: ChoiceOption[] = useMemo(
+    () =>
+      FASTING_PROGRAMS.map((p) => ({
+        id: p.id,
+        label: p.id === 'custom' ? t('dashboard.fasting.customLabel') : p.label,
+      })),
+    [t]
+  );
   const [selectedDate, setSelectedDate] = useState(todayISODate());
   const isViewingPast = selectedDate !== todayISODate();
   const { missions, completionByDate, loading: missionsLoading, incrementMission } = useDailyMissions(
@@ -137,7 +150,7 @@ export default function DashboardScreen() {
     const ok = await addMeal({ ...input, mealType: addFoodMealType });
     setAddingFood(false);
     if (ok) setAddFoodMealType(null);
-    else showAlert('Erreur', "Impossible d'ajouter cet aliment. Réessaie.");
+    else showAlert(t('common.error'), t('dashboard.errors.addFoodFailed'));
   };
 
   const handleEditSave = async (patch: { portion: string; kcal: number }) => {
@@ -146,14 +159,19 @@ export default function DashboardScreen() {
     const ok = await updateMeal(editMeal.id, patch);
     setSavingEdit(false);
     if (ok) setEditMeal(null);
-    else showAlert('Erreur', 'Impossible de modifier cet aliment. Réessaie.');
+    else showAlert(t('common.error'), t('dashboard.errors.editFoodFailed'));
   };
 
   const handleDeleteMeal = (meal: Meal) => {
-    showConfirm('Supprimer cet aliment ?', `"${meal.name}" sera retiré de ton journal.`, 'Supprimer', async () => {
-      const ok = await deleteMeal(meal.id);
-      if (!ok) showAlert('Erreur', 'Impossible de supprimer cet aliment. Réessaie.');
-    });
+    showConfirm(
+      t('dashboard.meals.deleteConfirmTitle'),
+      t('dashboard.meals.deleteConfirmMessage', { name: meal.name }),
+      t('dashboard.actions.delete'),
+      async () => {
+        const ok = await deleteMeal(meal.id);
+        if (!ok) showAlert(t('common.error'), t('dashboard.errors.deleteFoodFailed'));
+      }
+    );
   };
 
   const handleMoveMeal = async (option: ChoiceOption) => {
@@ -164,13 +182,13 @@ export default function DashboardScreen() {
 
   const handleQuickAddWater = async (ml: number) => {
     const ok = await addWater(ml);
-    if (!ok) showAlert('Erreur', "Impossible d'ajouter cette quantité d'eau. Réessaie.");
+    if (!ok) showAlert(t('common.error'), t('dashboard.errors.addWaterFailed'));
   };
 
   const handleSetWaterTotal = async (targetMl: number) => {
     const delta = targetMl - waterTotalToday;
     const ok = delta > 0 ? await addWater(delta) : delta < 0 ? await removeWater(-delta) : true;
-    if (!ok) showAlert('Erreur', "Impossible de mettre à jour l'hydratation. Réessaie.");
+    if (!ok) showAlert(t('common.error'), t('dashboard.errors.updateHydrationFailed'));
   };
 
   const handleSaveWaterGoal = async (value: number) => {
@@ -178,7 +196,7 @@ export default function DashboardScreen() {
     const ok = await updateSettings({ objectifEauMl: value });
     setSavingWaterGoal(false);
     if (ok) setWaterGoalModalVisible(false);
-    else showAlert('Erreur', "Impossible d'enregistrer l'objectif. Réessaie.");
+    else showAlert(t('common.error'), t('dashboard.errors.saveWaterGoalFailed'));
   };
 
   const resolvedFastingProgram = resolveProgramSetting(settings.programmeJeune);
@@ -188,14 +206,19 @@ export default function DashboardScreen() {
     const ok = await startFasting(startAt, settings.programmeJeune);
     setSavingFastingStart(false);
     if (ok) setFastingStartModalVisible(false);
-    else showAlert('Erreur', 'Impossible de démarrer ce jeûne. Réessaie.');
+    else showAlert(t('common.error'), t('dashboard.errors.startFastingFailed'));
   };
 
   const handleStopFasting = () => {
-    showConfirm('Terminer ce jeûne ?', 'Cette session sera enregistrée dans ton historique.', 'Terminer', async () => {
-      const ok = await stopFasting();
-      if (!ok) showAlert('Erreur', 'Impossible de terminer ce jeûne. Réessaie.');
-    });
+    showConfirm(
+      t('dashboard.fasting.stopConfirmTitle'),
+      t('dashboard.fasting.stopConfirmMessage'),
+      t('dashboard.fasting.stopConfirmButton'),
+      async () => {
+        const ok = await stopFasting();
+        if (!ok) showAlert(t('common.error'), t('dashboard.errors.stopFastingFailed'));
+      }
+    );
   };
 
   const handleSelectFastingProgram = async (option: ChoiceOption) => {
@@ -206,7 +229,7 @@ export default function DashboardScreen() {
     }
     setFastingProgramModalVisible(false);
     const ok = await updateSettings({ programmeJeune: option.id });
-    if (!ok) showAlert('Erreur', 'Impossible d\'enregistrer ce programme. Réessaie.');
+    if (!ok) showAlert(t('common.error'), t('dashboard.errors.saveFastingProgramFailed'));
   };
 
   const handleSaveCustomFastingHours = async (value: number) => {
@@ -214,7 +237,7 @@ export default function DashboardScreen() {
     const ok = await updateSettings({ programmeJeune: String(Math.round(value)) });
     setSavingFastingProgram(false);
     if (ok) setCustomFastingHoursModalVisible(false);
-    else showAlert('Erreur', 'Impossible d\'enregistrer ce programme. Réessaie.');
+    else showAlert(t('common.error'), t('dashboard.errors.saveFastingProgramFailed'));
   };
 
   useFocusEffect(
@@ -228,7 +251,7 @@ export default function DashboardScreen() {
 
   const displayName = getDisplayName(profile, user);
   const initial = (displayName ?? '?').charAt(0).toUpperCase();
-  const greeting = displayName ? `Salut, ${displayName}` : 'Salut !';
+  const greeting = displayName ? t('dashboard.greeting', { name: displayName }) : t('dashboard.greetingGeneric');
   const programDay = getProgramDay(profile?.created_at ?? null);
   const streak = useMemo(() => computeStreak(completionByDate, todayISODate()), [completionByDate]);
 
@@ -245,7 +268,7 @@ export default function DashboardScreen() {
     return filtered.slice(0, RECOMMENDED_COUNT);
   }, [category]);
 
-  const tip = getTipOfTheDay(profile?.objectif ?? null);
+  const tip = t(getTipOfTheDay(profile?.objectif ?? null));
 
   const recentBadges = useMemo(
     () =>
@@ -271,10 +294,8 @@ export default function DashboardScreen() {
   if (!profile) {
     return (
       <SafeAreaView style={styles.loadingScreen} edges={['top', 'left', 'right']}>
-        <Text style={styles.emptyTitle}>Profil introuvable</Text>
-        <Text style={styles.emptyText}>
-          Impossible de charger ton profil pour le moment. Réessaie dans un instant.
-        </Text>
+        <Text style={styles.emptyTitle}>{t('dashboard.profileNotFound.title')}</Text>
+        <Text style={styles.emptyText}>{t('dashboard.profileNotFound.message')}</Text>
       </SafeAreaView>
     );
   }
@@ -302,7 +323,7 @@ export default function DashboardScreen() {
 
         {isViewingPast && (
           <PastDateBanner
-            label={formatDisplayDate(selectedDate)}
+            label={formatDisplayDate(selectedDate, locale)}
             onReset={() => setSelectedDate(todayISODate())}
           />
         )}
@@ -317,22 +338,21 @@ export default function DashboardScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Missions du jour</Text>
+            <Text style={styles.sectionTitle}>{t('dashboard.missions.sectionTitle')}</Text>
             <Text style={styles.sectionCounter}>
-              {completedMissions}/{missions.length}
+              {t('dashboard.missions.counter', { done: completedMissions, total: missions.length })}
             </Text>
           </View>
           <View style={styles.missionsList}>
             {missionsLoading ? (
               <ActivityIndicator color={colors.accent} />
             ) : missions.length === 0 ? (
-              <Text style={styles.emptyMealsTitle}>Aucune mission enregistrée ce jour-là</Text>
+              <Text style={styles.emptyMealsTitle}>{t('dashboard.missions.emptyForDay')}</Text>
             ) : (
               missions.map((mission) => (
                 <MissionCard
                   key={mission.id}
                   missionKey={mission.mission_key}
-                  label={mission.label}
                   current={mission.current}
                   target={mission.target}
                   completed={mission.completed}
@@ -346,10 +366,10 @@ export default function DashboardScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Journal alimentaire</Text>
+            <Text style={styles.sectionTitle}>{t('dashboard.journal.title')}</Text>
             <Pressable accessibilityRole="button" onPress={() => router.push('/journal')} hitSlop={8}>
               {({ pressed }) => (
-                <Text style={[styles.link, pressed && styles.linkPressed]}>Voir le journal</Text>
+                <Text style={[styles.link, pressed && styles.linkPressed]}>{t('dashboard.journal.viewLink')}</Text>
               )}
             </Pressable>
           </View>
@@ -402,13 +422,18 @@ export default function DashboardScreen() {
         <View style={styles.section}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
             {WORKOUT_CATEGORIES.map((c) => (
-              <CategoryChip key={c.id} label={c.label} active={category === c.id} onPress={() => setCategory(c.id)} />
+              <CategoryChip
+                key={c.id}
+                label={t(c.labelKey)}
+                active={category === c.id}
+                onPress={() => setCategory(c.id)}
+              />
             ))}
           </ScrollView>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Séances recommandées</Text>
+          <Text style={styles.sectionTitle}>{t('dashboard.workout.recommendedTitle')}</Text>
           <View style={styles.sessionsList}>
             {recommendedSessions.map((session) => (
               <WorkoutCard key={session.id} session={session} />
@@ -417,18 +442,27 @@ export default function DashboardScreen() {
         </View>
 
         <View style={styles.statsRow}>
-          <StatCard label="Poids actuel" value={poidsActuel != null ? `${poidsActuel} kg` : '-'} />
-          <StatCard label="Objectif" value={poidsObjectif != null ? `${poidsObjectif} kg` : '-'} />
-          <StatCard label="Écart restant" value={ecart != null ? `${ecart} kg` : '-'} />
+          <StatCard
+            label={t('dashboard.stats.currentWeight')}
+            value={poidsActuel != null ? formatWeight(poidsActuel, 'kg', locale) : '-'}
+          />
+          <StatCard
+            label={t('dashboard.stats.target')}
+            value={poidsObjectif != null ? formatWeight(poidsObjectif, 'kg', locale) : '-'}
+          />
+          <StatCard
+            label={t('dashboard.stats.remainingGap')}
+            value={ecart != null ? formatWeight(ecart, 'kg', locale) : '-'}
+          />
         </View>
 
         {recentBadges.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Tes badges</Text>
+              <Text style={styles.sectionTitle}>{t('dashboard.badges.sectionTitle')}</Text>
               <Pressable accessibilityRole="button" onPress={() => router.push('/badges')} hitSlop={8}>
                 {({ pressed }) => (
-                  <Text style={[styles.link, pressed && styles.linkPressed]}>Voir tout</Text>
+                  <Text style={[styles.link, pressed && styles.linkPressed]}>{t('dashboard.badges.viewAllLink')}</Text>
                 )}
               </Pressable>
             </View>
@@ -486,16 +520,16 @@ export default function DashboardScreen() {
 
       <ChoiceModal
         visible={moveMealTarget !== null}
-        title="Déplacer vers"
+        title={t('dashboard.actions.moveTo')}
         options={MOVE_TO_OPTIONS}
-        selectedLabel={moveMealTarget ? getMealTypeInfo(moveMealTarget.mealType).label : null}
+        selectedLabel={moveMealTarget ? t(getMealTypeInfo(moveMealTarget.mealType).labelKey) : null}
         onCancel={() => setMoveMealTarget(null)}
         onSelect={handleMoveMeal}
       />
 
       <NumberStepperModal
         visible={waterGoalModalVisible}
-        title="Objectif quotidien"
+        title={t('dashboard.hydration.goalModalTitle')}
         initialValue={settings.objectifEauMl}
         unit="ml"
         step={WATER_GOAL_STEP_ML}
@@ -517,16 +551,20 @@ export default function DashboardScreen() {
 
       <ChoiceModal
         visible={fastingProgramModalVisible}
-        title="Programme de jeûne"
+        title={t('dashboard.fasting.programModalTitle')}
         options={FASTING_PROGRAM_OPTIONS}
-        selectedLabel={resolvedFastingProgram.programId === 'custom' ? 'Personnalisé' : resolvedFastingProgram.label}
+        selectedLabel={
+          resolvedFastingProgram.programId === 'custom'
+            ? t('dashboard.fasting.customLabel')
+            : resolvedFastingProgram.label
+        }
         onCancel={() => setFastingProgramModalVisible(false)}
         onSelect={handleSelectFastingProgram}
       />
 
       <NumberStepperModal
         visible={customFastingHoursModalVisible}
-        title="Durée personnalisée"
+        title={t('dashboard.fasting.customDurationModalTitle')}
         initialValue={resolvedFastingProgram.targetHours}
         unit="h"
         step={1}
