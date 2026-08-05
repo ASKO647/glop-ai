@@ -40,10 +40,10 @@ export default function OnboardingLayout({
   const { colors } = useTheme();
   const styles = makeStyles(colors);
 
-  // Width can't run on the native driver (it's a layout property, not opacity/transform), but
-  // this is a single 3px-tall bar animated only on step changes — cheap enough on the JS thread
-  // that pulling it off-thread wouldn't be noticeable.
-  const progressWidth = useRef(new Animated.Value(progress * 100)).current;
+  // `width` is a layout property and isn't supported by the native driver — animate `scaleX`
+  // on a full-width fill (anchored to the left via `transformOrigin`) instead, so the bar still
+  // grows from left-to-right but stays on the native thread.
+  const progressWidth = useRef(new Animated.Value(progress)).current;
   const progressFlash = useRef(new Animated.Value(1)).current;
   const buttonScale = useRef(new Animated.Value(1)).current;
   const titleOpacity = useRef(new Animated.Value(0)).current;
@@ -72,10 +72,10 @@ export default function OnboardingLayout({
 
   useEffect(() => {
     Animated.timing(progressWidth, {
-      toValue: progress * 100,
+      toValue: progress,
       duration: PROGRESS_DURATION_MS,
       easing: Easing.out(Easing.exp),
-      useNativeDriver: false,
+      useNativeDriver: true,
     }).start();
     Animated.sequence([
       Animated.timing(progressFlash, { toValue: 0.4, duration: 80, useNativeDriver: true }),
@@ -100,7 +100,7 @@ export default function OnboardingLayout({
   }, [continueDisabled]);
 
   const progressFillStyle = {
-    width: progressWidth.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }),
+    transform: [{ scaleX: progressWidth }],
     opacity: progressFlash,
   };
 
@@ -194,9 +194,11 @@ function makeStyles(colors: Colors) {
       overflow: 'hidden',
     },
     progressFill: {
+      width: '100%',
       height: 3,
       borderRadius: radii.full,
       backgroundColor: colors.accent,
+      transformOrigin: 'left',
     },
     title: {
       marginTop: spacing.lg,
