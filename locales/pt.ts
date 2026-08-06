@@ -857,6 +857,7 @@ const pt: TranslationSchema = {
       unreadableResult: 'Não foi possível ler o resultado. Tenta novamente.',
       generateNetworkError: 'Não foi possível gerar receitas. Verifica a tua ligação à internet e tenta novamente.',
       fridgeNetworkError: 'Não foi possível analisar os teus ingredientes. Verifica a tua ligação à internet e tenta novamente.',
+      timeout: 'A geração está a demorar muito tempo. Tenta novamente.',
     },
     actions: {
       generate: 'A geração de receitas',
@@ -1082,6 +1083,8 @@ const pt: TranslationSchema = {
     join: {
       title: 'Juntar-me a um grupo',
       placeholder: 'CÓDIGO',
+      pendingTitle: 'Pedido enviado',
+      pendingMessage: 'O teu pedido foi enviado ao administrador.',
     },
     create: {
       title: 'Criar um grupo',
@@ -1114,6 +1117,7 @@ const pt: TranslationSchema = {
       deleteGroupFailed: 'Não foi possível eliminar este grupo. Tenta novamente.',
       leaveFailed: 'Não foi possível sair deste grupo. Tenta novamente.',
       blockFailed: 'Não foi possível bloquear este membro. Tenta novamente.',
+      joinRequestRefused: 'O teu pedido para entrar neste grupo foi recusado.',
     },
     conversation: {
       membersCount: { one: '%{count} membro', other: '%{count} membros' },
@@ -1146,6 +1150,19 @@ const pt: TranslationSchema = {
     },
     info: {
       title: 'Informações do grupo',
+      avatarAccessibility: 'Foto do grupo',
+      bannerAccessibility: 'Banner do grupo',
+      photoPermissionDeniedTitle: 'Acesso às tuas fotos negado',
+      photoPermissionDeniedMessage: 'A GlowUp AI precisa de aceder às tuas fotos para alterar a imagem do grupo. Ativa o acesso nas definições do teu telemóvel.',
+      photoUpdateFailed: 'Não foi possível atualizar a imagem. Tenta novamente.',
+      updateFailed: 'Não foi possível atualizar o grupo. Tenta novamente.',
+      privateToggleLabel: 'Grupo privado',
+      privateToggleSubtitle: 'Entrar por código requer a tua aprovação',
+      pendingRequestsTitle: 'Pedidos pendentes',
+      acceptRequest: 'Aceitar',
+      refuseRequest: 'Recusar',
+      acceptRequestFailed: 'Não foi possível aceitar este pedido. Tenta novamente.',
+      refuseRequestFailed: 'Não foi possível recusar este pedido. Tenta novamente.',
       codeLabel: 'Código de convite',
       membersTitle: 'Membros',
       you: 'Tu',

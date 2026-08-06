@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../context/LocaleContext';
 import { useTheme } from '../context/ThemeContext';
 import { useGroups, type GroupSummary } from '../hooks/useGroups';
+import { showAlert } from '../lib/alert';
 
 type ActiveModal = 'join' | 'create' | null;
 
@@ -100,6 +101,11 @@ export default function GroupsScreen() {
         onSave={async (code) => {
           const result = await joinByCode(code);
           if (!result.ok) return result.error;
+          if (result.pending) {
+            closeModal();
+            showAlert(t('groups.join.pendingTitle'), t('groups.join.pendingMessage'));
+            return;
+          }
           if (result.groupId) openGroup(result.groupId);
         }}
       />

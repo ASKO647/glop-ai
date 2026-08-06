@@ -857,6 +857,7 @@ const de: TranslationSchema = {
       unreadableResult: 'Das Ergebnis konnte nicht gelesen werden. Versuche es erneut.',
       generateNetworkError: 'Rezepte konnten nicht generiert werden. Überprüfe deine Internetverbindung und versuche es erneut.',
       fridgeNetworkError: 'Deine Zutaten konnten nicht analysiert werden. Überprüfe deine Internetverbindung und versuche es erneut.',
+      timeout: 'Die Generierung dauert zu lange. Versuche es erneut.',
     },
     actions: {
       generate: 'Die Rezeptgenerierung',
@@ -1082,6 +1083,8 @@ const de: TranslationSchema = {
     join: {
       title: 'Gruppe beitreten',
       placeholder: 'CODE',
+      pendingTitle: 'Anfrage gesendet',
+      pendingMessage: 'Deine Anfrage wurde an den Administrator gesendet.',
     },
     create: {
       title: 'Gruppe erstellen',
@@ -1114,6 +1117,7 @@ const de: TranslationSchema = {
       deleteGroupFailed: 'Diese Gruppe konnte nicht gelöscht werden. Versuche es erneut.',
       leaveFailed: 'Diese Gruppe konnte nicht verlassen werden. Versuche es erneut.',
       blockFailed: 'Dieses Mitglied konnte nicht blockiert werden. Versuche es erneut.',
+      joinRequestRefused: 'Deine Anfrage, dieser Gruppe beizutreten, wurde abgelehnt.',
     },
     conversation: {
       membersCount: { one: '%{count} Mitglied', other: '%{count} Mitglieder' },
@@ -1146,6 +1150,19 @@ const de: TranslationSchema = {
     },
     info: {
       title: 'Gruppeninfo',
+      avatarAccessibility: 'Gruppenfoto',
+      bannerAccessibility: 'Gruppenbanner',
+      photoPermissionDeniedTitle: 'Fotozugriff verweigert',
+      photoPermissionDeniedMessage: 'GlowUp AI benötigt Zugriff auf deine Fotos, um das Gruppenbild zu ändern. Aktiviere den Zugriff in den Einstellungen deines Telefons.',
+      photoUpdateFailed: 'Das Bild konnte nicht aktualisiert werden. Versuche es erneut.',
+      updateFailed: 'Die Gruppe konnte nicht aktualisiert werden. Versuche es erneut.',
+      privateToggleLabel: 'Private Gruppe',
+      privateToggleSubtitle: 'Beitritt per Code erfordert deine Zustimmung',
+      pendingRequestsTitle: 'Ausstehende Anfragen',
+      acceptRequest: 'Annehmen',
+      refuseRequest: 'Ablehnen',
+      acceptRequestFailed: 'Diese Anfrage konnte nicht angenommen werden. Versuche es erneut.',
+      refuseRequestFailed: 'Diese Anfrage konnte nicht abgelehnt werden. Versuche es erneut.',
       codeLabel: 'Einladungscode',
       membersTitle: 'Mitglieder',
       you: 'Du',

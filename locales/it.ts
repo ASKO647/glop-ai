@@ -857,6 +857,7 @@ const it: TranslationSchema = {
       unreadableResult: 'Impossibile leggere il risultato. Riprova.',
       generateNetworkError: 'Impossibile generare ricette. Controlla la tua connessione internet e riprova.',
       fridgeNetworkError: 'Impossibile analizzare i tuoi ingredienti. Controlla la tua connessione internet e riprova.',
+      timeout: 'La generazione sta impiegando troppo tempo. Riprova.',
     },
     actions: {
       generate: 'La generazione di ricette',
@@ -1082,6 +1083,8 @@ const it: TranslationSchema = {
     join: {
       title: 'Unisciti a un gruppo',
       placeholder: 'CODICE',
+      pendingTitle: 'Richiesta inviata',
+      pendingMessage: "La tua richiesta è stata inviata all'amministratore.",
     },
     create: {
       title: 'Crea un gruppo',
@@ -1114,6 +1117,7 @@ const it: TranslationSchema = {
       deleteGroupFailed: 'Impossibile eliminare questo gruppo. Riprova.',
       leaveFailed: 'Impossibile uscire da questo gruppo. Riprova.',
       blockFailed: 'Impossibile bloccare questo membro. Riprova.',
+      joinRequestRefused: 'La tua richiesta per unirti a questo gruppo è stata rifiutata.',
     },
     conversation: {
       membersCount: { one: '%{count} membro', other: '%{count} membri' },
@@ -1146,6 +1150,19 @@ const it: TranslationSchema = {
     },
     info: {
       title: 'Info gruppo',
+      avatarAccessibility: 'Foto del gruppo',
+      bannerAccessibility: 'Banner del gruppo',
+      photoPermissionDeniedTitle: 'Accesso alle foto negato',
+      photoPermissionDeniedMessage: "GlowUp AI ha bisogno di accedere alle tue foto per cambiare l'immagine del gruppo. Attiva l'accesso nelle impostazioni del telefono.",
+      photoUpdateFailed: "Impossibile aggiornare l'immagine. Riprova.",
+      updateFailed: 'Impossibile aggiornare il gruppo. Riprova.',
+      privateToggleLabel: 'Gruppo privato',
+      privateToggleSubtitle: "Unirsi tramite codice richiede la tua approvazione",
+      pendingRequestsTitle: 'Richieste in sospeso',
+      acceptRequest: 'Accetta',
+      refuseRequest: 'Rifiuta',
+      acceptRequestFailed: 'Impossibile accettare questa richiesta. Riprova.',
+      refuseRequestFailed: 'Impossibile rifiutare questa richiesta. Riprova.',
       codeLabel: 'Codice di invito',
       membersTitle: 'Membri',
       you: 'Tu',

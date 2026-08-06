@@ -857,6 +857,7 @@ const en: TranslationSchema = {
       unreadableResult: "Couldn't read the result. Try again.",
       generateNetworkError: "Couldn't generate recipes. Check your internet connection and try again.",
       fridgeNetworkError: "Couldn't analyze your ingredients. Check your internet connection and try again.",
+      timeout: "Generating is taking too long. Try again.",
     },
     actions: {
       generate: 'Recipe generation',
@@ -1082,6 +1083,8 @@ const en: TranslationSchema = {
     join: {
       title: 'Join a group',
       placeholder: 'CODE',
+      pendingTitle: 'Request sent',
+      pendingMessage: 'Your request has been sent to the admin.',
     },
     create: {
       title: 'Create a group',
@@ -1114,6 +1117,7 @@ const en: TranslationSchema = {
       deleteGroupFailed: 'Could not delete this group. Try again.',
       leaveFailed: 'Could not leave this group. Try again.',
       blockFailed: 'Could not block this member. Try again.',
+      joinRequestRefused: 'Your request to join this group was declined.',
     },
     conversation: {
       membersCount: { one: '%{count} member', other: '%{count} members' },
@@ -1146,6 +1150,19 @@ const en: TranslationSchema = {
     },
     info: {
       title: 'Group info',
+      avatarAccessibility: 'Group photo',
+      bannerAccessibility: 'Group banner',
+      photoPermissionDeniedTitle: 'Photo access denied',
+      photoPermissionDeniedMessage: 'GlowUp AI needs access to your photos to change the group image. Enable access in your phone settings.',
+      photoUpdateFailed: "Couldn't update the image. Try again.",
+      updateFailed: "Couldn't update the group. Try again.",
+      privateToggleLabel: 'Private group',
+      privateToggleSubtitle: 'Joining by code requires your approval',
+      pendingRequestsTitle: 'Pending requests',
+      acceptRequest: 'Accept',
+      refuseRequest: 'Decline',
+      acceptRequestFailed: "Couldn't accept this request. Try again.",
+      refuseRequestFailed: "Couldn't decline this request. Try again.",
       codeLabel: 'Invite code',
       membersTitle: 'Members',
       you: 'You',
