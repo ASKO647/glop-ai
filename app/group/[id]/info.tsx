@@ -37,6 +37,28 @@ type GroupInfo = {
 type MemberInfo = { userId: string; role: 'admin' | 'membre'; prenom: string | null };
 type JoinRequest = { id: string; userId: string; prenom: string | null; avatarSignedUrl: string | null };
 
+type GroupUpdateOutcome = 'ok' | 'blocked' | 'error';
+
+/**
+ * Updates `groups` and tells apart a real Supabase error from a write RLS silently swallowed —
+ * an `update().eq('id', ...)` a row's UPDATE policy rejects returns no `error` and simply
+ * affects 0 rows, which without `.select()` looks identical to a successful no-op. Requesting
+ * the row back distinguishes "wrote the new value" from "the policy blocked it," so a blocked
+ * write can be surfaced to the user instead of silently doing nothing.
+ */
+async function updateGroupRow(groupId: string, patch: Record<string, unknown>): Promise<GroupUpdateOutcome> {
+  const { data, error } = await supabase.from('groups').update(patch).eq('id', groupId).select('id');
+  if (error) {
+    console.error('Failed to update group', groupId, patch, error);
+    return 'error';
+  }
+  if (!data || data.length === 0) {
+    console.error('Group update affected 0 rows (likely blocked by the groups UPDATE policy):', groupId, patch);
+    return 'blocked';
+  }
+  return 'ok';
+}
+
 /** Signs a batch of `profiles.avatar_path` values (private `avatars` bucket) for the pending-requests list. */
 async function signProfileAvatarPaths(paths: string[]): Promise<Record<string, string>> {
   if (paths.length === 0) return {};
@@ -213,9 +235,9 @@ export default function GroupInfoScreen() {
       }
 
       const column = kind === 'avatar' ? 'avatar_path' : 'banner_path';
-      const { error } = await supabase.from('groups').update({ [column]: storagePath }).eq('id', id);
-      if (error) {
-        showAlert(t('common.error'), t('groups.info.photoUpdateFailed'));
+      const outcome = await updateGroupRow(id, { [column]: storagePath });
+      if (outcome !== 'ok') {
+        showAlert(t('common.error'), outcome === 'blocked' ? t('groups.info.updateBlocked') : t('groups.info.photoUpdateFailed'));
         return;
       }
       await load();
@@ -228,16 +250,16 @@ export default function GroupInfoScreen() {
     if (!id) return t('groups.info.updateFailed');
     const trimmed = value.trim();
     if (!trimmed) return t('groups.errors.nameRequired');
-    const { error } = await supabase.from('groups').update({ nom: trimmed }).eq('id', id);
-    if (error) return t('groups.info.updateFailed');
+    const outcome = await updateGroupRow(id, { nom: trimmed });
+    if (outcome !== 'ok') return outcome === 'blocked' ? t('groups.info.updateBlocked') : t('groups.info.updateFailed');
     await load();
     return undefined;
   };
 
   const handleSaveDescription = async (value: string): Promise<string | undefined> => {
     if (!id) return t('groups.info.updateFailed');
-    const { error } = await supabase.from('groups').update({ description: value.trim() || null }).eq('id', id);
-    if (error) return t('groups.info.updateFailed');
+    const outcome = await updateGroupRow(id, { description: value.trim() || null });
+    if (outcome !== 'ok') return outcome === 'blocked' ? t('groups.info.updateBlocked') : t('groups.info.updateFailed');
     await load();
     return undefined;
   };
@@ -245,10 +267,13 @@ export default function GroupInfoScreen() {
   const handleTogglePrivate = async (value: boolean) => {
     if (!id) return;
     setTogglingPrivate(true);
-    const { error } = await supabase.from('groups').update({ is_private: value }).eq('id', id);
+    const outcome = await updateGroupRow(id, { is_private: value });
     setTogglingPrivate(false);
-    if (error) {
-      showAlert(t('common.error'), t('groups.info.updateFailed'));
+    if (outcome !== 'ok') {
+      // Re-read the confirmed DB state either way — on a blocked/failed write this restores the
+      // switch to its actual value rather than leaving it showing an unconfirmed optimistic flip.
+      await load();
+      showAlert(t('common.error'), outcome === 'blocked' ? t('groups.info.updateBlocked') : t('groups.info.updateFailed'));
       return;
     }
     await load();

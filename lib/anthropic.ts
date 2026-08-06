@@ -12,6 +12,13 @@ export const ANTHROPIC_VERSION = '2023-06-01';
 // claude-sonnet-4-6 doesn't exist — that name was producing 400s from every caller.
 export const ANTHROPIC_MODEL = 'claude-sonnet-4-5-20250929';
 
+// Scoped to lib/recipes.ts only (category suggestions + fridge analysis): both are structured
+// JSON generation with no open-ended reasoning, and Haiku produces that markedly faster than
+// Sonnet while remaining accurate enough — that gap (not network or JSON parsing) was the actual
+// source of the 5-10 minute recipe generations. Coach, the meal scanner and progress analysis
+// stay on ANTHROPIC_MODEL: they need the more capable model.
+export const FAST_MODEL = 'claude-haiku-4-5-20251001';
+
 export function anthropicHeaders(apiKey: string): Record<string, string> {
   return {
     'content-type': 'application/json',

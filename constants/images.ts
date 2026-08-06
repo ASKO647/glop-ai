@@ -52,21 +52,32 @@ export function matchVisualCategoryFromTitle(titre: string): RecipeVisualCategor
   return match?.categorie ?? null;
 }
 
-const EXERCISE_LOWER_BODY_KEYWORDS = /squat|jambe|fente/i;
-const EXERCISE_CARDIO_KEYWORDS = /course|cardio|corde/i;
-const EXERCISE_CORE_KEYWORDS = /pompe|gainage|abdo/i;
+const EXERCISE_LOWER_BODY_KEYWORDS =
+  /squat|fente|jambe|cuisse|mollet|hip thrust|souleve|deadlift|presse|ischio|fessier/;
+const EXERCISE_CORE_KEYWORDS = /pompe|push|gainage|planche|abdo|crunch|dips|traction|pull/;
+const EXERCISE_CARDIO_KEYWORDS = /course|cardio|corde|burpee|jumping|mountain climber|velo|rameur|hiit|saut|tapis/;
+const EXERCISE_UPPER_BODY_KEYWORDS = /developpe|epaule|biceps|triceps|curl|haltere|pectoraux|dos|rowing|elevation/;
+
+/** Lowercases and strips accents so "Développé épaules" and "developpe epaules" match the same keywords. */
+function normalizeExerciseName(nom: string): string {
+  return nom
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
 
 /**
- * Matches an exercise's (French, internal) name against keywords to pick a representative
- * stock photo — "développé"/"épaules" and anything unmatched fall back to the dumbbells shot.
- *
- * ⚠️ `exercise-pushup.jpg` doesn't exist in the `app-images` bucket yet — the "pompes/gainage/
- * abdos" group uses `exercise-squat.jpg` in the meantime. Swap this to `exercise-pushup.jpg`
- * once that asset is uploaded.
+ * Matches an exercise's (French, internal) name against keywords to pick a representative stock
+ * photo, matched against a normalized (lowercase, accent-stripped) name so accentless variants
+ * ("developpe") match the same as the accented original ("développé"). Anything unmatched falls
+ * back to the dumbbells shot and is logged so the keyword lists can be extended.
  */
 export function exerciseImage(nom: string): { uri: string } {
-  if (EXERCISE_LOWER_BODY_KEYWORDS.test(nom)) return appImage('exercise-squat.jpg');
-  if (EXERCISE_CARDIO_KEYWORDS.test(nom)) return appImage('exercise-cardio.jpg');
-  if (EXERCISE_CORE_KEYWORDS.test(nom)) return appImage('exercise-squat.jpg');
+  const normalized = normalizeExerciseName(nom);
+  if (EXERCISE_LOWER_BODY_KEYWORDS.test(normalized)) return appImage('exercise-squat.jpg');
+  if (EXERCISE_CORE_KEYWORDS.test(normalized)) return appImage('exercise-pushup.jpg');
+  if (EXERCISE_CARDIO_KEYWORDS.test(normalized)) return appImage('exercise-cardio.jpg');
+  if (EXERCISE_UPPER_BODY_KEYWORDS.test(normalized)) return appImage('exercise-dumbbells.jpg');
+  console.log(`[exerciseImage] No keyword match for exercise name: "${nom}"`);
   return appImage('exercise-dumbbells.jpg');
 }
