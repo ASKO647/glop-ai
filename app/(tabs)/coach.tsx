@@ -1,3 +1,4 @@
+import * as ImagePicker from 'expo-image-picker';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,7 +15,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
-import { useCoachMessages } from '../../hooks/useCoachMessages';
+import { useCoachMessages, type PickedImage } from '../../hooks/useCoachMessages';
+import { isLikelyProductQuery } from '../../lib/coach';
+import { showAlert } from '../../lib/alert';
 
 const SUGGESTION_KEYS = ['loseFat', 'dinner', 'motivation'] as const;
 
@@ -24,13 +27,34 @@ export default function CoachScreen() {
   const { colors } = useTheme();
   const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { messages, loading, sending, send } = useCoachMessages(user?.id, profile);
+  const { messages, loading, sending, preparingImage, send } = useCoachMessages(user?.id, profile);
   const [draft, setDraft] = useState('');
+  const [pendingImage, setPendingImage] = useState<PickedImage | null>(null);
+  const [lastQuery, setLastQuery] = useState('');
+
+  const busy = sending || preparingImage;
+
+  const handlePickImage = async () => {
+    const { status: existing } = await ImagePicker.getMediaLibraryPermissionsAsync();
+    if (existing !== 'granted') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        showAlert(t('profile.avatar.permissionDeniedTitle'), t('profile.avatar.permissionDeniedMessage'));
+        return;
+      }
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+    if (result.canceled || result.assets.length === 0) return;
+    const asset = result.assets[0];
+    setPendingImage({ uri: asset.uri, width: asset.width });
+  };
 
   const handleSend = (text: string) => {
-    if (!text.trim() || sending) return;
-    send(text);
+    if ((!text.trim() && !pendingImage) || busy) return;
+    setLastQuery(text);
+    send(text, pendingImage ?? undefined);
     setDraft('');
+    setPendingImage(null);
   };
 
   return (
@@ -69,7 +93,7 @@ export default function CoachScreen() {
             inverted
             data={[...messages].reverse()}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <MessageBubble role={item.role} text={item.content} />}
+            renderItem={({ item }) => <MessageBubble role={item.role} text={item.content} imageUrl={item.imageSignedUrl} />}
             contentContainerStyle={styles.listContent}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             keyboardShouldPersistTaps="handled"
@@ -78,12 +102,20 @@ export default function CoachScreen() {
 
         {sending && messages.length > 0 && (
           <View style={styles.typingWrap}>
-            <TypingIndicator />
+            <TypingIndicator label={isLikelyProductQuery(lastQuery) ? t('coach.searchingIndicator') : undefined} />
           </View>
         )}
 
         <View style={styles.inputWrap}>
-          <ChatInput value={draft} onChangeText={setDraft} onSend={() => handleSend(draft)} disabled={sending} />
+          <ChatInput
+            value={draft}
+            onChangeText={setDraft}
+            onSend={() => handleSend(draft)}
+            disabled={busy}
+            pendingImageUri={pendingImage?.uri}
+            onPickImage={handlePickImage}
+            onRemoveImage={() => setPendingImage(null)}
+          />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

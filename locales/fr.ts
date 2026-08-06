@@ -34,6 +34,7 @@ const fr = {
       groups: 'Groupes',
       widgets: 'Widgets',
       recipes: 'Recettes',
+      skincare: 'Skincare',
     },
     notifications: {
       title: 'Notifications',
@@ -590,6 +591,9 @@ const fr = {
     },
     inputPlaceholder: 'Écris un message...',
     send: 'Envoyer',
+    searchingIndicator: 'Le coach cherche des informations...',
+    attachImageAccessibility: 'Ajouter une photo',
+    removeImageAccessibility: 'Retirer la photo',
     errors: {
       missingApiKey: 'Clé API Anthropic manquante. Ajoute EXPO_PUBLIC_ANTHROPIC_API_KEY dans ton fichier .env.',
       networkError: 'Impossible de contacter le coach. Vérifie ta connexion internet et réessaie.',
@@ -597,6 +601,9 @@ const fr = {
       unreadableResponse: 'Réponse du coach illisible. Réessaie dans un instant.',
       emptyResponse: "Le coach n'a pas renvoyé de réponse.",
       fallback: "Le coach n'a pas pu répondre. Vérifie ta connexion et réessaie.",
+      imageRejected: 'Cette image ne peut pas être analysée. Envoie une photo en lien avec ton objectif.',
+      imagePrepareFailed: "Impossible de préparer cette image. Réessaie.",
+      imageUploadFailed: "Impossible d'envoyer cette image. Réessaie.",
     },
   },
 
@@ -879,6 +886,7 @@ const fr = {
     },
     userNotFound: 'Utilisateur introuvable.',
     saveFailed: "Impossible d'enregistrer ce changement. Réessaie.",
+    skincareAnalysesCount: { one: '%{count} analyse', other: '%{count} analyses' },
     avatar: {
       addLabel: 'Ajouter une photo de profil',
       label: 'Photo de profil — appui long pour la supprimer',
@@ -904,6 +912,7 @@ const fr = {
       targetWeight: 'Poids objectif',
       pace: 'Vitesse',
       workoutsPerWeek: 'Entraînements par semaine',
+      skincare: 'Skincare',
       account: 'Compte',
       changePassword: 'Modifier mon mot de passe',
       enterReferralCode: 'Saisir un code de parrainage',
@@ -1186,6 +1195,60 @@ const fr = {
       deleteConfirmTitle: 'Supprimer ce groupe ?',
       deleteConfirmMessage: 'Cette action est irréversible : le groupe et tous ses messages seront définitivement supprimés.',
       deleteConfirmButton: 'Supprimer',
+    },
+  },
+
+  skincare: {
+    header: { title: 'Skincare' },
+    tabs: {
+      evolution: 'Mon évolution',
+      problem: 'Analyser un problème',
+    },
+    evolution: {
+      before: 'Avant',
+      now: 'Maintenant',
+      addPhoto: 'Ajouter une photo',
+      reminderTitle: 'Avant de prendre la photo',
+      reminderMessage: 'Photo de face, lumière naturelle, sans maquillage.',
+      reminderConfirm: 'Continuer',
+      analyzeButton: 'Analyser mon évolution',
+    },
+    problem: {
+      takePhotoButton: 'Prendre en photo',
+      analyzing: 'Analyse en cours...',
+      historyTitle: 'Historique',
+    },
+    result: {
+      improvements: 'Améliorations',
+      attentionPoints: "Points d'attention",
+      advice: 'Conseils',
+      suggestedProducts: 'Produits suggérés',
+      probableCauses: 'Causes probables',
+      recommendedActions: 'Actions recommandées',
+    },
+    actions: {
+      evolutionAnalysis: "L'analyse de ton évolution",
+      problemAnalysis: 'L\'analyse de la zone',
+    },
+    errors: {
+      missingApiKey: 'Clé API Anthropic manquante. Ajoute EXPO_PUBLIC_ANTHROPIC_API_KEY dans ton fichier .env.',
+      networkError: "Impossible de contacter le service d'analyse. Vérifie ta connexion internet et réessaie.",
+      unreadableResponse: 'Réponse illisible. Réessaie dans un instant.',
+      noResult: "%{action} n'a renvoyé aucun résultat. Réessaie.",
+      unreadableResult: 'Impossible de lire le résultat. Réessaie.',
+      fetchPhotoNetwork: 'Impossible de récupérer cette photo. Vérifie ta connexion internet et réessaie.',
+      fetchPhotoFailed: 'Impossible de récupérer cette photo. Réessaie.',
+      readPhotoFailed: 'Impossible de lire cette photo. Réessaie.',
+      analysisFailed: "L'analyse a échoué. Réessaie.",
+      permissionDeniedTitle: 'Accès à tes photos refusé',
+      permissionDeniedMessage:
+        "GlowUp AI a besoin d'accéder à tes photos pour analyser ta peau. Active l'accès dans les réglages de ton téléphone.",
+      cameraPermissionDeniedTitle: "Accès à l'appareil photo refusé",
+      cameraPermissionDeniedMessage:
+        "GlowUp AI a besoin d'accéder à l'appareil photo pour analyser ta peau. Active l'accès dans les réglages de ton téléphone.",
+      photoError: "Impossible d'ajouter cette photo. Réessaie.",
+      prepareFailed: 'Impossible de préparer cette photo. Réessaie.',
+      saveFailed: "Impossible d'enregistrer cette photo. Réessaie.",
     },
   },
 } as const;

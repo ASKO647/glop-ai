@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
@@ -7,9 +7,10 @@ import { useTheme } from '../../context/ThemeContext';
 type MessageBubbleProps = {
   role: 'user' | 'assistant' | 'system';
   text: string;
+  imageUrl?: string | null;
 };
 
-export default function MessageBubble({ role, text }: MessageBubbleProps) {
+export default function MessageBubble({ role, text, imageUrl }: MessageBubbleProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -28,7 +29,8 @@ export default function MessageBubble({ role, text }: MessageBubbleProps) {
   return (
     <View style={[styles.row, isUser ? styles.rowUser : styles.rowCoach]}>
       <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleCoach]}>
-        <Text style={[styles.text, isUser ? styles.textUser : styles.textCoach]}>{text}</Text>
+        {imageUrl && <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" />}
+        {text ? <Text style={[styles.text, isUser ? styles.textUser : styles.textCoach]}>{text}</Text> : null}
       </View>
     </View>
   );
@@ -50,6 +52,12 @@ function makeStyles(colors: Colors) {
       borderRadius: radii.lg,
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.md,
+      gap: spacing.xs,
+    },
+    image: {
+      width: 200,
+      height: 200,
+      borderRadius: radii.md,
     },
     bubbleCoach: {
       backgroundColor: colors.surface,
