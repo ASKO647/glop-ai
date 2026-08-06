@@ -1161,6 +1161,7 @@ const fr = {
         "GlowUp AI a besoin d'accéder à tes photos pour changer l'image du groupe. Active l'accès dans les réglages de ton téléphone.",
       photoUpdateFailed: "Impossible de mettre à jour l'image. Réessaie.",
       updateFailed: 'Impossible de mettre à jour le groupe. Réessaie.',
+      updateBlocked: "La modification n'a pas été enregistrée : tu n'as peut-être pas les droits nécessaires.",
       privateToggleLabel: 'Groupe privé',
       privateToggleSubtitle: 'Rejoindre par code nécessite ton acceptation',
       pendingRequestsTitle: 'Demandes en attente',

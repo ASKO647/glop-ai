@@ -1156,6 +1156,7 @@ const pt: TranslationSchema = {
       photoPermissionDeniedMessage: 'A GlowUp AI precisa de aceder às tuas fotos para alterar a imagem do grupo. Ativa o acesso nas definições do teu telemóvel.',
       photoUpdateFailed: 'Não foi possível atualizar a imagem. Tenta novamente.',
       updateFailed: 'Não foi possível atualizar o grupo. Tenta novamente.',
+      updateBlocked: 'A alteração não foi guardada: podes não ter as permissões necessárias.',
       privateToggleLabel: 'Grupo privado',
       privateToggleSubtitle: 'Entrar por código requer a tua aprovação',
       pendingRequestsTitle: 'Pedidos pendentes',

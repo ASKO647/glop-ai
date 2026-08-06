@@ -3,9 +3,9 @@ import type { Locale } from '../context/LocaleContext';
 import type { Profile } from '../context/ProfileContext';
 import {
   ANTHROPIC_API_URL,
-  ANTHROPIC_MODEL,
   anthropicHeaders,
   describeAnthropicError,
+  FAST_MODEL,
   languageInstruction,
   stripJsonFences,
 } from './anthropic';
@@ -172,6 +172,8 @@ async function postAnthropicMessage(
   timeoutMessage: string,
   networkErrorMessage: string
 ): Promise<Response> {
+  const model = typeof body.model === 'string' ? body.model : 'unknown-model';
+
   const attempt = (): Promise<Response> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -187,14 +189,14 @@ async function postAnthropicMessage(
   for (let attemptNumber = 1; attemptNumber <= 2; attemptNumber++) {
     try {
       const response = await attempt();
-      console.log(`[Recettes] ${action} — ${Date.now() - start} ms${attemptNumber > 1 ? ' (après nouvelle tentative)' : ''}`);
+      console.log(`[Recettes] ${action} (${model}) — ${Date.now() - start} ms${attemptNumber > 1 ? ' (après nouvelle tentative)' : ''}`);
       return response;
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
-        console.log(`[Recettes] ${action} — délai dépassé après ${Date.now() - start} ms`);
+        console.log(`[Recettes] ${action} (${model}) — délai dépassé après ${Date.now() - start} ms`);
         throw new Error(timeoutMessage);
       }
-      console.log(`[Recettes] ${action} — échec réseau après ${Date.now() - start} ms (tentative ${attemptNumber})`);
+      console.log(`[Recettes] ${action} (${model}) — échec réseau après ${Date.now() - start} ms (tentative ${attemptNumber})`);
     }
   }
   throw new Error(networkErrorMessage);
@@ -241,7 +243,7 @@ async function requestCategoryBatch(
   const response = await postAnthropicMessage(
     apiKey,
     {
-      model: ANTHROPIC_MODEL,
+      model: FAST_MODEL,
       max_tokens: CATEGORY_BATCH_MAX_TOKENS,
       system: buildSystemPrompt(profile, locale),
       messages: [{ role: 'user', content: buildCategoryPrompt(categoryPromptLabel, count) }],
@@ -307,7 +309,7 @@ export async function analyzeFridge(
   const response = await postAnthropicMessage(
     apiKey,
     {
-      model: ANTHROPIC_MODEL,
+      model: FAST_MODEL,
       max_tokens: FRIDGE_MAX_TOKENS,
       system: buildSystemPrompt(profile, locale),
       messages: [{ role: 'user', content }],
