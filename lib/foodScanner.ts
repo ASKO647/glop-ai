@@ -45,14 +45,19 @@ export type CompressedImage = {
 
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 
-/** Downscales to at most 1024px wide (never upscales), re-encodes as JPEG at 0.5 quality. */
-export async function compressImage(uri: string, originalWidth: number, t: Translate): Promise<CompressedImage> {
+/** Downscales to at most 1024px wide (never upscales), re-encodes as JPEG at the given quality (0.5 by default). */
+export async function compressImage(
+  uri: string,
+  originalWidth: number,
+  t: Translate,
+  quality: number = COMPRESS_QUALITY
+): Promise<CompressedImage> {
   const targetWidth = originalWidth > 0 ? Math.min(originalWidth, MAX_WIDTH) : MAX_WIDTH;
 
   const context = ImageManipulator.manipulate(uri).resize({ width: targetWidth });
   const rendered = await context.renderAsync();
   const result = await rendered.saveAsync({
-    compress: COMPRESS_QUALITY,
+    compress: quality,
     format: SaveFormat.JPEG,
     base64: true,
   });

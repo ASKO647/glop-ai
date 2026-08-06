@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
@@ -25,16 +25,34 @@ function Dot({ delay, color }: { delay: number; color: string }) {
   return <Animated.View style={[{ width: 6, height: 6, borderRadius: radii.full, backgroundColor: color }, { opacity }]} />;
 }
 
-export default function TypingIndicator() {
+type TypingIndicatorProps = {
+  /** Replaces the default bare dots with a label above them (e.g. "Le coach cherche des informations...") — same dot animation either way. */
+  label?: string;
+};
+
+export default function TypingIndicator({ label }: TypingIndicatorProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  const dots = (
+    <View style={styles.dotsRow}>
+      <Dot delay={0} color={colors.textSecondary} />
+      <Dot delay={150} color={colors.textSecondary} />
+      <Dot delay={300} color={colors.textSecondary} />
+    </View>
+  );
 
   return (
     <View style={styles.row}>
       <View style={styles.bubble}>
-        <Dot delay={0} color={colors.textSecondary} />
-        <Dot delay={150} color={colors.textSecondary} />
-        <Dot delay={300} color={colors.textSecondary} />
+        {label ? (
+          <>
+            <Text style={styles.label}>{label}</Text>
+            {dots}
+          </>
+        ) : (
+          dots
+        )}
       </View>
     </View>
   );
@@ -47,13 +65,20 @@ function makeStyles(colors: Colors) {
       justifyContent: 'flex-start',
     },
     bubble: {
-      flexDirection: 'row',
-      gap: 5,
+      gap: 6,
       backgroundColor: colors.surface,
       borderRadius: radii.lg,
       borderBottomLeftRadius: 4,
       paddingVertical: 14,
       paddingHorizontal: spacing.md,
+    },
+    dotsRow: {
+      flexDirection: 'row',
+      gap: 5,
+    },
+    label: {
+      fontSize: 12,
+      color: colors.textSecondary,
     },
   });
 }

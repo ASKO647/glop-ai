@@ -20,6 +20,7 @@ import {
   RotateCcw,
   Scale,
   Shield,
+  Sparkles,
   Sunrise,
   Sunset,
   Target,
@@ -57,6 +58,7 @@ import { useBadges } from '../../hooks/useBadges';
 import { useMissionStreak } from '../../hooks/useMissionStreak';
 import { useReferral } from '../../hooks/useReferral';
 import { useSettings } from '../../hooks/useSettings';
+import { useSkincareAnalysesCount } from '../../hooks/useSkinPhotos';
 import { useWeightLogs } from '../../hooks/useWeightLogs';
 import { showAlert, showConfirm } from '../../lib/alert';
 import { LANGUAGE_OPTIONS, type Locale } from '../../lib/i18n';
@@ -149,6 +151,7 @@ export default function ProfilScreen() {
   const { logs: weightLogs, loading: weightLoading, refetch: refetchWeightLogs } = useWeightLogs(user?.id);
   const { streak, loading: streakLoading, refetch: refetchStreak } = useMissionStreak(user?.id);
   const { earnedCount: badgesEarnedCount, totalCount: badgesTotalCount } = useBadges();
+  const { count: skincareAnalysesCount } = useSkincareAnalysesCount(user?.id);
   const { signedUrl: avatarUrl, uploading: avatarUploading, uploadAvatar, deleteAvatar } = useAvatar(
     user?.id,
     profile?.avatar_path
@@ -493,6 +496,12 @@ export default function ProfilScreen() {
             label={t('badges.title')}
             onPress={() => router.push('/badges')}
             right={<SettingsValue value={`${badgesEarnedCount}/${badgesTotalCount}`} />}
+          />
+          <SettingsRow
+            icon={Sparkles}
+            label={t('profile.sections.skincare')}
+            onPress={() => router.push('/skincare')}
+            right={<SettingsValue value={t('profile.skincareAnalysesCount', { count: skincareAnalysesCount })} />}
           />
         </SettingsSection>
 

@@ -5,6 +5,7 @@ import {
   ChefHat,
   Dumbbell,
   LayoutGrid,
+  Sparkles,
   TrendingUp,
   Users,
   Utensils,
@@ -36,6 +37,7 @@ const GRID_ITEMS: NavItem[] = [
   { key: 'groups', labelKey: 'common.navItems.groups', Icon: Users, route: '/groups' },
   { key: 'widgets', labelKey: 'common.navItems.widgets', Icon: LayoutGrid, comingSoon: true },
   { key: 'recipes', labelKey: 'common.navItems.recipes', Icon: ChefHat, route: '/recipes' },
+  { key: 'skincare', labelKey: 'common.navItems.skincare', Icon: Sparkles, route: '/skincare' },
 ];
 
 // Chunked into fixed pairs rather than left to flex-wrap, which would fit 3 (or more)

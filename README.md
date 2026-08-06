@@ -146,6 +146,7 @@ Cette base contient la **structure de navigation**, des **écrans vides** (titre
      user_id uuid not null references auth.users(id) on delete cascade,
      role text not null check (role in ('user', 'assistant')),
      content text not null,
+     image_path text,
      created_at timestamptz not null default now()
    );
 
@@ -168,6 +169,8 @@ Cette base contient la **structure de navigation**, des **écrans vides** (titre
      on messages for delete
      using (auth.uid() = user_id);
    ```
+
+   `image_path` pointe vers le bucket privé `coach-images` (objets préfixés `{user_id}/{timestamp}.jpg`, policies scoped au même préfixe — voir la section Coach IA plus bas pour le détail du flux d'envoi d'image).
 
    Ajoute ensuite ta clé API Anthropic (console.anthropic.com) à `.env` :
 
@@ -511,6 +514,12 @@ Le prompt système (construit dans `buildSystemPrompt`, `lib/coach.ts`) fixe la 
 Si `sendMessage` échoue (réseau, clé manquante, erreur API), le message d'erreur en français n'est pas jeté comme une exception silencieuse : il est ajouté à la conversation comme une bulle "système" (fond neutre, texte `colors.danger`), visible dans le fil, mais **non persistée** en base — un rechargement de l'historique la fait disparaître, contrairement aux vrais tours de conversation. Ce message distingue 401 (clé invalide), 402 (crédit insuffisant), 429 (trop de requêtes) et 400 (requête invalide) plutôt que d'afficher un texte générique — `lib/anthropic.ts` construit ce message et journalise systématiquement le corps complet de la réponse en erreur avec `console.error` avant de le renvoyer : le message d'erreur d'Anthropic dit précisément quel champ ou quelle règle a été violée, un simple code de statut ne le dit pas.
 
 Au premier lancement (aucun message en base), l'écran affiche 3 suggestions en pilules qui envoient directement le message correspondant au tap plutôt que de pré-remplir le champ de saisie.
+
+**Recherche web pour les recommandations de produits.** `sendMessage` (`lib/coach.ts`) déclare l'outil serveur `web_search_20250305` (`max_uses: 3`, pour borner la latence) dans le corps de la requête ; le modèle décide seul, selon le prompt système, de l'utiliser ou non. Le prompt précise explicitement de ne rechercher que pour des questions produit/marque/prix/actualité — jamais pour de la motivation ou des conseils généraux — et, en cas de recommandation, de donner un nom exact, une fourchette de prix et où l'acheter en priorité dans des enseignes françaises ; il interdit aussi toute recommandation de complément alimentaire, médicament ou traitement dermatologique sur ordonnance, et renvoie vers un dermatologue pour tout problème de peau persistant. Une réponse augmentée par une recherche mélange des blocs `text` avec des blocs `server_tool_use`/`web_search_tool_result` dans `data.content` — `extractReplyText` ne concatène que les blocs `text` et ignore le reste, plutôt que de ne lire que `content[0]` comme avant. `MAX_TOKENS` est passé de 1000 à 1500 pour laisser de la marge à ces blocs supplémentaires côté budget de réponse.
+
+L'outil de recherche s'exécute côté serveur Anthropic à l'intérieur d'un seul appel non-streaming : il n'y a donc aucun signal en direct indiquant qu'une recherche est en cours. `isLikelyProductQuery` (`lib/coach.ts`) est une heuristique côté client (mots-clés : acheter, prix, marque, produit, recommande...) appliquée au dernier message envoyé, uniquement pour choisir le texte affiché sous l'indicateur de frappe pendant l'attente (« Le coach cherche des informations... » au lieu des trois points, `TypingIndicator` acceptant désormais un `label` optionnel) — une approximation assumée, pas une vraie détection d'appel d'outil.
+
+**Envoi d'images au coach.** Bouton trombone (`Paperclip`, `components/coach/ChatInput.tsx`) ouvrant `expo-image-picker`, aperçu 60px au-dessus du champ de saisie avant envoi. `moderateCoachImage` (`lib/coach.ts`) fait un appel Anthropic dédié et minimal (20 tokens max, pas d'outils) avant tout upload : `{"appropriate":true|false}` sur une image compressée (1024px, qualité 0.6, `compressImage` de `lib/foodScanner.ts` — accepte maintenant une qualité en 4ᵉ paramètre optionnel, 0.5 par défaut pour ne rien changer aux appelants existants). Cette vérification échoue "fermé" : toute erreur réseau/parsing est traitée comme un refus plutôt que de laisser passer une image non vérifiée. Une image refusée n'est ni compressée-uploadée ni transmise au coach — `hooks/useCoachMessages.ts` affiche directement le message « Cette image ne peut pas être analysée. Envoie une photo en lien avec ton objectif. » comme bulle système locale, sans toucher au bucket ni à `messages`. Une image acceptée est téléversée dans le bucket privé `coach-images` (`{user_id}/{timestamp}.jpg`, chemin toujours unique donc pas de risque de collision de cache), l'URL signée obtenue juste après l'upload reçoit le même correctif anti-cache que l'avatar de profil (`&t=${Date.now()}` ajouté à l'URL), puis l'image (base64) est envoyée dans le même message Anthropic que le texte — `sendMessage` accepte un `image` optionnel et le rattache au dernier message du tableau plutôt qu'à un message dédié. La bulle utilisateur affiche l'image à 200×200 (`components/coach/MessageBubble.tsx`), au-dessus du texte s'il y en a un.
 
 ## Scanner de repas
 
@@ -1040,6 +1049,52 @@ update user_settings set langue = 'fr' where langue = 'Français';
 **Écran conversation — avatar et bannière.** Le cercle 32px à côté du nom du groupe dans l'en-tête affiche l'avatar signé s'il existe (repli sur l'initiale sinon) ; si le groupe a une bannière, elle s'affiche en fond de tout l'en-tête (`position: relative`/`overflow: hidden` sur le conteneur) avec un `LinearGradient` sombre par-dessus pour garder le texte lisible — même mécanisme que le fond photo de `welcome.tsx`. La liste des groupes (`GroupCard.tsx`) affiche le même avatar signé (repli sur l'initiale), sans bannière : une image pleine largeur n'a pas sa place dans une ligne de liste compacte.
 
 **Écran infos (`app/group/[id]/info.tsx`)** — bannière 120px en tête (tap ouvre `expo-image-picker`, badge appareil photo, réservé à l'admin) et avatar rond 88px chevauchant la bannière (même mécanisme, badge appareil photo bas-droite), tous deux téléversés vers le bucket `group-images` (`{group_id}/avatar.jpg` / `{group_id}/banner.jpg`) via `lib/storageUpload.ts`, exactement le pattern `hooks/useAvatar.ts` (compression `expo-image-manipulator`, upload en `ArrayBuffer`, colonne mise à jour puis re-signature immédiate). Nom et description modifiables via `TextInputModal` (tap sur le texte, admin seulement). Interrupteur "Groupe privé" (`SettingsSwitch`, réutilisé de `SettingsRow.tsx`) : une fois actif, `useGroups.joinByCode` bascule sur le flux de demande d'adhésion plutôt que d'ajouter directement le membre. Section "Demandes en attente" (visible seulement si le groupe est privé et qu'il existe des demandes `en_attente`, admin seulement) : avatar de profil signé (bucket `avatars`, signature en lot dédiée dans ce fichier), prénom, boutons Accepter/Refuser appelant les fonctions RPC `accept_group_join_request`/`refuse_group_join_request`. Retirer un membre est un appui long sur sa ligne (au lieu d'une icône dédiée, admin seulement, jamais sur soi-même ni sur un autre admin) avec double confirmation (même pattern que la réinitialisation de progression dans `profil.tsx` : deux `showConfirm` enchaînés) ; code avec copie et partage natif ; confirmation simple pour bloquer et quitter. Pour un membre non admin, la bannière/l'avatar/le nom/la description ne sont pas cliquables, et le toggle privé/les demandes en attente/l'appui long pour retirer n'existent tout simplement pas.
+
+## Skincare
+
+`app/skincare.tsx` (route `/skincare`, écran racine hors `(tabs)`) — accessible depuis la carte "Skincare" du menu **+** et depuis une ligne dans `profil.tsx` (icône `Sparkles`, valeur = nombre d'analyses effectuées). Deux onglets en pilules, même style que `recipes.tsx` : Mon évolution, Analyser un problème.
+
+**Table Supabase** :
+
+```sql
+create table skin_photos (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  storage_path text not null,
+  type text not null check (type in ('evolution', 'probleme')),
+  taken_at timestamptz not null default now(),
+  analysis jsonb,
+  created_at timestamptz not null default now()
+);
+
+alter table skin_photos enable row level security;
+
+create policy "Users can insert their own skin photos"
+  on skin_photos for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can read their own skin photos"
+  on skin_photos for select
+  using (auth.uid() = user_id);
+
+create policy "Users can update their own skin photos"
+  on skin_photos for update
+  using (auth.uid() = user_id);
+
+create policy "Users can delete their own skin photos"
+  on skin_photos for delete
+  using (auth.uid() = user_id);
+```
+
+Bucket privé `skin-photos`, objets préfixés `{user_id}/{timestamp}.jpg` — un chemin toujours unique (jamais de slot fixe réutilisé), donc pas de risque de cache obsolète sur une URL signée réutilisée ; le correctif anti-cache de l'avatar de profil (`&t=${Date.now()}` sur l'URL signée) est appliqué systématiquement quand même, par cohérence avec le reste de l'app plutôt que par nécessité stricte ici.
+
+**`hooks/useSkinPhotos.ts`** — pas de colonne `slot` dans le schéma donné : les photos "évolution" sont une simple liste chronologique, et "Avant"/"Maintenant" (dans l'onglet Mon évolution) sont dérivés à la volée, respectivement la plus ancienne et la plus récente photo `type: 'evolution'` (`beforePhoto`/`nowPhoto`). Avec une seule photo, elle s'affiche en "Avant" et "Maintenant" reste vide en attente d'une deuxième ; taper l'un ou l'autre cadre vide ajoute toujours une nouvelle photo (jamais un remplacement d'une position précise), et l'affichage se redérive ensuite de l'ensemble des photos disponibles. Les photos "problème" (`type: 'probleme'`) sont un historique plat, plus récent en premier. `useSkincareAnalysesCount(userId)` (même fichier) fait une requête `count`-only séparée (`analysis is not null`) pour la ligne du profil, plutôt que de réutiliser `useSkinPhotos` et payer le coût de signature de toutes les photos juste pour afficher un nombre.
+
+**`lib/skincare.ts`** suit le pattern `fetch` brut de `lib/progressAnalysis.ts` (jamais de SDK Anthropic) : `analyzeEvolution(before, now)` envoie les deux photos (base64, récupérées depuis leurs URLs signées comme dans `progressAnalysis.ts`) avec la consigne de comparaison, `analyzeProblem(photo)` envoie la photo unique. Garde-fous imposés dans le prompt système, partagés mot pour mot entre les deux appels : aucun diagnostic médical ni nom de pathologie, formulation factuelle et jamais dévalorisante, uniquement des cosmétiques en vente libre (jamais d'ordonnance ni de complément), et le JSON demande explicitement que le dernier élément du tableau `conseils` (évolution) ou `actions` (problème) soit exactement la phrase "Pour un problème persistant ou douloureux, consulte un dermatologue." — c'est la seule façon de garantir cette phrase de clôture dans une réponse structurée en JSON plutôt qu'en texte libre. Si la photo ne montre pas de peau humaine ou est inappropriée, la réponse attendue est `{"erreur":"..."}` (`isSkincareError` distingue ce cas d'un résultat valide).
+
+**Onglet Mon évolution** — deux `PhotoFrame` (`components/skincare/PhotoFrame.tsx`, ratio 3:4) côte à côte, bordure pointillée + icône appareil photo + "Ajouter une photo" quand vide. Un tap ouvre une confirmation (« Photo de face, lumière naturelle, sans maquillage », `showConfirm`) avant de lancer `expo-image-picker` (galerie) — le rappel est donc affiché explicitement avant le sélecteur plutôt qu'en sous-titre permanent. "Analyser mon évolution" (actif dès `beforePhoto` et `nowPhoto` présents) appelle `analyzeEvolution`, le résultat est affiché via `EvolutionResultCard` (résumé, améliorations en puces vertes `colors.accent`, points d'attention en puces oranges `colors.warning`, conseils, produits suggérés en mini-cartes) et persisté dans la colonne `analysis` de la photo "maintenant".
+
+**Onglet Analyser un problème** — bouton "Prendre en photo" ouvrant la caméra (`launchCameraAsync`, pas la galerie — distinction volontaire avec l'onglet précédent, qui dit "Ajouter" et non "Prendre"). La photo est uploadée puis analysée immédiatement (`analyzeProblem`), le résultat affiché via `ProblemResultCard` (zone + pilule délai d'amélioration, observation, causes probables en puces oranges, actions recommandées en puces vertes, produits suggérés) et persisté sur la photo. Historique en bas : vignettes 56px avec date, défilement horizontal ; taper une vignette affiche l'analyse déjà enregistrée sur cette photo (`selectedProblemPhotoId`) sans relancer d'appel IA.
 
 ## Visuels
 
