@@ -1,12 +1,14 @@
 import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Info } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -29,6 +31,7 @@ import { useBlockedUsers } from '../../hooks/useBlockedUsers';
 import { useGroupMessages, type GroupMessage } from '../../hooks/useGroupMessages';
 import { useMessageReactions } from '../../hooks/useMessageReactions';
 import { showAlert } from '../../lib/alert';
+import { signGroupImagePaths } from '../../lib/groups';
 import { uploadBase64Image } from '../../lib/storageUpload';
 import { supabase } from '../../lib/supabase';
 
@@ -84,6 +87,8 @@ export default function GroupConversationScreen() {
 
   const [groupName, setGroupName] = useState('');
   const [memberCount, setMemberCount] = useState(0);
+  const [groupAvatarUrl, setGroupAvatarUrl] = useState<string | null>(null);
+  const [groupBannerUrl, setGroupBannerUrl] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [actionSheetMessageId, setActionSheetMessageId] = useState<string | null>(null);
@@ -112,11 +117,24 @@ export default function GroupConversationScreen() {
     if (!id) return;
     let cancelled = false;
     (async () => {
-      const { data: group } = await supabase.from('groups').select('nom').eq('id', id).maybeSingle();
+      const { data: group } = await supabase
+        .from('groups')
+        .select('nom, avatar_path, banner_path')
+        .eq('id', id)
+        .maybeSingle();
       const { count } = await supabase.from('group_members').select('id', { count: 'exact', head: true }).eq('group_id', id);
       if (!cancelled) {
         setGroupName(group?.nom ?? '');
         setMemberCount(count ?? 0);
+      }
+
+      const paths = [group?.avatar_path, group?.banner_path].filter((p): p is string => !!p);
+      if (paths.length > 0) {
+        const urls = await signGroupImagePaths(paths);
+        if (!cancelled) {
+          setGroupAvatarUrl(group?.avatar_path ? urls[group.avatar_path] ?? null : null);
+          setGroupBannerUrl(group?.banner_path ? urls[group.banner_path] ?? null : null);
+        }
       }
     })();
     return () => {
@@ -212,6 +230,16 @@ export default function GroupConversationScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
+        {groupBannerUrl && (
+          <>
+            <Image source={{ uri: groupBannerUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            <LinearGradient
+              colors={['rgba(10,13,12,0.4)', 'rgba(10,13,12,0.8)']}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
+          </>
+        )}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('groups.conversation.backAccessibility')}
@@ -222,10 +250,19 @@ export default function GroupConversationScreen() {
           <ArrowLeft color={colors.textPrimary} size={22} />
         </Pressable>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {groupName}
-          </Text>
-          <Text style={styles.headerSubtitle}>{t('groups.conversation.membersCount', { count: memberCount })}</Text>
+          <View style={styles.headerAvatar}>
+            {groupAvatarUrl ? (
+              <Image source={{ uri: groupAvatarUrl }} style={styles.headerAvatarImage} />
+            ) : (
+              <Text style={styles.headerAvatarText}>{(groupName.trim().charAt(0) || '?').toUpperCase()}</Text>
+            )}
+          </View>
+          <View style={styles.headerTexts}>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {groupName}
+            </Text>
+            <Text style={styles.headerSubtitle}>{t('groups.conversation.membersCount', { count: memberCount })}</Text>
+          </View>
         </View>
         <Pressable
           accessibilityRole="button"
@@ -381,6 +418,8 @@ function makeStyles(colors: Colors) {
       paddingTop: spacing.md,
       paddingBottom: spacing.md,
       gap: spacing.sm,
+      position: 'relative',
+      overflow: 'hidden',
     },
     backButton: {
       width: 36,
@@ -403,6 +442,30 @@ function makeStyles(colors: Colors) {
     },
     headerCenter: {
       flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+    },
+    headerAvatar: {
+      width: 32,
+      height: 32,
+      borderRadius: radii.full,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    headerAvatarImage: {
+      width: '100%',
+      height: '100%',
+    },
+    headerAvatarText: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: colors.accent,
+    },
+    headerTexts: {
       alignItems: 'center',
     },
     headerTitle: {

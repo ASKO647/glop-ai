@@ -35,6 +35,23 @@ export function recipeImage(categorie: string | undefined): { uri: string } {
   return appImage(`recipe-${safeCategorie}.jpg`);
 }
 
+const VISUAL_CATEGORY_TITLE_KEYWORDS: { pattern: RegExp; categorie: RecipeVisualCategory }[] = [
+  { pattern: /poulet|dinde|b[oœ]uf|porc|veau|escalope/i, categorie: 'viande' },
+  { pattern: /saumon|cabillaud|thon|poisson|crevette/i, categorie: 'poisson' },
+  { pattern: /p[âa]tes|spaghetti|lasagne|risotto/i, categorie: 'pates' },
+];
+
+/**
+ * The AI's own `categorie_visuelle` sometimes keys off a side dish instead of the main
+ * ingredient (a mustard turkey escalope tagged as a fish-and-rice photo) — a title keyword match
+ * is a stronger, cheaper signal and overrides it whenever one applies. Returns `null` when no
+ * keyword matches, meaning the AI's own category (or the `vegetarien` fallback) should stand.
+ */
+export function matchVisualCategoryFromTitle(titre: string): RecipeVisualCategory | null {
+  const match = VISUAL_CATEGORY_TITLE_KEYWORDS.find(({ pattern }) => pattern.test(titre));
+  return match?.categorie ?? null;
+}
+
 const EXERCISE_LOWER_BODY_KEYWORDS = /squat|jambe|fente/i;
 const EXERCISE_CARDIO_KEYWORDS = /course|cardio|corde/i;
 const EXERCISE_CORE_KEYWORDS = /pompe|gainage|abdo/i;

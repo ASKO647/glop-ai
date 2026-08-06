@@ -861,6 +861,7 @@ const fr = {
       unreadableResult: 'Impossible de lire le résultat. Réessaie.',
       generateNetworkError: 'Impossible de générer des recettes. Vérifie ta connexion internet et réessaie.',
       fridgeNetworkError: "Impossible d'analyser tes ingrédients. Vérifie ta connexion internet et réessaie.",
+      timeout: 'La génération prend trop de temps. Réessaie.',
     },
     actions: {
       generate: 'La génération de recettes',
@@ -1086,6 +1087,8 @@ const fr = {
     join: {
       title: 'Rejoindre un groupe',
       placeholder: 'CODE',
+      pendingTitle: 'Demande envoyée',
+      pendingMessage: "Ta demande a été envoyée à l'administrateur.",
     },
     create: {
       title: 'Créer un groupe',
@@ -1118,6 +1121,7 @@ const fr = {
       deleteGroupFailed: 'Impossible de supprimer ce groupe. Réessaie.',
       leaveFailed: 'Impossible de quitter ce groupe. Réessaie.',
       blockFailed: 'Impossible de bloquer ce membre. Réessaie.',
+      joinRequestRefused: 'Ta demande pour rejoindre ce groupe a été refusée.',
     },
     conversation: {
       membersCount: { one: '%{count} membre', other: '%{count} membres' },
@@ -1150,6 +1154,20 @@ const fr = {
     },
     info: {
       title: 'Infos du groupe',
+      avatarAccessibility: 'Photo du groupe',
+      bannerAccessibility: 'Bannière du groupe',
+      photoPermissionDeniedTitle: 'Accès à tes photos refusé',
+      photoPermissionDeniedMessage:
+        "GlowUp AI a besoin d'accéder à tes photos pour changer l'image du groupe. Active l'accès dans les réglages de ton téléphone.",
+      photoUpdateFailed: "Impossible de mettre à jour l'image. Réessaie.",
+      updateFailed: 'Impossible de mettre à jour le groupe. Réessaie.',
+      privateToggleLabel: 'Groupe privé',
+      privateToggleSubtitle: 'Rejoindre par code nécessite ton acceptation',
+      pendingRequestsTitle: 'Demandes en attente',
+      acceptRequest: 'Accepter',
+      refuseRequest: 'Refuser',
+      acceptRequestFailed: "Impossible d'accepter cette demande. Réessaie.",
+      refuseRequestFailed: 'Impossible de refuser cette demande. Réessaie.',
       codeLabel: "Code d'invitation",
       membersTitle: 'Membres',
       you: 'Toi',

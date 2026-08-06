@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../context/LocaleContext';
-import { generateUniqueGroupCode } from '../lib/groups';
+import { generateUniqueGroupCode, signGroupImagePaths } from '../lib/groups';
 import { supabase } from '../lib/supabase';
 
 export type GroupRole = 'admin' | 'membre';
@@ -11,6 +11,9 @@ export type GroupSummary = {
   description: string | null;
   codeInvitation: string;
   createurId: string;
+  isPrivate: boolean;
+  avatarPath: string | null;
+  avatarSignedUrl: string | null;
   role: GroupRole;
   memberCount: number;
   lastMessage: {
@@ -28,6 +31,8 @@ type GroupRow = {
   description: string | null;
   code_invitation: string;
   createur_id: string;
+  is_private: boolean;
+  avatar_path: string | null;
 };
 
 type MemberRow = {
@@ -36,7 +41,7 @@ type MemberRow = {
   last_read_at: string;
 };
 
-type ActionResult = { ok: boolean; error?: string; groupId?: string; codeInvitation?: string };
+type ActionResult = { ok: boolean; error?: string; groupId?: string; codeInvitation?: string; pending?: boolean };
 
 /** A group's most recent (non-deleted) message plus its author's first name and whether it carries an image. */
 async function fetchLastMessage(groupId: string): Promise<GroupSummary['lastMessage']> {
@@ -107,9 +112,13 @@ export function useGroups(userId: string | undefined) {
     const groupIds = members.map((m) => m.group_id);
     const { data: groupRows } = await supabase
       .from('groups')
-      .select('id, nom, description, code_invitation, createur_id')
+      .select('id, nom, description, code_invitation, createur_id, is_private, avatar_path')
       .in('id', groupIds);
-    const rowsById = new Map(((groupRows ?? []) as GroupRow[]).map((row) => [row.id, row]));
+    const rows = (groupRows ?? []) as GroupRow[];
+    const rowsById = new Map(rows.map((row) => [row.id, row]));
+    const avatarUrlByPath = await signGroupImagePaths(
+      rows.map((row) => row.avatar_path).filter((path): path is string => !!path)
+    );
 
     const summaries = await Promise.all(
       members.map(async (member): Promise<GroupSummary | null> => {
@@ -126,6 +135,9 @@ export function useGroups(userId: string | undefined) {
           description: row.description,
           codeInvitation: row.code_invitation,
           createurId: row.createur_id,
+          isPrivate: row.is_private,
+          avatarPath: row.avatar_path,
+          avatarSignedUrl: row.avatar_path ? avatarUrlByPath[row.avatar_path] ?? null : null,
           role: member.role,
           memberCount,
           lastMessage,
@@ -155,7 +167,11 @@ export function useGroups(userId: string | undefined) {
     const code = rawCode.trim().toUpperCase();
     if (!code) return { ok: false, error: t('groups.errors.codeRequired') };
 
-    const { data: group } = await supabase.from('groups').select('id').eq('code_invitation', code).maybeSingle();
+    const { data: group } = await supabase
+      .from('groups')
+      .select('id, is_private')
+      .eq('code_invitation', code)
+      .maybeSingle();
     if (!group) return { ok: false, error: t('groups.errors.codeInvalid') };
 
     const { data: existing } = await supabase
@@ -165,6 +181,26 @@ export function useGroups(userId: string | undefined) {
       .eq('user_id', userId)
       .maybeSingle();
     if (existing) return { ok: false, error: t('groups.errors.alreadyMember') };
+
+    if (group.is_private) {
+      // A valid code for a private group doesn't add the member directly — it creates a request
+      // the group's admin must accept (see app/group/[id]/info.tsx). The unique (group_id,
+      // user_id) constraint means a previously refused request can't be re-sent by inserting
+      // again — surfaced explicitly rather than as a generic "join failed".
+      const { data: existingRequest } = await supabase
+        .from('group_join_requests')
+        .select('status')
+        .eq('group_id', group.id)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (existingRequest?.status === 'en_attente') return { ok: true, pending: true };
+      if (existingRequest?.status === 'refuse') return { ok: false, error: t('groups.errors.joinRequestRefused') };
+
+      const { error } = await supabase.from('group_join_requests').insert({ group_id: group.id, user_id: userId });
+      if (error) return { ok: false, error: t('groups.errors.joinFailed') };
+      return { ok: true, pending: true };
+    }
 
     const { error } = await supabase.from('group_members').insert({ group_id: group.id, user_id: userId, role: 'membre' });
     if (error) return { ok: false, error: t('groups.errors.joinFailed') };

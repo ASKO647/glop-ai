@@ -23,6 +23,7 @@ import { compressImage } from '../lib/foodScanner';
 import {
   analyzeFridge,
   generateCategoryRecipes,
+  RECIPES_PER_CATEGORY,
   summarizeProfileForRecipes,
   type FridgeAnalysis,
   type FridgeRecipe,
@@ -104,9 +105,24 @@ export default function RecipesScreen() {
         }
       }
 
+      // Recipes arrive in batches (see generateCategoryRecipes) — `collected` accumulates them
+      // across `onBatch` calls so each batch's `setSuggestionsByCategory` reflects everything
+      // received so far, rendering recipes as soon as each batch lands instead of only once
+      // every batch has resolved.
+      setSuggestionsByCategory((prev) => ({ ...prev, [category]: [] }));
+      const collected: Recipe[] = [];
       const categoryInfo = getRecipeCategoryInfo(category, t);
-      const result = await generateCategoryRecipes(categoryInfo.promptLabel, summarizeProfileForRecipes(profile), locale, t);
-      setSuggestionsByCategory((prev) => ({ ...prev, [category]: result.recettes }));
+      const result = await generateCategoryRecipes(
+        categoryInfo.promptLabel,
+        summarizeProfileForRecipes(profile),
+        locale,
+        t,
+        (batch) => {
+          collected.push(...batch);
+          setSuggestionsByCategory((prev) => ({ ...prev, [category]: [...collected] }));
+          setSuggestionsLoading(false);
+        }
+      );
       setSuggestionFavorites((prev) => {
         const next = { ...prev };
         for (const key of Object.keys(next)) {
@@ -116,6 +132,8 @@ export default function RecipesScreen() {
       });
       await AsyncStorage.setItem(categorySuggestionsCacheKey(user.id, category), JSON.stringify(result));
     } catch (error) {
+      // A partially-filled `collected` list (from a batch that succeeded before another one
+      // failed) is left on screen — showing what did generate is better than discarding it.
       setSuggestionsError(error instanceof Error ? error.message : t('recipes.suggestions.error'));
     } finally {
       setSuggestionsLoading(false);
@@ -364,38 +382,49 @@ export default function RecipesScreen() {
               )}
             </View>
 
-            {suggestionsLoading ? (
+            {suggestionsLoading && currentSuggestions.length === 0 ? (
               <View style={styles.list}>
                 <RecipeSkeletonCard />
                 <RecipeSkeletonCard />
                 <RecipeSkeletonCard />
               </View>
-            ) : suggestionsError ? (
-              <View style={styles.errorBlock}>
-                <Text style={styles.errorText}>{suggestionsError}</Text>
-                <Button label={t('common.retry')} onPress={() => loadCategory(selectedCategory, true)} loading={regenerating} />
-              </View>
             ) : (
               <>
-                <View style={styles.list}>
-                  {currentSuggestions.map((recipe, index) => (
-                    <RecipeIdeaCard
-                      key={index}
-                      recipe={recipe}
-                      isFavorite={!!suggestionFavorites[suggestionFavoriteKey(selectedCategory, index)]}
-                      onToggleFavorite={() => toggleSuggestionFavorite(selectedCategory, index, recipe)}
-                      onPress={() =>
-                        openRecipe(recipe, 'suggestion', suggestionFavorites[suggestionFavoriteKey(selectedCategory, index)])
-                      }
+                {currentSuggestions.length > 0 && (
+                  <View style={styles.list}>
+                    {currentSuggestions.map((recipe, index) => (
+                      <RecipeIdeaCard
+                        key={index}
+                        recipe={recipe}
+                        isFavorite={!!suggestionFavorites[suggestionFavoriteKey(selectedCategory, index)]}
+                        onToggleFavorite={() => toggleSuggestionFavorite(selectedCategory, index, recipe)}
+                        onPress={() =>
+                          openRecipe(recipe, 'suggestion', suggestionFavorites[suggestionFavoriteKey(selectedCategory, index)])
+                        }
+                      />
+                    ))}
+                    {/* Still-pending batch (see generateCategoryRecipes) — recipes stream in progressively. */}
+                    {(suggestionsLoading || regenerating) &&
+                      !suggestionsError &&
+                      currentSuggestions.length < RECIPES_PER_CATEGORY && <RecipeSkeletonCard />}
+                  </View>
+                )}
+                {suggestionsError ? (
+                  <View style={styles.errorBlock}>
+                    <Text style={styles.errorText}>{suggestionsError}</Text>
+                    <Button label={t('common.retry')} onPress={() => loadCategory(selectedCategory, true)} loading={regenerating} />
+                  </View>
+                ) : (
+                  !suggestionsLoading &&
+                  !regenerating && (
+                    <Button
+                      label={t('recipes.suggestions.generateMore')}
+                      variant="secondary"
+                      onPress={() => loadCategory(selectedCategory, true)}
+                      loading={regenerating}
                     />
-                  ))}
-                </View>
-                <Button
-                  label={t('recipes.suggestions.generateMore')}
-                  variant="secondary"
-                  onPress={() => loadCategory(selectedCategory, true)}
-                  loading={regenerating}
-                />
+                  )
+                )}
               </>
             )}
           </View>

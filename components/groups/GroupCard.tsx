@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
@@ -40,7 +40,11 @@ export default function GroupCard({ group, onPress }: GroupCardProps) {
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{initial}</Text>
+        {group.avatarSignedUrl ? (
+          <Image source={{ uri: group.avatarSignedUrl }} style={styles.avatarImage} />
+        ) : (
+          <Text style={styles.avatarText}>{initial}</Text>
+        )}
       </View>
 
       <View style={styles.body}>
@@ -93,6 +97,11 @@ function makeStyles(colors: Colors) {
       backgroundColor: colors.background,
       alignItems: 'center',
       justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    avatarImage: {
+      width: '100%',
+      height: '100%',
     },
     avatarText: {
       fontSize: 18,
