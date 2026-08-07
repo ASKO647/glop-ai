@@ -1216,6 +1216,7 @@ const fr = {
     },
     problem: {
       takePhotoButton: 'Prendre en photo',
+      choosePhotoButton: 'Choisir une photo',
       analyzing: 'Analyse en cours...',
       historyTitle: 'Historique',
     },

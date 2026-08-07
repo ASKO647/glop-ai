@@ -2,7 +2,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Camera as CameraIcon } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import MealTypePills from '../../components/dashboard/MealTypePills';
 import AppImage from '../../components/ui/AppImage';
@@ -221,13 +221,25 @@ export default function ScannerScreen() {
           </>
         ) : (
           <>
+            {/* expo-image-picker has no real camera capture on web (launchCameraAsync falls back to
+                the same file picker as the gallery) — offering it as a distinct button there would
+                promise something the browser can't actually do, so only the gallery/upload option
+                shows up on web, per platform. */}
+            {Platform.OS !== 'web' && (
+              <Button
+                label={t('scanner.takePhotoButton')}
+                onPress={handleTakePhoto}
+                disabled={busy}
+                loading={screenState === 'analyzing'}
+              />
+            )}
             <Button
-              label={t('scanner.takePhotoButton')}
-              onPress={handleTakePhoto}
+              label={t('scanner.pickFromLibraryButton')}
+              variant={Platform.OS === 'web' ? 'primary' : 'secondary'}
+              onPress={handlePickFromLibrary}
               disabled={busy}
-              loading={screenState === 'analyzing'}
+              loading={Platform.OS === 'web' && screenState === 'analyzing'}
             />
-            <Button label={t('scanner.pickFromLibraryButton')} variant="secondary" onPress={handlePickFromLibrary} disabled={busy} />
           </>
         )}
       </View>

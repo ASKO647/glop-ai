@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+
+    <title>GlowUp AI — Ton coach IA personnel</title>
+    <meta
+      name="description"
+      content="GlowUp AI, ton coach IA personnel : suivi nutritionnel, séances de sport, recettes adaptées à ton objectif et un coach qui répond à tes questions fitness, alimentation et skincare."
+    />
+    <meta name="theme-color" content="#0a0d0c" />
+
+    <!-- Open Graph — og:image is a relative path since the production domain isn't fixed yet; swap for an absolute URL once deployed, some crawlers require one. -->
+    <meta property="og:title" content="GlowUp AI — Ton coach IA personnel" />
+    <meta
+      property="og:description"
+      content="Suivi nutritionnel, séances de sport, recettes et coach IA personnel — GlowUp AI t'accompagne au quotidien."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/icon-512.png" />
+
+    <!-- PWA manifest + iOS "add to home screen" -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="GlowUp" />
+
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+  </body>
+</html>

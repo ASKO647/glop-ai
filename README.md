@@ -1098,6 +1098,24 @@ Bucket privé `skin-photos`, objets préfixés `{user_id}/{timestamp}.jpg` — u
 
 **Onglet Analyser un problème** — bouton "Prendre en photo" ouvrant la caméra (`launchCameraAsync`, pas la galerie — distinction volontaire avec l'onglet précédent, qui dit "Ajouter" et non "Prendre"). La photo est uploadée puis analysée immédiatement (`analyzeProblem`), le résultat affiché via `ProblemResultCard` (zone + pilule délai d'amélioration, observation, causes probables en puces oranges, actions recommandées en puces vertes, produits suggérés) et persisté sur la photo. Historique en bas : vignettes 56px avec date, défilement horizontal ; taper une vignette affiche l'analyse déjà enregistrée sur cette photo (`selectedProblemPhotoId`) sans relancer d'appel IA.
 
+## Déploiement web (Vercel)
+
+`app.json`'s `expo.web` était déjà en `bundler: "metro"` / `output: "single"` (SPA classique, un seul `index.html`, routage géré côté client par `expo-router`) — rien à changer là.
+
+**`vercel.json`** réécrit toute route vers `/index.html` (`{ "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }`) — sans ça, rafraîchir sur une route interne (`/coach`, `/skincare`...) renvoie une 404 puisque ces chemins n'existent pas comme fichiers sur le serveur. Vercel sert d'abord les fichiers réels du dossier de sortie (le bundle JS, `favicon.ico`, `manifest.json`, les icônes) avant d'appliquer la réécriture, donc ce catch-all ne casse rien de statique.
+
+**`public/index.html` — pas `app/+html.tsx`.** Le mécanisme habituel d'`expo-router` pour personnaliser le HTML racine (`app/+html.tsx`, rendu via React/SSR) ne s'applique qu'en `web.output: "static"` (rendu statique par route). En `output: "single"`, `expo export` génère `index.html` par une tout autre voie (`createTemplateHtmlFromExpoConfigAsync` dans `@expo/cli`) qui lit d'abord un `public/index.html` s'il existe, sinon le template par défaut d'Expo — un `+html.tsx` aurait donc été silencieusement ignoré. `public/index.html` part du template par défaut d'Expo (charset, viewport, reset de style `react-native-web`) et ajoute : le titre « GlowUp AI — Ton coach IA personnel », une meta description, `theme-color` (`#0a0d0c`), les balises Open Graph, le lien vers `manifest.json` et les balises `apple-mobile-web-app-*` pour l'ajout à l'écran d'accueil iOS. Le bundle JS et le favicon sont injectés automatiquement par Expo dans ce template au moment de l'export (recherche simple de `</body>`/`</head>`), donc ce fichier garde exactement une balise `</head>` et `</body>`.
+
+**`public/manifest.json`** (copié tel quel dans la sortie par la convention `public/` d'Expo) : nom « GlowUp AI », nom court « GlowUp », `display: standalone`, `background_color`/`theme_color` en `#0a0d0c`, icônes 192 et 512px (`public/icon-192.png`, `public/icon-512.png`, générées depuis `assets/icon.png` via Pillow).
+
+**Désactivation propre du natif sur web** (`Platform.OS === 'web'`) :
+- `expo-haptics` et `expo-image-manipulator` ont déjà leur propre implémentation web (vibration/Canvas) — aucun garde nécessaire, ils ne plantent pas.
+- `Share.share` (partage du code de groupe, export de données dans `profil.tsx`) est déjà dans un try/catch — `react-native-web` rejette la promesse si `navigator.share` n'existe pas (Firefox/Safari desktop), ce qui affiche déjà le message d'erreur existant plutôt que de planter.
+- `expo-image-picker`'s `launchCameraAsync` n'a pas de vraie capture caméra sur web : il retombe sur le même input fichier que `launchImageLibraryAsync`, juste avec l'attribut `capture` (actif seulement sur mobile). `app/(tabs)/scanner.tsx` masque donc le bouton "Prendre une photo" sur web (`Platform.OS !== 'web'`) et ne garde que "Choisir dans la galerie" ; `app/skincare.tsx` (onglet "Analyser un problème", qui n'avait qu'un bouton caméra) bascule sur `launchImageLibraryAsync` + un libellé et une icône différents (`Choisir une photo`, icône `Upload`) sur web plutôt que de proposer une capture qui n'en est pas vraiment une.
+- La section "Notifications" de `profil.tsx` (rappels matin/soir) est masquée sur web (`Platform.OS !== 'web'`) — ce n'est qu'une préférence stockée côté Supabase, pas un vrai module de notifications push (aucune dépendance `expo-notifications` dans ce projet), donc l'afficher sur web laisserait croire à une fonctionnalité qui n'existe nulle part.
+
+`npx expo export --platform web` a été vérifié après coup : `index.html` exporté contient bien le titre, la description, les balises Open Graph, le lien manifeste et les balises iOS, et `manifest.json`/`icon-192.png`/`icon-512.png` sont bien présents à la racine de la sortie.
+
 ## Visuels
 
 `app.json` référence `./assets/icon.png`, `./assets/splash-icon.png` (splash, `resizeMode: "contain"`, fond `#0a0d0c`) et `./assets/adaptive-icon.png` (icône adaptative Android, même fond).

@@ -1211,6 +1211,7 @@ const de: TranslationSchema = {
     },
     problem: {
       takePhotoButton: 'Foto aufnehmen',
+      choosePhotoButton: 'Foto auswählen',
       analyzing: 'Analyse läuft...',
       historyTitle: 'Verlauf',
     },
