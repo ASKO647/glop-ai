@@ -3,8 +3,8 @@ import {
   ANTHROPIC_MODEL,
   anthropicHeaders,
   describeAnthropicError,
+  extractJsonObject,
   languageInstruction,
-  stripJsonFences,
 } from './anthropic';
 import type { Locale } from './i18n';
 
@@ -157,7 +157,7 @@ async function postSkincareAnalysis<T>(
   }
 
   try {
-    return JSON.parse(stripJsonFences(text)) as T | SkincareError;
+    return JSON.parse(extractJsonObject(text)) as T | SkincareError;
   } catch {
     throw new Error(t('skincare.errors.unreadableResult'));
   }

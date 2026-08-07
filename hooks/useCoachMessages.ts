@@ -123,9 +123,13 @@ export function useCoachMessages(userId: string | undefined, profile: Profile | 
       setPreparingImage(true);
       try {
         compressed = await compressImage(picked.uri, picked.width, t, IMAGE_QUALITY);
-        const appropriate = await moderateCoachImage(compressed);
-        if (!appropriate) {
+        const moderation = await moderateCoachImage(compressed);
+        if (moderation === 'rejected') {
           pushSystemMessage(t('coach.errors.imageRejected'));
+          return;
+        }
+        if (moderation === 'check_failed') {
+          pushSystemMessage(t('coach.errors.imageModerationFailed'));
           return;
         }
       } catch {

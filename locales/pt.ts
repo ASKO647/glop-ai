@@ -598,6 +598,7 @@ const pt: TranslationSchema = {
       emptyResponse: 'O coach não devolveu resposta.',
       fallback: 'O coach não conseguiu responder. Verifica a tua ligação e tenta novamente.',
       imageRejected: 'Esta imagem não pode ser analisada. Envia uma foto relacionada com o teu objetivo.',
+      imageModerationFailed: 'A verificação da imagem falhou. Tenta novamente.',
       imagePrepareFailed: 'Não foi possível preparar esta imagem. Tenta novamente.',
       imageUploadFailed: 'Não foi possível enviar esta imagem. Tenta novamente.',
     },

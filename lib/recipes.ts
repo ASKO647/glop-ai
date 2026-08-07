@@ -5,9 +5,9 @@ import {
   ANTHROPIC_API_URL,
   anthropicHeaders,
   describeAnthropicError,
+  extractJsonObject,
   FAST_MODEL,
   languageInstruction,
-  stripJsonFences,
 } from './anthropic';
 
 // Same rule as lib/coach.ts, lib/foodScanner.ts and lib/progressAnalysis.ts: no Anthropic SDK,
@@ -220,7 +220,7 @@ async function parseAnthropicJson<T>(t: TranslateFn, response: Response, action:
   }
 
   try {
-    return JSON.parse(stripJsonFences(text)) as T;
+    return JSON.parse(extractJsonObject(text)) as T;
   } catch {
     throw new Error(t('recipes.errors.unreadableResult'));
   }

@@ -36,6 +36,21 @@ export function stripJsonFences(text: string): string {
 }
 
 /**
+ * Prepares a Claude text response for `JSON.parse`: strips a wrapping ```json fence, then
+ * extracts the first `{...}` object found — despite every prompt in this app instructing
+ * "JSON only, no other text", the model sometimes still prepends/appends prose ("Voici le
+ * résultat : {...}", "J'espère que ça aide !"), which makes a bare `JSON.parse` throw
+ * "Unexpected character" on otherwise-valid JSON. Every JSON-expecting Anthropic call in this
+ * app (coach, scanner, recipes, progress analysis, skincare) must clean through this — never
+ * `JSON.parse(text)` or `JSON.parse(stripJsonFences(text))` directly.
+ */
+export function extractJsonObject(text: string): string {
+  const unfenced = stripJsonFences(text);
+  const match = unfenced.match(/\{[\s\S]*\}/);
+  return match ? match[0] : unfenced;
+}
+
+/**
  * Appended to every Anthropic system prompt (coach, scanner, recipes, progress analysis) so the
  * model answers in the user's active app language — the prompts themselves stay authored in
  * French, this is just an explicit language override for the reply.
