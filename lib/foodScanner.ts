@@ -1,5 +1,5 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
-import { ANTHROPIC_API_URL, ANTHROPIC_MODEL, anthropicHeaders, describeAnthropicError, languageInstruction, stripJsonFences } from './anthropic';
+import { ANTHROPIC_API_URL, ANTHROPIC_MODEL, anthropicHeaders, describeAnthropicError, extractJsonObject, languageInstruction } from './anthropic';
 import type { Locale } from './i18n';
 
 // Same rule as lib/coach.ts: no Anthropic SDK, ever — it pulls in `node:fs`
@@ -125,7 +125,7 @@ export async function analyzeMeal(
   }
 
   try {
-    return JSON.parse(stripJsonFences(text)) as MealAnalysis | MealAnalysisError;
+    return JSON.parse(extractJsonObject(text)) as MealAnalysis | MealAnalysisError;
   } catch {
     throw new Error(t('scanner.errors.unparsableResult'));
   }

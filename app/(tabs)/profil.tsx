@@ -28,7 +28,7 @@ import {
   User,
 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Linking, Share, ScrollView, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Linking, Platform, Share, ScrollView, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ProfileHeader from '../../components/profil/ProfileHeader';
 import SubscriptionCard from '../../components/profil/SubscriptionCard';
@@ -522,33 +522,35 @@ export default function ProfilScreen() {
           />
         </SettingsSection>
 
-        <SettingsSection title={t('common.notifications.title')}>
-          <SettingsRow
-            icon={Bell}
-            label={t('profile.sections.enableNotifications')}
-            right={
-              <SettingsSwitch
-                value={settings.notificationsActives}
-                onValueChange={(value) => updateSettings({ notificationsActives: value })}
-                disabled={settingsLoading}
-              />
-            }
-          />
-          <SettingsRow
-            icon={Sunrise}
-            label={t('profile.sections.morningReminder')}
-            disabled={!settings.notificationsActives}
-            onPress={settings.notificationsActives ? () => setActiveModal('morningReminder') : undefined}
-            right={<SettingsValue value={settings.rappelMatin} />}
-          />
-          <SettingsRow
-            icon={Sunset}
-            label={t('profile.sections.eveningReminder')}
-            disabled={!settings.notificationsActives}
-            onPress={settings.notificationsActives ? () => setActiveModal('eveningReminder') : undefined}
-            right={<SettingsValue value={settings.rappelSoir} />}
-          />
-        </SettingsSection>
+        {Platform.OS !== 'web' && (
+          <SettingsSection title={t('common.notifications.title')}>
+            <SettingsRow
+              icon={Bell}
+              label={t('profile.sections.enableNotifications')}
+              right={
+                <SettingsSwitch
+                  value={settings.notificationsActives}
+                  onValueChange={(value) => updateSettings({ notificationsActives: value })}
+                  disabled={settingsLoading}
+                />
+              }
+            />
+            <SettingsRow
+              icon={Sunrise}
+              label={t('profile.sections.morningReminder')}
+              disabled={!settings.notificationsActives}
+              onPress={settings.notificationsActives ? () => setActiveModal('morningReminder') : undefined}
+              right={<SettingsValue value={settings.rappelMatin} />}
+            />
+            <SettingsRow
+              icon={Sunset}
+              label={t('profile.sections.eveningReminder')}
+              disabled={!settings.notificationsActives}
+              onPress={settings.notificationsActives ? () => setActiveModal('eveningReminder') : undefined}
+              right={<SettingsValue value={settings.rappelSoir} />}
+            />
+          </SettingsSection>
+        )}
 
         <SettingsSection title={t('profile.sections.preferences')}>
           <SettingsRow

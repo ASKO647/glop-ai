@@ -1,5 +1,13 @@
 import type { Profile } from '../context/ProfileContext';
-import { ANTHROPIC_API_URL, ANTHROPIC_MODEL, anthropicHeaders, describeAnthropicError, languageInstruction } from './anthropic';
+import {
+  ANTHROPIC_API_URL,
+  ANTHROPIC_MODEL,
+  anthropicHeaders,
+  describeAnthropicError,
+  extractJsonObject,
+  FAST_MODEL,
+  languageInstruction,
+} from './anthropic';
 import type { Locale } from './i18n';
 
 // No Anthropic SDK here on purpose: the SDK is a Node package (it pulls in
@@ -13,7 +21,10 @@ const MAX_TOKENS = 1500;
 // Product questions ("où acheter", "quelle marque") legitimately need a search; anything else
 // (motivation, general advice) should never trigger one — capped at 3 to bound latency either way.
 const WEB_SEARCH_MAX_USES = 3;
-const MODERATION_MAX_TOKENS = 20;
+// Enough room for {"approuve": false, "raison": "..."} without truncating mid-string — the
+// previous 20-token budget was cutting the "raison" field off before its closing quote/brace,
+// which is one of the ways the response ended up unparseable.
+const MODERATION_MAX_TOKENS = 60;
 
 export type ChatRole = 'user' | 'assistant';
 
@@ -167,24 +178,34 @@ export async function sendMessage(
 
 const MODERATION_PROMPT = `Cette image va être envoyée à un coach fitness/bien-être IA dans une conversation de chat. Détermine si elle est appropriée à transmettre : refuse toute image contenant de la nudité ou du contenu suggestif, et toute image sans rapport avec la santé, l'alimentation, le sport ou la peau.
 
-Réponds UNIQUEMENT avec un objet JSON valide, sans aucun texte avant ou après, au format exact : {"appropriate":true} ou {"appropriate":false}`;
+Réponds UNIQUEMENT en JSON, sans texte d'introduction, sans explication, sans balises markdown. Format exact : {"approuve": true} si l'image est appropriée, ou {"approuve": false, "raison": "..."} sinon (raison brève, en français).`;
+
+// The prompt above already says "JSON only", but the model still sometimes opens with a
+// sentence of prose regardless. The Messages API resumes generation from the exact text of a
+// supplied assistant turn, so seeding one with "{" makes a JSON object the only thing it can
+// produce — cheaper and more reliable than asking nicely a second time.
+const JSON_PREFILL = '{';
+
+export type ModerationOutcome = 'approved' | 'rejected' | 'check_failed';
 
 /**
  * Pre-send moderation check, run before any upload — an image is never stored or transmitted
- * to the coach conversation unless this returns `true`. Fails closed (returns `false`) on any
- * network/parsing error: a moderation failure should block sending, not silently let an
- * unchecked image through.
+ * to the coach conversation unless this returns `'approved'`. Distinguishes a real rejection
+ * (`'rejected'`) from the check itself failing (`'check_failed'`: network error, non-2xx, or an
+ * unparseable/malformed response) so the caller can show a different message for each rather
+ * than silently treating both as "inappropriate image" — either way sending is blocked, never
+ * left to throw uncaught.
  */
-export async function moderateCoachImage(image: ChatImage): Promise<boolean> {
+export async function moderateCoachImage(image: ChatImage): Promise<ModerationOutcome> {
   const apiKey = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY;
-  if (!apiKey) return false;
+  if (!apiKey) return 'check_failed';
 
   try {
     const response = await fetch(ANTHROPIC_API_URL, {
       method: 'POST',
       headers: anthropicHeaders(apiKey),
       body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
+        model: FAST_MODEL,
         max_tokens: MODERATION_MAX_TOKENS,
         messages: [
           {
@@ -194,16 +215,29 @@ export async function moderateCoachImage(image: ChatImage): Promise<boolean> {
               { type: 'text', text: MODERATION_PROMPT },
             ],
           },
+          { role: 'assistant', content: JSON_PREFILL },
         ],
       }),
     });
-    if (!response.ok) return false;
+    if (!response.ok) {
+      console.error(`[Coach] Moderation check failed — HTTP ${response.status}`);
+      return 'check_failed';
+    }
+
     const data = (await response.json()) as AnthropicMessageResponse;
-    const text = extractReplyText(data.content);
-    const parsed = JSON.parse(text) as { appropriate?: boolean };
-    return parsed.appropriate === true;
+    // The prefill isn't echoed back in the response — the model continues from where it left
+    // off, so it has to be prepended before this is valid JSON again.
+    const rawText = JSON_PREFILL + extractReplyText(data.content);
+    console.log('[Coach] Moderation raw response:', rawText);
+
+    const parsed = JSON.parse(extractJsonObject(rawText)) as { approuve?: boolean; raison?: string };
+    if (typeof parsed.approuve !== 'boolean') {
+      console.error('[Coach] Moderation response missing a boolean "approuve" field:', rawText);
+      return 'check_failed';
+    }
+    return parsed.approuve ? 'approved' : 'rejected';
   } catch (err) {
     console.error('Coach image moderation check failed:', err);
-    return false;
+    return 'check_failed';
   }
 }

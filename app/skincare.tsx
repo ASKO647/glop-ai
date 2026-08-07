@@ -1,8 +1,8 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Camera as CameraIcon } from 'lucide-react-native';
+import { ArrowLeft, Camera as CameraIcon, Upload as UploadIcon } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import EvolutionResultCard from '../components/skincare/EvolutionResultCard';
 import PhotoFrame from '../components/skincare/PhotoFrame';
@@ -94,15 +94,28 @@ export default function SkincareScreen() {
   };
 
   const handleTakeProblemPhoto = async () => {
-    const { status: existing } = await ImagePicker.getCameraPermissionsAsync();
-    if (existing !== 'granted') {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    // No real camera capture on web (expo-image-picker's launchCameraAsync just falls back to a
+    // plain file input there) — go straight to the gallery/file picker instead of a camera
+    // permission prompt that wouldn't correspond to any actual camera access.
+    let result: ImagePicker.ImagePickerResult;
+    if (Platform.OS === 'web') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        showAlert(t('skincare.errors.cameraPermissionDeniedTitle'), t('skincare.errors.cameraPermissionDeniedMessage'));
+        showAlert(t('skincare.errors.permissionDeniedTitle'), t('skincare.errors.permissionDeniedMessage'));
         return;
       }
+      result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+    } else {
+      const { status: existing } = await ImagePicker.getCameraPermissionsAsync();
+      if (existing !== 'granted') {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          showAlert(t('skincare.errors.cameraPermissionDeniedTitle'), t('skincare.errors.cameraPermissionDeniedMessage'));
+          return;
+        }
+      }
+      result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1 });
     }
-    const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1 });
     if (result.canceled || result.assets.length === 0) return;
     const asset = result.assets[0];
 
@@ -212,8 +225,14 @@ export default function SkincareScreen() {
               disabled={uploading || analyzingProblem}
               style={({ pressed }) => [styles.captureButton, pressed && styles.pressed]}
             >
-              <CameraIcon color={colors.onAccent} size={20} />
-              <Text style={styles.captureButtonLabel}>{t('skincare.problem.takePhotoButton')}</Text>
+              {Platform.OS === 'web' ? (
+                <UploadIcon color={colors.onAccent} size={20} />
+              ) : (
+                <CameraIcon color={colors.onAccent} size={20} />
+              )}
+              <Text style={styles.captureButtonLabel}>
+                {t(Platform.OS === 'web' ? 'skincare.problem.choosePhotoButton' : 'skincare.problem.takePhotoButton')}
+              </Text>
             </Pressable>
 
             {(uploading || analyzingProblem) && (

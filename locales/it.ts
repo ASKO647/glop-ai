@@ -598,6 +598,7 @@ const it: TranslationSchema = {
       emptyResponse: 'Il coach non ha restituito alcuna risposta.',
       fallback: 'Il coach non è riuscito a rispondere. Controlla la tua connessione e riprova.',
       imageRejected: 'Questa immagine non può essere analizzata. Invia una foto legata al tuo obiettivo.',
+      imageModerationFailed: "La verifica dell'immagine non è riuscita. Riprova.",
       imagePrepareFailed: 'Impossibile preparare questa immagine. Riprova.',
       imageUploadFailed: 'Impossibile inviare questa immagine. Riprova.',
     },
@@ -1210,6 +1211,7 @@ const it: TranslationSchema = {
     },
     problem: {
       takePhotoButton: 'Scatta una foto',
+      choosePhotoButton: 'Scegli una foto',
       analyzing: 'Analisi in corso...',
       historyTitle: 'Cronologia',
     },

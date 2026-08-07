@@ -7,8 +7,8 @@ import {
   ANTHROPIC_MODEL,
   anthropicHeaders,
   describeAnthropicError,
+  extractJsonObject,
   languageInstruction,
-  stripJsonFences,
 } from './anthropic';
 
 // Same rule as lib/coach.ts and lib/foodScanner.ts: no Anthropic SDK, ever — raw `fetch` only.
@@ -152,7 +152,7 @@ export async function analyzeProgress(
   }
 
   try {
-    return JSON.parse(stripJsonFences(text)) as ProgressAnalysis;
+    return JSON.parse(extractJsonObject(text)) as ProgressAnalysis;
   } catch {
     throw new Error(t('progression.errors.unreadableResult'));
   }

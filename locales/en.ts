@@ -598,6 +598,7 @@ const en: TranslationSchema = {
       emptyResponse: "The coach didn't return a response.",
       fallback: "The coach couldn't respond. Check your connection and try again.",
       imageRejected: "This image can't be analyzed. Send a photo related to your goal.",
+      imageModerationFailed: "The image check failed. Try again.",
       imagePrepareFailed: "Couldn't prepare this image. Try again.",
       imageUploadFailed: "Couldn't send this image. Try again.",
     },
@@ -1210,6 +1211,7 @@ const en: TranslationSchema = {
     },
     problem: {
       takePhotoButton: 'Take a photo',
+      choosePhotoButton: 'Choose a photo',
       analyzing: 'Analyzing...',
       historyTitle: 'History',
     },

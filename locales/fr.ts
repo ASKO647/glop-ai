@@ -602,6 +602,7 @@ const fr = {
       emptyResponse: "Le coach n'a pas renvoyé de réponse.",
       fallback: "Le coach n'a pas pu répondre. Vérifie ta connexion et réessaie.",
       imageRejected: 'Cette image ne peut pas être analysée. Envoie une photo en lien avec ton objectif.',
+      imageModerationFailed: "La vérification de l'image a échoué. Réessaie.",
       imagePrepareFailed: "Impossible de préparer cette image. Réessaie.",
       imageUploadFailed: "Impossible d'envoyer cette image. Réessaie.",
     },
@@ -1215,6 +1216,7 @@ const fr = {
     },
     problem: {
       takePhotoButton: 'Prendre en photo',
+      choosePhotoButton: 'Choisir une photo',
       analyzing: 'Analyse en cours...',
       historyTitle: 'Historique',
     },
