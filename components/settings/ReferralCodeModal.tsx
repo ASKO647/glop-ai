@@ -10,10 +10,13 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { desktopModalBackdrop, desktopModalSheet } from '../../constants/modalPresentation';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import Button from '../ui/Button';
 
 type ReferralCodeModalProps = {
@@ -26,6 +29,7 @@ type ReferralCodeModalProps = {
 export default function ReferralCodeModal({ visible, redeeming, onCancel, onSubmit }: ReferralCodeModalProps) {
   const { colors } = useTheme();
   const { t } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -44,13 +48,21 @@ export default function ReferralCodeModal({ visible, redeeming, onCancel, onSubm
     }
   };
 
+  useEscapeKey(onCancel, visible);
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
-      <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <KeyboardAvoidingView
+        style={[styles.backdrop, isDesktop && desktopModalBackdrop]}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={onCancel} />
 
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          <View style={styles.sheet}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, isDesktop && styles.scrollContentDesktop]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={[styles.sheet, isDesktop && desktopModalSheet]}>
             <Text style={styles.title}>{t('profile.sections.enterReferralCode')}</Text>
 
             <TextInput
@@ -96,6 +108,10 @@ function makeStyles(colors: Colors) {
     scrollContent: {
       flexGrow: 1,
       justifyContent: 'flex-end',
+    },
+    scrollContentDesktop: {
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     sheet: {
       backgroundColor: colors.surface,

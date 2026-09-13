@@ -2,10 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Button from '../../components/ui/Button';
 import TextField from '../../components/ui/TextField';
+import { desktopModalBackdrop, desktopModalSheet } from '../../constants/modalPresentation';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { supabase } from '../../lib/supabase';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -26,6 +29,7 @@ type EmailChangeModalProps = {
 export default function EmailChangeModal({ visible, currentEmail, sent, onSent, onCancel }: EmailChangeModalProps) {
   const { colors } = useTheme();
   const { t } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | undefined>();
@@ -55,13 +59,21 @@ export default function EmailChangeModal({ visible, currentEmail, sent, onSent, 
     onSent();
   };
 
+  useEscapeKey(onCancel, visible);
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
-      <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <KeyboardAvoidingView
+        style={[styles.backdrop, isDesktop && desktopModalBackdrop]}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={onCancel} />
 
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          <View style={styles.sheet}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, isDesktop && styles.scrollContentDesktop]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={[styles.sheet, isDesktop && desktopModalSheet]}>
             <Text style={styles.title}>{t('profile.emailChange.title')}</Text>
 
             {sent ? (
@@ -116,6 +128,10 @@ function makeStyles(colors: Colors) {
     scrollContent: {
       flexGrow: 1,
       justifyContent: 'flex-end',
+    },
+    scrollContentDesktop: {
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     sheet: {
       backgroundColor: colors.surface,

@@ -3,9 +3,11 @@ import { ArrowLeft } from 'lucide-react-native';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ONBOARDING_MAX_WIDTH } from '../../constants/onboardingLayout';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 
 const PROGRESS_DURATION_MS = 400;
 const BUTTON_COLOR_DURATION_MS = 250;
@@ -38,6 +40,7 @@ export default function OnboardingLayout({
   children,
 }: OnboardingLayoutProps) {
   const { colors } = useTheme();
+  const { isDesktop } = useBreakpoint();
   const styles = makeStyles(colors);
 
   // `width` is a layout property and isn't supported by the native driver — animate `scaleX`
@@ -140,24 +143,26 @@ export default function OnboardingLayout({
         </View>
       </View>
 
-      {title ? <Animated.Text style={[styles.title, titleStyle]}>{title}</Animated.Text> : null}
-      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      <View style={[styles.body, isDesktop && styles.desktopBody]}>
+        {title ? <Animated.Text style={[styles.title, titleStyle]}>{title}</Animated.Text> : null}
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
 
-      <View style={styles.content}>{children}</View>
+        <View style={styles.content}>{children}</View>
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ disabled: continueDisabled }}
-        disabled={continueDisabled}
-        onPress={handleContinuePress}
-        style={styles.buttonWrap}
-      >
-        <Animated.View
-          style={[styles.button, { backgroundColor: buttonColors.backgroundColor, transform: [{ scale: buttonScale }] }]}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: continueDisabled }}
+          disabled={continueDisabled}
+          onPress={handleContinuePress}
+          style={styles.buttonWrap}
         >
-          <Text style={[styles.buttonLabel, { color: buttonColors.textColor }]}>{continueLabel}</Text>
-        </Animated.View>
-      </Pressable>
+          <Animated.View
+            style={[styles.button, { backgroundColor: buttonColors.backgroundColor, transform: [{ scale: buttonScale }] }]}
+          >
+            <Text style={[styles.buttonLabel, { color: buttonColors.textColor }]}>{continueLabel}</Text>
+          </Animated.View>
+        </Pressable>
+      </View>
     </SafeAreaView>
   );
 }
@@ -199,6 +204,14 @@ function makeStyles(colors: Colors) {
       borderRadius: radii.full,
       backgroundColor: colors.accent,
       transformOrigin: 'left',
+    },
+    body: {
+      flex: 1,
+    },
+    desktopBody: {
+      alignSelf: 'center',
+      width: '100%',
+      maxWidth: ONBOARDING_MAX_WIDTH,
     },
     title: {
       marginTop: spacing.lg,

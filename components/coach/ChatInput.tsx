@@ -5,6 +5,7 @@ import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { createEnterToSendHandler } from '../../lib/webKeyboard';
 
 type ChatInputProps = {
   value: string;
@@ -59,6 +60,7 @@ export default function ChatInput({
         <TextInput
           value={value}
           onChangeText={onChangeText}
+          onKeyPress={createEnterToSendHandler(() => canSend && onSend())}
           placeholder={t('coach.inputPlaceholder')}
           placeholderTextColor={colors.textTertiary}
           style={styles.input}

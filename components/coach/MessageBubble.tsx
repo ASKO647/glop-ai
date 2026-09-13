@@ -3,6 +3,7 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 
 type MessageBubbleProps = {
   role: 'user' | 'assistant' | 'system';
@@ -12,6 +13,7 @@ type MessageBubbleProps = {
 
 export default function MessageBubble({ role, text, imageUrl }: MessageBubbleProps) {
   const { colors } = useTheme();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   if (role === 'system') {
@@ -28,7 +30,7 @@ export default function MessageBubble({ role, text, imageUrl }: MessageBubblePro
 
   return (
     <View style={[styles.row, isUser ? styles.rowUser : styles.rowCoach]}>
-      <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleCoach]}>
+      <View style={[styles.bubble, isDesktop && styles.bubbleDesktop, isUser ? styles.bubbleUser : styles.bubbleCoach]}>
         {imageUrl && <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" />}
         {text ? <Text style={[styles.text, isUser ? styles.textUser : styles.textCoach]}>{text}</Text> : null}
       </View>
@@ -53,6 +55,9 @@ function makeStyles(colors: Colors) {
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.md,
       gap: spacing.xs,
+    },
+    bubbleDesktop: {
+      maxWidth: '60%',
     },
     image: {
       width: 200,

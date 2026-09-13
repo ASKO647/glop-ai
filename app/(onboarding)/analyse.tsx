@@ -4,10 +4,12 @@ import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AnalysisStepRow from '../../components/onboarding/AnalysisStepRow';
 import ProgressRing from '../../components/onboarding/ProgressRing';
+import { ONBOARDING_MAX_WIDTH } from '../../constants/onboardingLayout';
 import type { Colors } from '../../constants/theme';
 import { spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 
 const TARGET_PROGRESS = 87;
 const DURATION = 4000;
@@ -26,6 +28,7 @@ export default function AnalyseScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { t } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const progressAnim = useRef(new Animated.Value(0)).current;
   const [progress, setProgress] = useState(0);
@@ -56,22 +59,24 @@ export default function AnalyseScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
-      <Text style={styles.title}>{t('onboarding.analysis.title')}</Text>
+      <View style={[styles.body, isDesktop && styles.desktopBody]}>
+        <Text style={styles.title}>{t('onboarding.analysis.title')}</Text>
 
-      <View style={styles.centerBlock}>
-        <View style={styles.ringWrapper}>
-          <ProgressRing
-            progress={progressAnim}
-            displayValue={progress}
-            size={RING_SIZE}
-            strokeWidth={RING_STROKE_WIDTH}
-          />
-        </View>
+        <View style={styles.centerBlock}>
+          <View style={styles.ringWrapper}>
+            <ProgressRing
+              progress={progressAnim}
+              displayValue={progress}
+              size={RING_SIZE}
+              strokeWidth={RING_STROKE_WIDTH}
+            />
+          </View>
 
-        <View style={styles.steps}>
-          {STEP_KEYS.map((key, index) => (
-            <AnalysisStepRow key={key} label={t(key)} checked={index < checkedCount} />
-          ))}
+          <View style={styles.steps}>
+            {STEP_KEYS.map((key, index) => (
+              <AnalysisStepRow key={key} label={t(key)} checked={index < checkedCount} />
+            ))}
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -84,6 +89,14 @@ function makeStyles(colors: Colors) {
       flex: 1,
       backgroundColor: colors.background,
       paddingHorizontal: spacing.lg,
+    },
+    body: {
+      flex: 1,
+    },
+    desktopBody: {
+      alignSelf: 'center',
+      width: '100%',
+      maxWidth: ONBOARDING_MAX_WIDTH,
     },
     title: {
       marginTop: spacing.lg,

@@ -24,6 +24,8 @@ import EditMealModal from '../../components/journal/EditMealModal';
 import MealItemMenuModal from '../../components/journal/MealItemMenuModal';
 import ChoiceModal, { type ChoiceOption } from '../../components/settings/ChoiceModal';
 import NumberStepperModal from '../../components/ui/NumberStepperModal';
+import ResponsiveContainer from '../../components/ui/ResponsiveContainer';
+import ResponsiveGrid from '../../components/ui/ResponsiveGrid';
 import {
   MEAL_TYPES,
   WORKOUT_CATEGORIES,
@@ -60,6 +62,7 @@ import { useBadges } from '../../hooks/useBadges';
 import { useDailyMissions } from '../../hooks/useDailyMissions';
 import { useFasting } from '../../hooks/useFasting';
 import { useMeals, type Meal } from '../../hooks/useMeals';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { useSettings } from '../../hooks/useSettings';
 import { useWaterLogs } from '../../hooks/useWaterLogs';
 import { useWeightLogs } from '../../hooks/useWeightLogs';
@@ -73,6 +76,7 @@ export default function DashboardScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
   const { t, locale } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { profile, loading: profileLoading } = useProfile();
   const MOVE_TO_OPTIONS: ChoiceOption[] = useMemo(
@@ -303,187 +307,216 @@ export default function DashboardScreen() {
     );
   }
 
-  return (
-    <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.logoWrapper}>
-          <Logo height={34} textSize={26} />
+  // Split so desktop can lay these out as two columns (main cards left, secondary sections
+  // right) while mobile/tablet render them as siblings in the same flat, single-column
+  // ScrollView as before — Fragments add no layout node, so the flat case is unchanged.
+  const mainColumn = (
+    <>
+      <View style={styles.logoWrapper}>
+        <Logo height={34} textSize={26} />
+      </View>
+
+      <DashboardHeader
+        initial={initial}
+        greeting={greeting}
+        programDay={programDay}
+        programLength={PROGRAM_LENGTH_DAYS}
+        streak={streak}
+      />
+
+      <WeekStrip
+        completionByDate={completionByDate}
+        selectedDate={selectedDate}
+        onSelectDate={setSelectedDate}
+      />
+
+      {isViewingPast && (
+        <PastDateBanner
+          label={formatDisplayDate(selectedDate, locale)}
+          onReset={() => setSelectedDate(todayISODate())}
+        />
+      )}
+
+      <CalorieCard
+        caloriesRemaining={caloriesRemaining}
+        percent={percent}
+        proteines={{ current: totals.proteines, target: macroTargets.proteines }}
+        glucides={{ current: totals.glucides, target: macroTargets.glucides }}
+        lipides={{ current: totals.lipides, target: macroTargets.lipides }}
+      />
+
+      <HydrationCard
+        totalMl={waterTotalToday}
+        goalMl={settings.objectifEauMl}
+        onSetTotal={handleSetWaterTotal}
+        onQuickAdd={handleQuickAddWater}
+        onLongPressHeader={() => setWaterGoalModalVisible(true)}
+      />
+
+      <FastingCard
+        activeSession={
+          activeFastingSession
+            ? { debut: activeFastingSession.debut, targetHours: activeFastingSession.duree_cible_heures }
+            : null
+        }
+        elapsedMs={fastingElapsedMs}
+        currentProgramLabel={resolvedFastingProgram.label}
+        lastCompletedTodayMs={lastCompletedTodayMs}
+        onStart={() => setFastingStartModalVisible(true)}
+        onStop={handleStopFasting}
+        onLongPressHeader={() => setFastingProgramModalVisible(true)}
+        onHistoryPress={() => router.push('/fasting')}
+      />
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{t('dashboard.missions.sectionTitle')}</Text>
+          <Text style={styles.sectionCounter}>
+            {t('dashboard.missions.counter', { done: completedMissions, total: missions.length })}
+          </Text>
         </View>
+        <View style={styles.missionsList}>
+          {missionsLoading ? (
+            <ActivityIndicator color={colors.accent} />
+          ) : missions.length === 0 ? (
+            <Text style={styles.emptyMealsTitle}>{t('dashboard.missions.emptyForDay')}</Text>
+          ) : (
+            missions.map((mission) => (
+              <MissionCard
+                key={mission.id}
+                missionKey={mission.mission_key}
+                current={mission.current}
+                target={mission.target}
+                completed={mission.completed}
+                disabled={isViewingPast}
+                objectif={profile?.objectif}
+                onPress={() => incrementMission(mission)}
+              />
+            ))
+          )}
+        </View>
+      </View>
 
-        <DashboardHeader
-          initial={initial}
-          greeting={greeting}
-          programDay={programDay}
-          programLength={PROGRAM_LENGTH_DAYS}
-          streak={streak}
-        />
-
-        <WeekStrip
-          completionByDate={completionByDate}
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-        />
-
-        {isViewingPast && (
-          <PastDateBanner
-            label={formatDisplayDate(selectedDate, locale)}
-            onReset={() => setSelectedDate(todayISODate())}
-          />
-        )}
-
-        <CalorieCard
-          caloriesRemaining={caloriesRemaining}
-          percent={percent}
-          proteines={{ current: totals.proteines, target: macroTargets.proteines }}
-          glucides={{ current: totals.glucides, target: macroTargets.glucides }}
-          lipides={{ current: totals.lipides, target: macroTargets.lipides }}
-        />
-
-        <HydrationCard
-          totalMl={waterTotalToday}
-          goalMl={settings.objectifEauMl}
-          onSetTotal={handleSetWaterTotal}
-          onQuickAdd={handleQuickAddWater}
-          onLongPressHeader={() => setWaterGoalModalVisible(true)}
-        />
-
-        <FastingCard
-          activeSession={
-            activeFastingSession
-              ? { debut: activeFastingSession.debut, targetHours: activeFastingSession.duree_cible_heures }
-              : null
-          }
-          elapsedMs={fastingElapsedMs}
-          currentProgramLabel={resolvedFastingProgram.label}
-          lastCompletedTodayMs={lastCompletedTodayMs}
-          onStart={() => setFastingStartModalVisible(true)}
-          onStop={handleStopFasting}
-          onLongPressHeader={() => setFastingProgramModalVisible(true)}
-          onHistoryPress={() => router.push('/fasting')}
-        />
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('dashboard.missions.sectionTitle')}</Text>
-            <Text style={styles.sectionCounter}>
-              {t('dashboard.missions.counter', { done: completedMissions, total: missions.length })}
-            </Text>
-          </View>
-          <View style={styles.missionsList}>
-            {missionsLoading ? (
-              <ActivityIndicator color={colors.accent} />
-            ) : missions.length === 0 ? (
-              <Text style={styles.emptyMealsTitle}>{t('dashboard.missions.emptyForDay')}</Text>
-            ) : (
-              missions.map((mission) => (
-                <MissionCard
-                  key={mission.id}
-                  missionKey={mission.mission_key}
-                  current={mission.current}
-                  target={mission.target}
-                  completed={mission.completed}
-                  disabled={isViewingPast}
-                  objectif={profile?.objectif}
-                  onPress={() => incrementMission(mission)}
-                />
-              ))
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{t('dashboard.journal.title')}</Text>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/journal')} hitSlop={8}>
+            {({ pressed }) => (
+              <Text style={[styles.link, pressed && styles.linkPressed]}>{t('dashboard.journal.viewLink')}</Text>
             )}
-          </View>
+          </Pressable>
         </View>
 
+        {mealsLoading ? (
+          <ActivityIndicator color={colors.accent} />
+        ) : (
+          <View style={styles.mealsList}>
+            {MEAL_TYPES.map((mealTypeInfo) => (
+              <MealTypeCard
+                key={mealTypeInfo.id}
+                mealType={mealTypeInfo.id}
+                meals={mealsByType[mealTypeInfo.id]}
+                totalKcal={totalsByType[mealTypeInfo.id].kcal}
+                expanded={expandedMealTypes[mealTypeInfo.id]}
+                onToggleExpand={() => toggleMealType(mealTypeInfo.id)}
+                onAddFood={() => setAddFoodMealType(mealTypeInfo.id)}
+                onLongPressFood={setMenuMeal}
+              />
+            ))}
+          </View>
+        )}
+      </View>
+    </>
+  );
+
+  const secondaryColumn = (
+    <>
+      <View style={styles.section}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+          {WORKOUT_CATEGORIES.map((c) => (
+            <CategoryChip
+              key={c.id}
+              label={t(c.labelKey)}
+              active={category === c.id}
+              onPress={() => setCategory(c.id)}
+            />
+          ))}
+        </ScrollView>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{t('dashboard.workout.recommendedTitle')}</Text>
+        <ResponsiveGrid desktopColumns={2} style={styles.sessionsList}>
+          {recommendedSessions.map((session) => (
+            <WorkoutCard key={session.id} session={session} />
+          ))}
+        </ResponsiveGrid>
+      </View>
+
+      <BmiCard weightKg={poidsActuel} heightCm={profile.taille} />
+
+      <View style={styles.statsRow}>
+        <StatCard
+          label={t('dashboard.stats.currentWeight')}
+          value={poidsActuel != null ? formatWeight(poidsActuel, 'kg', locale) : '-'}
+        />
+        <StatCard
+          label={t('dashboard.stats.target')}
+          value={poidsObjectif != null ? formatWeight(poidsObjectif, 'kg', locale) : '-'}
+        />
+        <StatCard
+          label={t('dashboard.stats.remainingGap')}
+          value={ecart != null ? formatWeight(ecart, 'kg', locale) : '-'}
+        />
+      </View>
+
+      {recentBadges.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('dashboard.journal.title')}</Text>
-            <Pressable accessibilityRole="button" onPress={() => router.push('/journal')} hitSlop={8}>
+            <Text style={styles.sectionTitle}>{t('dashboard.badges.sectionTitle')}</Text>
+            <Pressable accessibilityRole="button" onPress={() => router.push('/badges')} hitSlop={8}>
               {({ pressed }) => (
-                <Text style={[styles.link, pressed && styles.linkPressed]}>{t('dashboard.journal.viewLink')}</Text>
+                <Text style={[styles.link, pressed && styles.linkPressed]}>{t('dashboard.badges.viewAllLink')}</Text>
               )}
             </Pressable>
           </View>
-
-          {mealsLoading ? (
-            <ActivityIndicator color={colors.accent} />
-          ) : (
-            <View style={styles.mealsList}>
-              {MEAL_TYPES.map((mealTypeInfo) => (
-                <MealTypeCard
-                  key={mealTypeInfo.id}
-                  mealType={mealTypeInfo.id}
-                  meals={mealsByType[mealTypeInfo.id]}
-                  totalKcal={totalsByType[mealTypeInfo.id].kcal}
-                  expanded={expandedMealTypes[mealTypeInfo.id]}
-                  onToggleExpand={() => toggleMealType(mealTypeInfo.id)}
-                  onAddFood={() => setAddFoodMealType(mealTypeInfo.id)}
-                  onLongPressFood={setMenuMeal}
-                />
-              ))}
-            </View>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
-            {WORKOUT_CATEGORIES.map((c) => (
-              <CategoryChip
-                key={c.id}
-                label={t(c.labelKey)}
-                active={category === c.id}
-                onPress={() => setCategory(c.id)}
-              />
-            ))}
-          </ScrollView>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('dashboard.workout.recommendedTitle')}</Text>
-          <View style={styles.sessionsList}>
-            {recommendedSessions.map((session) => (
-              <WorkoutCard key={session.id} session={session} />
+          <View style={styles.badgesRow}>
+            {recentBadges.map((badge) => (
+              <View key={badge.key} style={styles.badgeChip}>
+                <BadgeMedal Icon={badge.Icon} unlocked size={48} iconSize={22} />
+                <Text style={styles.badgeChipLabel} numberOfLines={1}>
+                  {badge.name}
+                </Text>
+              </View>
             ))}
           </View>
         </View>
+      )}
 
-        <BmiCard weightKg={poidsActuel} heightCm={profile.taille} />
+      <TipCard text={tip} />
+    </>
+  );
 
-        <View style={styles.statsRow}>
-          <StatCard
-            label={t('dashboard.stats.currentWeight')}
-            value={poidsActuel != null ? formatWeight(poidsActuel, 'kg', locale) : '-'}
-          />
-          <StatCard
-            label={t('dashboard.stats.target')}
-            value={poidsObjectif != null ? formatWeight(poidsObjectif, 'kg', locale) : '-'}
-          />
-          <StatCard
-            label={t('dashboard.stats.remainingGap')}
-            value={ecart != null ? formatWeight(ecart, 'kg', locale) : '-'}
-          />
-        </View>
-
-        {recentBadges.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{t('dashboard.badges.sectionTitle')}</Text>
-              <Pressable accessibilityRole="button" onPress={() => router.push('/badges')} hitSlop={8}>
-                {({ pressed }) => (
-                  <Text style={[styles.link, pressed && styles.linkPressed]}>{t('dashboard.badges.viewAllLink')}</Text>
-                )}
-              </Pressable>
+  return (
+    <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.content, isDesktop && styles.contentDesktop]}
+        showsVerticalScrollIndicator={false}
+      >
+        {isDesktop ? (
+          <ResponsiveContainer>
+            <View style={styles.desktopColumns}>
+              <View style={styles.desktopMainColumn}>{mainColumn}</View>
+              <View style={styles.desktopSecondaryColumn}>{secondaryColumn}</View>
             </View>
-            <View style={styles.badgesRow}>
-              {recentBadges.map((badge) => (
-                <View key={badge.key} style={styles.badgeChip}>
-                  <BadgeMedal Icon={badge.Icon} unlocked size={48} iconSize={22} />
-                  <Text style={styles.badgeChipLabel} numberOfLines={1}>
-                    {badge.name}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
+          </ResponsiveContainer>
+        ) : (
+          <>
+            {mainColumn}
+            {secondaryColumn}
+          </>
         )}
-
-        <TipCard text={tip} />
       </ScrollView>
 
       <BadgeUnlockModal badge={pendingUnlock} onDismiss={dismissPendingUnlock} />
@@ -595,6 +628,25 @@ function makeStyles(colors: Colors) {
     paddingHorizontal: 20,
     paddingTop: spacing.md,
     paddingBottom: TAB_BAR_CLEARANCE,
+    gap: 24,
+  },
+  // Desktop's single ResponsiveContainer child owns its own horizontal padding — avoid doubling
+  // up with `content`'s, and there's no floating tab bar on desktop to clear at the bottom.
+  contentDesktop: {
+    paddingHorizontal: 0,
+    paddingBottom: spacing.xl,
+  },
+  desktopColumns: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xl,
+  },
+  desktopMainColumn: {
+    flex: 2,
+    gap: 24,
+  },
+  desktopSecondaryColumn: {
+    flex: 1,
     gap: 24,
   },
   loadingScreen: {

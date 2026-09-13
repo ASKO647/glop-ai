@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { desktopModalBackdrop, desktopModalSheet } from '../../constants/modalPresentation';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import type { Meal } from '../../hooks/useMeals';
 import Button from '../ui/Button';
 import TextField from '../ui/TextField';
@@ -20,6 +23,7 @@ type EditMealModalProps = {
 export default function EditMealModal({ visible, meal, saving, onCancel, onSave }: EditMealModalProps) {
   const { colors } = useTheme();
   const { t } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [portion, setPortion] = useState('');
   const [kcalText, setKcalText] = useState('');
@@ -39,13 +43,21 @@ export default function EditMealModal({ visible, meal, saving, onCancel, onSave 
     onSave({ portion: portion.trim(), kcal });
   };
 
+  useEscapeKey(onCancel, visible);
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
-      <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <KeyboardAvoidingView
+        style={[styles.backdrop, isDesktop && desktopModalBackdrop]}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={onCancel} />
 
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          <View style={styles.sheet}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, isDesktop && styles.scrollContentDesktop]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={[styles.sheet, isDesktop && desktopModalSheet]}>
             <Text style={styles.title} numberOfLines={1}>
               {meal?.name ?? t('dashboard.editMeal.fallbackTitle')}
             </Text>
@@ -96,6 +108,10 @@ function makeStyles(colors: Colors) {
     scrollContent: {
       flexGrow: 1,
       justifyContent: 'flex-end',
+    },
+    scrollContentDesktop: {
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     sheet: {
       backgroundColor: colors.surface,

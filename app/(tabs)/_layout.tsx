@@ -11,6 +11,7 @@ import type { Colors } from '../../constants/theme';
 import { radii } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 
 const TAB_BAR_MARGIN = 20;
 
@@ -67,6 +68,7 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { t } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   // On devices with a home indicator, keep the bar (and the + button) clear of
   // the safe-area/system-gesture zone instead of sitting at a fixed 24px from
@@ -89,7 +91,10 @@ export default function TabsLayout() {
           // (though it works on react-native-web, which doesn't hit the same Yoga precedence),
           // making the pill render full-width with the button floating on top of its end. Using
           // the exact same keys the library sets guarantees our values win instead of theirs.
-          tabBarStyle: [styles.tabBar, { bottom: barBottom, end: TAB_BAR_MARGIN + FAB_SIZE + FAB_GAP }],
+          // On desktop, the root layout's `DesktopSidebar` replaces this floating bar entirely.
+          tabBarStyle: isDesktop
+            ? styles.tabBarHidden
+            : [styles.tabBar, { bottom: barBottom, end: TAB_BAR_MARGIN + FAB_SIZE + FAB_GAP }],
           tabBarItemStyle: styles.tabBarItem,
         }}
       >
@@ -131,19 +136,25 @@ export default function TabsLayout() {
         <Tabs.Screen name="meals" options={{ href: null }} />
       </Tabs>
 
-      <View pointerEvents="box-none" style={[styles.fabWrap, { bottom: barBottom }]}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('common.explore')}
-          onPress={() => setSheetVisible(true)}
-          style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
-        >
-          {/* onAccent, not background: this icon sits on the accent-colored FAB surface. */}
-          <Plus color={colors.onAccent} size={32} strokeWidth={2.75} />
-        </Pressable>
-      </View>
+      {/* The `+` sheet only supplements the mobile tab bar — on desktop every destination is
+          already reachable from the sidebar, so neither the button nor the sheet is needed. */}
+      {!isDesktop && (
+        <>
+          <View pointerEvents="box-none" style={[styles.fabWrap, { bottom: barBottom }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('common.explore')}
+              onPress={() => setSheetVisible(true)}
+              style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+            >
+              {/* onAccent, not background: this icon sits on the accent-colored FAB surface. */}
+              <Plus color={colors.onAccent} size={32} strokeWidth={2.75} />
+            </Pressable>
+          </View>
 
-      <NavigationSheet visible={sheetVisible} onClose={() => setSheetVisible(false)} />
+          <NavigationSheet visible={sheetVisible} onClose={() => setSheetVisible(false)} />
+        </>
+      )}
     </View>
   );
 }
@@ -162,6 +173,9 @@ function makeStyles(colors: Colors) {
       backgroundColor: colors.surface,
       borderTopWidth: 0,
       ...BAR_SHADOW,
+    },
+    tabBarHidden: {
+      display: 'none',
     },
     tabBarItem: {
       height: TAB_BAR_HEIGHT,

@@ -1,10 +1,13 @@
 import { useMemo } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { getBmiCategories, bmiCategoryColor } from '../../constants/bmi';
+import { desktopModalBackdrop, desktopModalSheet } from '../../constants/modalPresentation';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import Button from '../ui/Button';
 
 type BmiInfoModalProps = {
@@ -15,15 +18,18 @@ type BmiInfoModalProps = {
 export default function BmiInfoModal({ visible, onClose }: BmiInfoModalProps) {
   const { colors, resolvedScheme } = useTheme();
   const { t } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const categories = useMemo(() => getBmiCategories(t), [t]);
 
+  useEscapeKey(onClose, visible);
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
+      <View style={[styles.backdrop, isDesktop && desktopModalBackdrop]}>
         <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={onClose} />
 
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, isDesktop && desktopModalSheet]}>
           <Text style={styles.title}>{t('progression.bmi.title')}</Text>
 
           <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>

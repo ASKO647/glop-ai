@@ -2,10 +2,13 @@ import { Minus, Plus } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { computeExpectedEnd, formatHourMinute } from '../../constants/fasting';
+import { desktopModalBackdrop, desktopModalSheet } from '../../constants/modalPresentation';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import Button from '../ui/Button';
 
 const STEP_MINUTES = 15;
@@ -30,6 +33,7 @@ export default function FastingStartModal({
 }: FastingStartModalProps) {
   const { colors } = useTheme();
   const { t } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [minutesAgo, setMinutesAgo] = useState(0);
   const [anchor, setAnchor] = useState(() => new Date());
@@ -87,12 +91,14 @@ export default function FastingStartModal({
     onStart(startAt);
   };
 
+  useEscapeKey(handleCancel, visible);
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleCancel}>
-      <View style={styles.backdrop}>
+      <View style={[styles.backdrop, isDesktop && desktopModalBackdrop]}>
         <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={handleCancel} />
 
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, isDesktop && desktopModalSheet]}>
           <Text style={styles.title}>{t('dashboard.fasting.startCtaLong')}</Text>
 
           <View style={styles.startBlock}>

@@ -13,10 +13,13 @@ import {
   Text,
   View,
 } from 'react-native';
+import { desktopModalBackdrop, desktopModalSheet } from '../../constants/modalPresentation';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import Button from '../ui/Button';
 import TextField from '../ui/TextField';
 
@@ -37,6 +40,7 @@ type Step = 'form' | { group: { nom: string; code: string; id: string } };
 export default function CreateGroupModal({ visible, onCancel, onCreate, onDone }: CreateGroupModalProps) {
   const { colors } = useTheme();
   const { t } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = makeStyles(colors);
   const [nom, setNom] = useState('');
   const [description, setDescription] = useState('');
@@ -95,13 +99,21 @@ export default function CreateGroupModal({ visible, onCancel, onCreate, onDone }
     }
   };
 
+  useEscapeKey(handleClose, visible);
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <KeyboardAvoidingView
+        style={[styles.backdrop, isDesktop && desktopModalBackdrop]}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={handleClose} />
 
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          <View style={styles.sheet}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, isDesktop && styles.scrollContentDesktop]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={[styles.sheet, isDesktop && desktopModalSheet]}>
             {step === 'form' ? (
               <>
                 <Text style={styles.title}>{t('groups.create.title')}</Text>
@@ -202,6 +214,10 @@ function makeStyles(colors: Colors) {
     scrollContent: {
       flexGrow: 1,
       justifyContent: 'flex-end',
+    },
+    scrollContentDesktop: {
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     sheet: {
       backgroundColor: colors.surface,
