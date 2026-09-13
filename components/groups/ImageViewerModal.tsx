@@ -2,6 +2,7 @@ import { X } from 'lucide-react-native';
 import { Image, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useLocale } from '../../context/LocaleContext';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 type ImageViewerModalProps = {
   uri: string | null;
@@ -11,6 +12,8 @@ type ImageViewerModalProps = {
 export default function ImageViewerModal({ uri, onClose }: ImageViewerModalProps) {
   const { colors } = useTheme();
   const { t } = useLocale();
+
+  useEscapeKey(onClose, !!uri);
 
   return (
     <Modal visible={!!uri} transparent animationType="fade" onRequestClose={onClose}>

@@ -10,10 +10,13 @@ import {
   View,
   type TextInputProps,
 } from 'react-native';
+import { desktopModalBackdrop, desktopModalSheet } from '../../constants/modalPresentation';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import Button from './Button';
 import TextField from './TextField';
 
@@ -48,6 +51,7 @@ export default function TextInputModal({
 }: TextInputModalProps) {
   const { colors } = useTheme();
   const { t } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [value, setValue] = useState(initialValue);
   const [error, setError] = useState<string | undefined>();
@@ -88,13 +92,21 @@ export default function TextInputModal({
     onCancel();
   };
 
+  useEscapeKey(handleCancel, visible);
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleCancel}>
-      <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <KeyboardAvoidingView
+        style={[styles.backdrop, isDesktop && desktopModalBackdrop]}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={handleCancel} />
 
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          <View style={styles.sheet}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, isDesktop && styles.scrollContentDesktop]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={[styles.sheet, isDesktop && desktopModalSheet]}>
             <Text style={styles.title}>{title}</Text>
             {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
 
@@ -128,6 +140,10 @@ function makeStyles(colors: Colors) {
     scrollContent: {
       flexGrow: 1,
       justifyContent: 'flex-end',
+    },
+    scrollContentDesktop: {
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     sheet: {
       backgroundColor: colors.surface,

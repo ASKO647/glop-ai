@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { getMealTypeInfo, type MealType } from '../../constants/dashboard';
+import { desktopModalBackdrop, desktopModalSheet } from '../../constants/modalPresentation';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import Button from '../ui/Button';
 import TextField from '../ui/TextField';
 
@@ -34,6 +37,7 @@ function toInt(text: string): number {
 export default function AddFoodModal({ visible, mealType, saving, onCancel, onSave }: AddFoodModalProps) {
   const { colors } = useTheme();
   const { t } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [name, setName] = useState('');
   const [portion, setPortion] = useState('');
@@ -68,12 +72,17 @@ export default function AddFoodModal({ visible, mealType, saving, onCancel, onSa
     });
   };
 
+  useEscapeKey(onCancel, visible);
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
-      <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <KeyboardAvoidingView
+        style={[styles.backdrop, isDesktop && desktopModalBackdrop]}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={onCancel} />
 
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, isDesktop && desktopModalSheet]}>
           <Text style={styles.title}>
             {mealType
               ? t('dashboard.addFood.titleWithMealType', { mealType: t(getMealTypeInfo(mealType).labelKey) })

@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ChatInputBar from '../../components/groups/ChatInputBar';
+import GroupCard from '../../components/groups/GroupCard';
 import ImageViewerModal from '../../components/groups/ImageViewerModal';
 import MessageActionSheet from '../../components/groups/MessageActionSheet';
 import MessageBubble from '../../components/groups/MessageBubble';
@@ -28,12 +29,36 @@ import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useBlockedUsers } from '../../hooks/useBlockedUsers';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { useGroupMessages, type GroupMessage } from '../../hooks/useGroupMessages';
+import { useGroups } from '../../hooks/useGroups';
 import { useMessageReactions } from '../../hooks/useMessageReactions';
 import { showAlert } from '../../lib/alert';
 import { signGroupImagePaths } from '../../lib/groups';
 import { uploadBase64Image } from '../../lib/storageUpload';
 import { supabase } from '../../lib/supabase';
+
+const DESKTOP_LIST_PANE_WIDTH = 320;
+
+function DesktopGroupsListPane({ currentId, colors, styles }: { currentId: string; colors: Colors; styles: ReturnType<typeof makeStyles> }) {
+  const { user } = useAuth();
+  const router = useRouter();
+  const { groups } = useGroups(user?.id);
+
+  return (
+    <FlatList
+      data={groups}
+      keyExtractor={(group) => group.id}
+      contentContainerStyle={styles.desktopListContent}
+      renderItem={({ item }) => (
+        <View style={item.id === currentId ? styles.desktopListItemActive : undefined}>
+          <GroupCard group={item} onPress={() => router.replace(`/group/${item.id}`)} />
+        </View>
+      )}
+      showsVerticalScrollIndicator={false}
+    />
+  );
+}
 
 const BUCKET = 'group-images';
 const MAX_WIDTH = 1024;
@@ -82,6 +107,7 @@ export default function GroupConversationScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
   const { t, locale } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const listRef = useRef<FlatList<ListItem>>(null);
 
@@ -227,8 +253,12 @@ export default function GroupConversationScreen() {
       ? profiles[replyTargetForInput.message.userId].prenom
       : null;
 
-  return (
-    <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
+  // Mobile/tablet render `threadPane` directly as the SafeAreaView's only real content, exactly
+  // as before this existed. Desktop additionally shows a 320px pane on the left listing the
+  // user's other groups, replacing this one with a `router.replace` instead of pushing a new
+  // screen — the header/thread/input on the right are otherwise identical.
+  const threadPane = (
+    <>
       <View style={styles.header}>
         {groupBannerUrl && (
           <>
@@ -360,6 +390,21 @@ export default function GroupConversationScreen() {
           />
         </View>
       </KeyboardAvoidingView>
+    </>
+  );
+
+  return (
+    <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
+      {isDesktop ? (
+        <View style={styles.desktopRow}>
+          <View style={styles.desktopListPane}>
+            <DesktopGroupsListPane currentId={id} colors={colors} styles={styles} />
+          </View>
+          <View style={styles.desktopThreadPane}>{threadPane}</View>
+        </View>
+      ) : (
+        threadPane
+      )}
 
       <MessageActionSheet
         visible={!!actionSheetMessage}
@@ -410,6 +455,26 @@ function makeStyles(colors: Colors) {
     },
     flex: {
       flex: 1,
+    },
+    desktopRow: {
+      flex: 1,
+      flexDirection: 'row',
+    },
+    desktopListPane: {
+      width: DESKTOP_LIST_PANE_WIDTH,
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+    desktopThreadPane: {
+      flex: 1,
+    },
+    desktopListContent: {
+      padding: spacing.sm,
+      gap: spacing.xs,
+    },
+    desktopListItemActive: {
+      backgroundColor: colors.accentSurface,
+      borderRadius: radii.lg,
     },
     header: {
       flexDirection: 'row',

@@ -5,6 +5,7 @@ import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
 import type { GroupMessage } from '../../hooks/useGroupMessages';
+import { createEnterToSendHandler } from '../../lib/webKeyboard';
 
 type ChatInputBarProps = {
   value: string;
@@ -72,6 +73,7 @@ export default function ChatInputBar({
         <TextInput
           value={value}
           onChangeText={onChangeText}
+          onKeyPress={createEnterToSendHandler(() => canSend && onSend())}
           placeholder={t('groups.conversation.inputPlaceholder')}
           placeholderTextColor={colors.textTertiary}
           style={styles.input}

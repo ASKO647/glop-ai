@@ -6,16 +6,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AppImage from '../../components/ui/AppImage';
 import ChoiceModal, { type ChoiceOption } from '../../components/settings/ChoiceModal';
 import { appImage } from '../../constants/images';
+import { desktopOnboardingWidth } from '../../constants/onboardingLayout';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale, type Locale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { LANGUAGE_OPTIONS } from '../../lib/i18n';
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { t, locale, setLocale } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
 
@@ -64,7 +67,7 @@ export default function WelcomeScreen() {
         }}
       />
 
-      <View style={styles.hero}>
+      <View style={[styles.hero, isDesktop && desktopOnboardingWidth]}>
         <Text style={styles.brand}>GlowUp AI</Text>
         <Text style={styles.title}>{t('onboarding.welcome.title')}</Text>
         <Text style={styles.subtitle}>{t('onboarding.welcome.subtitle')}</Text>
@@ -72,7 +75,7 @@ export default function WelcomeScreen() {
 
       <View style={styles.spacer} />
 
-      <View style={styles.actions}>
+      <View style={[styles.actions, isDesktop && desktopOnboardingWidth]}>
         <Pressable
           accessibilityRole="button"
           onPress={() => router.push('/q/0')}

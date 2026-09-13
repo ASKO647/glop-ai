@@ -3,6 +3,7 @@ import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 import type { GroupMessage } from '../../hooks/useGroupMessages';
 import type { ReactionSummary } from '../../hooks/useMessageReactions';
 
@@ -46,6 +47,7 @@ export default function MessageBubble({
 }: MessageBubbleProps) {
   const { colors } = useTheme();
   const { t } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = makeStyles(colors);
 
   const initial = (authorName ?? '?').trim().charAt(0).toUpperCase() || '?';
@@ -63,7 +65,7 @@ export default function MessageBubble({
         </View>
       )}
 
-      <View style={styles.bubbleColumn}>
+      <View style={[styles.bubbleColumn, isDesktop && styles.bubbleColumnDesktop]}>
         {!isOwn && showAuthor && authorName && <Text style={styles.authorName}>{authorName}</Text>}
 
         <Pressable
@@ -172,6 +174,9 @@ function makeStyles(colors: Colors) {
     bubbleColumn: {
       maxWidth: '78%',
       gap: 2,
+    },
+    bubbleColumnDesktop: {
+      maxWidth: '60%',
     },
     authorName: {
       fontSize: 11,

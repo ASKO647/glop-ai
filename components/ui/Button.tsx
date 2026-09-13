@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, type PressableProps } f
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
+import { useHover } from '../../hooks/useHover';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
@@ -24,6 +25,7 @@ export default function Button({
   const { colors } = useTheme();
   const { styles, variantStyles, labelVariantStyles } = useMemo(() => makeStyles(colors), [colors]);
   const isDisabled = disabled || loading;
+  const { hovered, hoverProps } = useHover();
 
   return (
     <Pressable
@@ -34,9 +36,11 @@ export default function Button({
         styles.base,
         variantStyles[variant],
         isDisabled && styles.disabled,
+        hovered && !isDisabled && !pressed && styles.hovered,
         pressed && !isDisabled && styles.pressed,
         typeof style === 'function' ? undefined : style,
       ]}
+      {...hoverProps}
       {...rest}
     >
       {loading ? (
@@ -59,6 +63,9 @@ function makeStyles(colors: Colors) {
     },
     pressed: {
       opacity: 0.8,
+    },
+    hovered: {
+      opacity: 0.85,
     },
     disabled: {
       opacity: 0.5,

@@ -1,9 +1,12 @@
 import { Copy, Flag, Reply, Trash2 } from 'lucide-react-native';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { desktopModalBackdrop, desktopModalSheet } from '../../constants/modalPresentation';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { REACTION_EMOJIS } from '../../hooks/useMessageReactions';
 
 type MessageActionSheetProps = {
@@ -29,14 +32,17 @@ export default function MessageActionSheet({
 }: MessageActionSheetProps) {
   const { colors } = useTheme();
   const { t } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = makeStyles(colors);
+
+  useEscapeKey(onCancel, visible);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <View style={styles.backdrop}>
+      <View style={[styles.backdrop, isDesktop && desktopModalBackdrop]}>
         <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={onCancel} />
 
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, isDesktop && desktopModalSheet]}>
           <View style={styles.reactionRow}>
             {REACTION_EMOJIS.map((emoji) => (
               <Pressable

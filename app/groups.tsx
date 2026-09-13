@@ -11,6 +11,7 @@ import { radii, spacing, typography } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../context/LocaleContext';
 import { useTheme } from '../context/ThemeContext';
+import { useBreakpoint } from '../hooks/useBreakpoint';
 import { useGroups, type GroupSummary } from '../hooks/useGroups';
 import { showAlert } from '../lib/alert';
 
@@ -21,9 +22,11 @@ export default function GroupsScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
   const { t } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { groups, loading, joinByCode, createGroup } = useGroups(user?.id);
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
+  const numColumns = isDesktop ? 2 : 1;
 
   const closeModal = () => setActiveModal(null);
 
@@ -71,10 +74,22 @@ export default function GroupsScreen() {
         </View>
       ) : (
         <FlatList<GroupSummary>
+          key={numColumns}
           data={groups}
+          numColumns={numColumns}
           keyExtractor={(group) => group.id}
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => <GroupCard group={item} onPress={() => openGroup(item.id)} />}
+          style={isDesktop ? styles.listDesktop : undefined}
+          contentContainerStyle={[styles.list, isDesktop && styles.listContentDesktop]}
+          columnWrapperStyle={isDesktop ? styles.columnWrapper : undefined}
+          renderItem={({ item }) =>
+            isDesktop ? (
+              <View style={styles.gridItem}>
+                <GroupCard group={item} onPress={() => openGroup(item.id)} />
+              </View>
+            ) : (
+              <GroupCard group={item} onPress={() => openGroup(item.id)} />
+            )
+          }
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -155,6 +170,23 @@ function makeStyles(colors: Colors) {
       paddingHorizontal: spacing.lg,
       paddingBottom: 100,
       gap: spacing.sm,
+    },
+    // Caps + centers the grid on desktop, same 1200px/32px rule as `ResponsiveContainer` — kept
+    // as plain styles here (not that component) so the FlatList keeps its own flex-sizing context.
+    listDesktop: {
+      flex: 1,
+      width: '100%',
+      maxWidth: 1200,
+      alignSelf: 'center',
+    },
+    listContentDesktop: {
+      paddingHorizontal: 32,
+    },
+    columnWrapper: {
+      gap: spacing.sm,
+    },
+    gridItem: {
+      flex: 1,
     },
     emptyState: {
       flex: 1,

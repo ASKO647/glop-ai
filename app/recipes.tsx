@@ -10,6 +10,8 @@ import RecipeCard from '../components/recipes/RecipeCard';
 import RecipeIdeaCard from '../components/recipes/RecipeIdeaCard';
 import RecipeSkeletonCard from '../components/recipes/RecipeSkeletonCard';
 import Button from '../components/ui/Button';
+import ResponsiveContainer from '../components/ui/ResponsiveContainer';
+import ResponsiveGrid from '../components/ui/ResponsiveGrid';
 import { todayISODate } from '../constants/dashboard';
 import { getDefaultRecipeCategory, getRecipeCategories, getRecipeCategoryInfo, type RecipeCategoryId } from '../constants/recipes';
 import type { Colors } from '../constants/theme';
@@ -18,6 +20,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../context/LocaleContext';
 import { useProfile } from '../context/ProfileContext';
 import { useTheme } from '../context/ThemeContext';
+import { useBreakpoint } from '../hooks/useBreakpoint';
 import { showAlert, showConfirm } from '../lib/alert';
 import { compressImage } from '../lib/foodScanner';
 import {
@@ -54,6 +57,7 @@ export default function RecipesScreen() {
   const { profile, loading: profileLoading } = useProfile();
   const { colors } = useTheme();
   const { t, locale } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const TABS: { key: Tab; label: string }[] = useMemo(
@@ -331,38 +335,8 @@ export default function RecipesScreen() {
   const selectedCategoryInfo = getRecipeCategoryInfo(selectedCategory, t);
   const currentSuggestions = suggestionsByCategory[selectedCategory] ?? [];
 
-  return (
-    <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
-      <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          hitSlop={12}
-          style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-        >
-          <ArrowLeft color={colors.textPrimary} size={22} />
-        </Pressable>
-        <Text style={styles.headerTitle}>{t('recipes.header.title')}</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
-      <View style={styles.tabsRow}>
-        {TABS.map((tab) => {
-          const active = tab.key === activeTab;
-          return (
-            <Pressable
-              key={tab.key}
-              accessibilityRole="button"
-              onPress={() => setActiveTab(tab.key)}
-              style={[styles.tabPill, active && styles.tabPillActive]}
-            >
-              <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{tab.label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+  const tabContentBody = (
+    <>
         {activeTab === 'suggestions' && (
           <View style={styles.tabContent}>
             <CategoryStoryBar
@@ -391,23 +365,27 @@ export default function RecipesScreen() {
             ) : (
               <>
                 {currentSuggestions.length > 0 && (
-                  <View style={styles.list}>
-                    {currentSuggestions.map((recipe, index) => (
-                      <RecipeIdeaCard
-                        key={index}
-                        recipe={recipe}
-                        isFavorite={!!suggestionFavorites[suggestionFavoriteKey(selectedCategory, index)]}
-                        onToggleFavorite={() => toggleSuggestionFavorite(selectedCategory, index, recipe)}
-                        onPress={() =>
-                          openRecipe(recipe, 'suggestion', suggestionFavorites[suggestionFavoriteKey(selectedCategory, index)])
-                        }
-                      />
-                    ))}
-                    {/* Still-pending batch (see generateCategoryRecipes) — recipes stream in progressively. */}
-                    {(suggestionsLoading || regenerating) &&
+                  <ResponsiveGrid desktopColumns={3} style={styles.list}>
+                    {[
+                      ...currentSuggestions.map((recipe, index) => (
+                        <RecipeIdeaCard
+                          key={index}
+                          recipe={recipe}
+                          isFavorite={!!suggestionFavorites[suggestionFavoriteKey(selectedCategory, index)]}
+                          onToggleFavorite={() => toggleSuggestionFavorite(selectedCategory, index, recipe)}
+                          onPress={() =>
+                            openRecipe(recipe, 'suggestion', suggestionFavorites[suggestionFavoriteKey(selectedCategory, index)])
+                          }
+                        />
+                      )),
+                      // Still-pending batch (see generateCategoryRecipes) — recipes stream in progressively.
+                      ...((suggestionsLoading || regenerating) &&
                       !suggestionsError &&
-                      currentSuggestions.length < RECIPES_PER_CATEGORY && <RecipeSkeletonCard />}
-                  </View>
+                      currentSuggestions.length < RECIPES_PER_CATEGORY
+                        ? [<RecipeSkeletonCard key="skeleton" />]
+                        : []),
+                    ]}
+                  </ResponsiveGrid>
                 )}
                 {suggestionsError ? (
                   <View style={styles.errorBlock}>
@@ -504,7 +482,7 @@ export default function RecipesScreen() {
                   </View>
                 </View>
 
-                <View style={styles.list}>
+                <ResponsiveGrid desktopColumns={3} style={styles.list}>
                   {fridgeResult.recettes.map((recipe, index) => (
                     <RecipeCard
                       key={index}
@@ -515,7 +493,7 @@ export default function RecipesScreen() {
                       onPress={() => openRecipe(recipe, 'frigo', fridgeFavorites[index])}
                     />
                   ))}
-                </View>
+                </ResponsiveGrid>
 
                 <Button label={t('recipes.fridge.restart')} variant="secondary" onPress={resetFridge} />
               </>
@@ -534,7 +512,7 @@ export default function RecipesScreen() {
                 <Text style={styles.emptyText}>{t('recipes.favorites.emptyText')}</Text>
               </View>
             ) : (
-              <View style={styles.list}>
+              <ResponsiveGrid desktopColumns={3} style={styles.list}>
                 {savedRecipes.map((row) => (
                   <RecipeCard
                     key={row.id}
@@ -545,10 +523,49 @@ export default function RecipesScreen() {
                     onLongPress={() => handleDeleteSaved(row)}
                   />
                 ))}
-              </View>
+              </ResponsiveGrid>
             )}
           </View>
         )}
+    </>
+  );
+
+  return (
+    <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
+      <View style={styles.header}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.back()}
+          hitSlop={12}
+          style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+        >
+          <ArrowLeft color={colors.textPrimary} size={22} />
+        </Pressable>
+        <Text style={styles.headerTitle}>{t('recipes.header.title')}</Text>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      <View style={styles.tabsRow}>
+        {TABS.map((tab) => {
+          const active = tab.key === activeTab;
+          return (
+            <Pressable
+              key={tab.key}
+              accessibilityRole="button"
+              onPress={() => setActiveTab(tab.key)}
+              style={[styles.tabPill, active && styles.tabPillActive]}
+            >
+              <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{tab.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <ScrollView
+        contentContainerStyle={[styles.content, isDesktop && styles.contentDesktop]}
+        showsVerticalScrollIndicator={false}
+      >
+        {isDesktop ? <ResponsiveContainer>{tabContentBody}</ResponsiveContainer> : tabContentBody}
       </ScrollView>
     </SafeAreaView>
   );
@@ -624,6 +641,12 @@ function makeStyles(colors: Colors) {
     content: {
       paddingHorizontal: spacing.lg,
       paddingBottom: 100,
+    },
+    // ResponsiveContainer owns centering/max-width/side-margins on desktop — avoid doubling its
+    // horizontal padding, and there's no floating tab bar there to leave bottom clearance for.
+    contentDesktop: {
+      paddingHorizontal: 0,
+      paddingBottom: spacing.xl,
     },
     tabContent: {
       gap: spacing.md,

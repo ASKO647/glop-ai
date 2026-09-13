@@ -1,10 +1,13 @@
 import { Minus, Plus } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { desktopModalBackdrop, desktopModalSheet } from '../../constants/modalPresentation';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import Button from './Button';
 
 const REPEAT_DELAY_MS = 400;
@@ -51,6 +54,7 @@ export default function NumberStepperModal({
 }: NumberStepperModalProps) {
   const { colors } = useTheme();
   const { t } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const decimals = Number.isInteger(step) ? 0 : 1;
   const [value, setValue] = useState(initialValue);
@@ -114,12 +118,14 @@ export default function NumberStepperModal({
     onSave(roundToStep(value));
   };
 
+  useEscapeKey(handleCancel, visible);
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleCancel}>
-      <View style={styles.backdrop}>
+      <View style={[styles.backdrop, isDesktop && desktopModalBackdrop]}>
         <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={handleCancel} />
 
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, isDesktop && desktopModalSheet]}>
           <Text style={styles.title}>{title}</Text>
 
           <View style={styles.stepperRow}>

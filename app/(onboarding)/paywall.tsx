@@ -7,11 +7,13 @@ import BenefitRow from '../../components/onboarding/BenefitRow';
 import PlanCard from '../../components/onboarding/PlanCard';
 import Button from '../../components/ui/Button';
 import { appImage } from '../../constants/images';
+import { ONBOARDING_MAX_WIDTH } from '../../constants/onboardingLayout';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { supabase } from '../../lib/supabase';
 
 const BENEFIT_KEYS = [
@@ -27,6 +29,7 @@ export default function PaywallScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { t } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user, signOut, refreshSubscription } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<PlanId>('annual');
@@ -74,56 +77,58 @@ export default function PaywallScreen() {
         <X color={colors.labelMuted} size={22} />
       </Pressable>
 
-      <View style={styles.header}>
-        <Text style={styles.title}>{t('onboarding.paywall.title')}</Text>
-        <Text style={styles.subtitle} numberOfLines={2}>
-          {t('onboarding.paywall.subtitle')}
-        </Text>
-      </View>
+      <View style={isDesktop && styles.desktopBody}>
+        <View style={styles.header}>
+          <Text style={styles.title}>{t('onboarding.paywall.title')}</Text>
+          <Text style={styles.subtitle} numberOfLines={2}>
+            {t('onboarding.paywall.subtitle')}
+          </Text>
+        </View>
 
-      <View style={styles.benefits}>
-        {BENEFIT_KEYS.map((benefit) => (
-          <BenefitRow key={benefit.labelKey} label={t(benefit.labelKey)} image={benefit.image} />
-        ))}
-      </View>
+        <View style={styles.benefits}>
+          {BENEFIT_KEYS.map((benefit) => (
+            <BenefitRow key={benefit.labelKey} label={t(benefit.labelKey)} image={benefit.image} />
+          ))}
+        </View>
 
-      <View style={styles.plans}>
-        <PlanCard
-          badge={t('onboarding.paywall.plans.annualBadge')}
-          name={t('onboarding.paywall.plans.annualName')}
-          price={t('onboarding.paywall.plans.annualPrice')}
-          originalPrice={t('onboarding.paywall.plans.annualOriginalPrice')}
-          trialLabel={t('onboarding.paywall.plans.trial')}
-          subline={t('onboarding.paywall.plans.annualSubline')}
-          selected={selectedPlan === 'annual'}
-          onPress={() => setSelectedPlan('annual')}
-        />
-        <PlanCard
-          name={t('onboarding.paywall.plans.monthlyName')}
-          price={t('onboarding.paywall.plans.monthlyPrice')}
-          originalPrice={t('onboarding.paywall.plans.monthlyOriginalPrice')}
-          trialLabel={t('onboarding.paywall.plans.trial')}
-          subline={t('onboarding.paywall.plans.monthlySubline')}
-          selected={selectedPlan === 'monthly'}
-          onPress={() => setSelectedPlan('monthly')}
-        />
-      </View>
+        <View style={styles.plans}>
+          <PlanCard
+            badge={t('onboarding.paywall.plans.annualBadge')}
+            name={t('onboarding.paywall.plans.annualName')}
+            price={t('onboarding.paywall.plans.annualPrice')}
+            originalPrice={t('onboarding.paywall.plans.annualOriginalPrice')}
+            trialLabel={t('onboarding.paywall.plans.trial')}
+            subline={t('onboarding.paywall.plans.annualSubline')}
+            selected={selectedPlan === 'annual'}
+            onPress={() => setSelectedPlan('annual')}
+          />
+          <PlanCard
+            name={t('onboarding.paywall.plans.monthlyName')}
+            price={t('onboarding.paywall.plans.monthlyPrice')}
+            originalPrice={t('onboarding.paywall.plans.monthlyOriginalPrice')}
+            trialLabel={t('onboarding.paywall.plans.trial')}
+            subline={t('onboarding.paywall.plans.monthlySubline')}
+            selected={selectedPlan === 'monthly'}
+            onPress={() => setSelectedPlan('monthly')}
+          />
+        </View>
 
-      <View style={styles.footer}>
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Button
-          label={t('onboarding.paywall.cta')}
-          variant="primary"
-          style={styles.ctaButton}
-          loading={submitting}
-          onPress={handleSubscribe}
-        />
-        <View style={styles.linksRow}>
-          <Text style={styles.link}>{t('onboarding.paywall.restore')}</Text>
-          <Text style={styles.link}>·</Text>
-          <Text style={styles.link}>{t('onboarding.paywall.terms')}</Text>
-          <Text style={styles.link}>·</Text>
-          <Text style={styles.link}>{t('onboarding.paywall.privacy')}</Text>
+        <View style={styles.footer}>
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+          <Button
+            label={t('onboarding.paywall.cta')}
+            variant="primary"
+            style={styles.ctaButton}
+            loading={submitting}
+            onPress={handleSubscribe}
+          />
+          <View style={styles.linksRow}>
+            <Text style={styles.link}>{t('onboarding.paywall.restore')}</Text>
+            <Text style={styles.link}>·</Text>
+            <Text style={styles.link}>{t('onboarding.paywall.terms')}</Text>
+            <Text style={styles.link}>·</Text>
+            <Text style={styles.link}>{t('onboarding.paywall.privacy')}</Text>
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -136,6 +141,11 @@ function makeStyles(colors: Colors) {
       flex: 1,
       backgroundColor: colors.background,
       paddingHorizontal: spacing.lg,
+    },
+    desktopBody: {
+      alignSelf: 'center',
+      width: '100%',
+      maxWidth: ONBOARDING_MAX_WIDTH,
     },
     closeButton: {
       width: 32,

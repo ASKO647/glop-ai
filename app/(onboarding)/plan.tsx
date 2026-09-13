@@ -8,11 +8,13 @@ import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import { appImage } from '../../constants/images';
 import { getOptionLabelKey } from '../../constants/onboardingFlow';
+import { ONBOARDING_MAX_WIDTH } from '../../constants/onboardingLayout';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
 import { asString, useOnboarding } from '../../context/OnboardingContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 
 // Estimated weekly weight change (kg) per chosen pace — used only to derive a display duration.
 const WEEKLY_RATE_BY_PACE: Record<string, number> = {
@@ -69,6 +71,7 @@ function clamp(value: number, min: number, max: number): number {
 export default function PlanScreen() {
   const { colors } = useTheme();
   const { t } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { answers } = useOnboarding();
 
@@ -134,46 +137,48 @@ export default function PlanScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
-      <AppImage source={appImage('plan-hero.jpg')} style={styles.heroBanner} overlay={0.45} />
+      <View style={[styles.body, isDesktop && styles.desktopBody]}>
+        <AppImage source={appImage('plan-hero.jpg')} style={styles.heroBanner} overlay={0.45} />
 
-      <View style={styles.header}>
-        <Text style={styles.title}>{t('onboarding.plan.title')}</Text>
-        <Text style={styles.subtitle}>{t('onboarding.plan.subtitle')}</Text>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Card style={styles.heroCard}>
-          <View style={styles.heroIcon}>
-            {/* Icon sits on a colors.accent-filled circle, so it needs onAccent, not background
-                (background would turn light-on-light-ish against accent once light mode flips). */}
-            <Target color={colors.onAccent} size={18} />
-          </View>
-          <View style={styles.heroTextGroup}>
-            <Text style={styles.heroGoal}>{goalLabel}</Text>
-            <Text style={styles.heroDuration}>{durationLabel}</Text>
-          </View>
-        </Card>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>{t('onboarding.plan.sectionLabel')}</Text>
-          <View style={styles.objectiveList}>
-            {objectives.map((objective) => (
-              <View key={objective.title} style={styles.objectiveRow}>
-                <Check color={colors.accent} size={14} strokeWidth={3} />
-                <Text style={styles.objectiveText}>
-                  <Text style={styles.objectiveTitle}>{objective.title} : </Text>
-                  {objective.description}
-                </Text>
-              </View>
-            ))}
-          </View>
+        <View style={styles.header}>
+          <Text style={styles.title}>{t('onboarding.plan.title')}</Text>
+          <Text style={styles.subtitle}>{t('onboarding.plan.subtitle')}</Text>
         </View>
-      </ScrollView>
 
-      <View style={styles.footer}>
-        <Link href="/signup" asChild>
-          <Button label={t('onboarding.plan.cta')} variant="primary" style={styles.ctaButton} />
-        </Link>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <Card style={styles.heroCard}>
+            <View style={styles.heroIcon}>
+              {/* Icon sits on a colors.accent-filled circle, so it needs onAccent, not background
+                  (background would turn light-on-light-ish against accent once light mode flips). */}
+              <Target color={colors.onAccent} size={18} />
+            </View>
+            <View style={styles.heroTextGroup}>
+              <Text style={styles.heroGoal}>{goalLabel}</Text>
+              <Text style={styles.heroDuration}>{durationLabel}</Text>
+            </View>
+          </Card>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>{t('onboarding.plan.sectionLabel')}</Text>
+            <View style={styles.objectiveList}>
+              {objectives.map((objective) => (
+                <View key={objective.title} style={styles.objectiveRow}>
+                  <Check color={colors.accent} size={14} strokeWidth={3} />
+                  <Text style={styles.objectiveText}>
+                    <Text style={styles.objectiveTitle}>{objective.title} : </Text>
+                    {objective.description}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <Link href="/signup" asChild>
+            <Button label={t('onboarding.plan.cta')} variant="primary" style={styles.ctaButton} />
+          </Link>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -185,6 +190,14 @@ function makeStyles(colors: Colors) {
       flex: 1,
       backgroundColor: colors.background,
       paddingHorizontal: spacing.lg,
+    },
+    body: {
+      flex: 1,
+    },
+    desktopBody: {
+      alignSelf: 'center',
+      width: '100%',
+      maxWidth: ONBOARDING_MAX_WIDTH,
     },
     heroBanner: {
       width: '100%',

@@ -7,6 +7,7 @@ import MessageBubble from '../../components/coach/MessageBubble';
 import SuggestionChip from '../../components/coach/SuggestionChip';
 import TypingIndicator from '../../components/coach/TypingIndicator';
 import AppImage from '../../components/ui/AppImage';
+import ResponsiveContainer from '../../components/ui/ResponsiveContainer';
 import { appImage } from '../../constants/images';
 import { TAB_BAR_CLEARANCE } from '../../constants/layout';
 import type { Colors } from '../../constants/theme';
@@ -15,6 +16,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { useCoachMessages, type PickedImage } from '../../hooks/useCoachMessages';
 import { isLikelyProductQuery } from '../../lib/coach';
 import { showAlert } from '../../lib/alert';
@@ -26,6 +28,7 @@ export default function CoachScreen() {
   const { profile } = useProfile();
   const { colors } = useTheme();
   const { t } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { messages, loading, sending, preparingImage, send } = useCoachMessages(user?.id, profile);
   const [draft, setDraft] = useState('');
@@ -57,8 +60,11 @@ export default function CoachScreen() {
     setPendingImage(null);
   };
 
-  return (
-    <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
+  // Coach has a single ongoing conversation (no thread list to show alongside it), so its
+  // desktop treatment is just narrower bubbles (see MessageBubble) plus keeping this content
+  // centered instead of stretched — same `body` fragment either way, only the wrapper differs.
+  const body = (
+    <>
       <View style={styles.header}>
         <View style={styles.avatar}>
           <AppImage source={appImage('logo-mark.png')} style={styles.avatarLogo} resizeMode="contain" />
@@ -118,6 +124,12 @@ export default function CoachScreen() {
           />
         </View>
       </KeyboardAvoidingView>
+    </>
+  );
+
+  return (
+    <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
+      {isDesktop ? <ResponsiveContainer style={styles.flex}>{body}</ResponsiveContainer> : body}
     </SafeAreaView>
   );
 }

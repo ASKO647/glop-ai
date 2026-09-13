@@ -1,10 +1,13 @@
 import { Minus, Plus } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { desktopModalBackdrop, desktopModalSheet } from '../../constants/modalPresentation';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import Button from '../ui/Button';
 
 const MINUTE_STEP = 5;
@@ -38,6 +41,7 @@ function wrap(value: number, max: number): number {
 export default function TimePickerModal({ visible, title, initialValue, saving = false, onCancel, onSave }: TimePickerModalProps) {
   const { colors } = useTheme();
   const { t } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [hour, setHour] = useState(0);
   const [minute, setMinute] = useState(0);
@@ -54,12 +58,14 @@ export default function TimePickerModal({ visible, title, initialValue, saving =
     onSave(`${pad(hour)}:${pad(minute)}`);
   };
 
+  useEscapeKey(onCancel, visible);
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
-      <View style={styles.backdrop}>
+      <View style={[styles.backdrop, isDesktop && desktopModalBackdrop]}>
         <Pressable style={StyleSheet.absoluteFill} accessibilityLabel={t('common.close')} onPress={onCancel} />
 
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, isDesktop && desktopModalSheet]}>
           <Text style={styles.title}>{title}</Text>
 
           <View style={styles.timeRow}>

@@ -5,6 +5,7 @@ import type { Colors } from '../../constants/theme';
 import { radii, spacing, typography } from '../../constants/theme';
 import { useLocale } from '../../context/LocaleContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import Button from '../ui/Button';
 import BadgeMedal from './BadgeMedal';
 
@@ -18,6 +19,8 @@ export default function BadgeUnlockModal({ badge, onDismiss }: BadgeUnlockModalP
   const { colors } = useTheme();
   const { t } = useLocale();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  useEscapeKey(onDismiss, !!badge);
 
   return (
     <Modal visible={!!badge} transparent animationType="fade" onRequestClose={onDismiss}>

@@ -8,12 +8,14 @@ import SocialButton from '../../components/onboarding/SocialButton';
 import Button from '../../components/ui/Button';
 import TextField from '../../components/ui/TextField';
 import { getOptionLabel } from '../../constants/onboardingFlow';
+import { ONBOARDING_MAX_WIDTH } from '../../constants/onboardingLayout';
 import type { Colors } from '../../constants/theme';
 import { spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { asString, useOnboarding } from '../../context/OnboardingContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { mapAuthError } from '../../lib/authErrors';
 import { generateUniqueReferralCode } from '../../lib/referral';
 import { supabase } from '../../lib/supabase';
@@ -26,6 +28,7 @@ export default function SignupScreen() {
   const { answers } = useOnboarding();
   const { colors } = useTheme();
   const { t } = useLocale();
+  const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [email, setEmail] = useState('');
@@ -109,7 +112,7 @@ export default function SignupScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
       <KeyboardAvoidingView
-        style={styles.flex}
+        style={[styles.flex, isDesktop && styles.desktopBody]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.header}>
@@ -200,6 +203,11 @@ function makeStyles(colors: Colors) {
     flex: {
       flex: 1,
       justifyContent: 'space-between',
+    },
+    desktopBody: {
+      alignSelf: 'center',
+      width: '100%',
+      maxWidth: ONBOARDING_MAX_WIDTH,
     },
     header: {
       marginTop: spacing.lg,
