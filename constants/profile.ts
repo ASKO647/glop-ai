@@ -18,3 +18,16 @@ export function getDisplayName(profile: Profile | null, user: UserLike): string 
   if (!name) return null;
   return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
 }
+
+/**
+ * Whether this account has ever finished the onboarding questionnaire — used to route a
+ * signed-in, not-yet-subscribed user to `/q/0` instead of straight to `/paywall`
+ * ((onboarding)/_layout.tsx). No dedicated column for this: `objectif` ("goal") is the very
+ * first mandatory, non-skippable question in the flow (see constants/onboardingFlow.ts) and is
+ * always written in the same insert/update as every other answer, so it's already a reliable,
+ * all-or-nothing signal that the whole questionnaire was completed — a Google sign-in leaves it
+ * null until the user actually goes through `/q/0`..`/plan` (see lib/oauthProfile.ts).
+ */
+export function hasCompletedOnboardingQuestionnaire(profile: Profile | null): boolean {
+  return !!profile && profile.objectif !== null;
+}

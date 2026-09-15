@@ -1,5 +1,4 @@
 import { Link } from 'expo-router';
-import { Apple } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,7 +20,7 @@ export default function LoginScreen() {
   const { t } = useLocale();
   const { isDesktop } = useBreakpoint();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { signIn, signInWithApple, signInWithGoogle } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,6 +28,7 @@ export default function LoginScreen() {
   const [passwordError, setPasswordError] = useState<string | undefined>();
   const [formError, setFormError] = useState<string | undefined>();
   const [submitting, setSubmitting] = useState(false);
+  const [googleSubmitting, setGoogleSubmitting] = useState(false);
 
   const isDisabled = !email.trim() || !password;
 
@@ -62,6 +62,15 @@ export default function LoginScreen() {
     // subscription status) and routes to (tabs) or (onboarding)/paywall on its own.
   };
 
+  const handleGoogle = async () => {
+    setFormError(undefined);
+    setGoogleSubmitting(true);
+    const { error } = await signInWithGoogle();
+    setGoogleSubmitting(false);
+    if (error) setFormError(mapAuthError(t, error).message);
+    // No error, on web: the page is already navigating away to Google.
+  };
+
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
       <KeyboardAvoidingView
@@ -76,23 +85,12 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.middle}>
-          <View style={styles.socialButtons}>
-            <SocialButton
-              label={t('onboarding.auth.continueWithApple')}
-              // The "white" SocialButton variant is a fixed white surface regardless of theme
-              // (see SocialButton.tsx), so this icon must stay a fixed dark color too —
-              // colors.background would turn near-white in light mode and vanish on it.
-              icon={<Apple color="#0a0d0c" size={18} fill="#0a0d0c" />}
-              variant="white"
-              onPress={signInWithApple}
-            />
-            <SocialButton
-              label={t('onboarding.auth.continueWithGoogle')}
-              icon={<GoogleIcon size={18} />}
-              variant="outline"
-              onPress={signInWithGoogle}
-            />
-          </View>
+          <SocialButton
+            label={t('onboarding.auth.continueWithGoogle')}
+            icon={<GoogleIcon size={18} />}
+            onPress={handleGoogle}
+            loading={googleSubmitting}
+          />
 
           <View style={styles.separatorRow}>
             <View style={styles.separatorLine} />
@@ -180,9 +178,6 @@ function makeStyles(colors: Colors) {
     },
     middle: {
       gap: spacing.lg,
-    },
-    socialButtons: {
-      gap: spacing.sm,
     },
     separatorRow: {
       flexDirection: 'row',

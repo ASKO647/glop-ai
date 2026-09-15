@@ -34,8 +34,9 @@ export type Colors = {
   danger: string;
   // Warning / "wrong direction" state (e.g. a weight-trend arrow going the wrong way).
   warning: string;
-  // Pure white — required background for the "Continuer avec Apple" button per Apple's HIG.
-  // Intentionally identical in both palettes: it's a fixed platform requirement, not a themed tone.
+  // Pure white — used where content sits directly over a fixed-dark photo/scrim regardless of
+  // theme (e.g. welcome.tsx's hero text, RecipeIdeaCard's favorite icon). Intentionally identical
+  // in both palettes: it's a fixed requirement of what it's drawn over, not a themed tone.
   white: string;
 };
 

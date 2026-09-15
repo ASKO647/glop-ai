@@ -79,7 +79,6 @@ const es: TranslationSchema = {
       defaultDescription: 'Esta pantalla se implementará próximamente.',
     },
     auth: {
-      continueWithApple: 'Continuar con Apple',
       continueWithGoogle: 'Continuar con Google',
       or: 'o',
       emailLabel: 'Email',

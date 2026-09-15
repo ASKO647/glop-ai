@@ -1,6 +1,6 @@
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { Check, Target } from 'lucide-react-native';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppImage from '../../components/ui/AppImage';
@@ -11,10 +11,14 @@ import { getOptionLabelKey } from '../../constants/onboardingFlow';
 import { ONBOARDING_MAX_WIDTH } from '../../constants/onboardingLayout';
 import type { Colors } from '../../constants/theme';
 import { radii, spacing } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { asString, useOnboarding } from '../../context/OnboardingContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
+import { showAlert } from '../../lib/alert';
+import { buildOnboardingProfilePayload } from '../../lib/onboardingProfile';
+import { supabase } from '../../lib/supabase';
 
 // Estimated weekly weight change (kg) per chosen pace — used only to derive a display duration.
 const WEEKLY_RATE_BY_PACE: Record<string, number> = {
@@ -72,8 +76,11 @@ export default function PlanScreen() {
   const { colors } = useTheme();
   const { t } = useLocale();
   const { isDesktop } = useBreakpoint();
+  const router = useRouter();
+  const { user } = useAuth();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { answers } = useOnboarding();
+  const [submitting, setSubmitting] = useState(false);
 
   const goalLabelKey = getOptionLabelKey('goal', asString(answers.goal));
   const goalLabel = goalLabelKey ? t(goalLabelKey) : t('onboarding.plan.defaultGoal');
@@ -135,6 +142,28 @@ export default function PlanScreen() {
     { title: t('onboarding.plan.objectiveTitles.discipline'), description: disciplineDescription },
   ];
 
+  // A signed-in user reaching this screen already has an account (a Google sign-in that had no
+  // profile yet, sent here via (onboarding)/_layout.tsx) — there's no email/password left to
+  // collect, so just fill in their existing row with these answers instead of routing to
+  // `/signup`. Everyone else (the classic flow) still creates an account there.
+  const handleContinue = async () => {
+    if (!user) {
+      router.push('/signup');
+      return;
+    }
+    setSubmitting(true);
+    const { error } = await supabase
+      .from('profiles')
+      .update(buildOnboardingProfilePayload(answers))
+      .eq('id', user.id);
+    setSubmitting(false);
+    if (error) {
+      showAlert(t('common.error'), t('errors.generic'));
+      return;
+    }
+    router.replace('/paywall');
+  };
+
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
       <View style={[styles.body, isDesktop && styles.desktopBody]}>
@@ -175,9 +204,19 @@ export default function PlanScreen() {
         </ScrollView>
 
         <View style={styles.footer}>
-          <Link href="/signup" asChild>
-            <Button label={t('onboarding.plan.cta')} variant="primary" style={styles.ctaButton} />
-          </Link>
+          {user ? (
+            <Button
+              label={t('onboarding.plan.cta')}
+              variant="primary"
+              style={styles.ctaButton}
+              loading={submitting}
+              onPress={handleContinue}
+            />
+          ) : (
+            <Link href="/signup" asChild>
+              <Button label={t('onboarding.plan.cta')} variant="primary" style={styles.ctaButton} />
+            </Link>
+          )}
         </View>
       </View>
     </SafeAreaView>

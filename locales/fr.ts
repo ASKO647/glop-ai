@@ -83,7 +83,6 @@ const fr = {
       defaultDescription: 'Cet écran sera implémenté prochainement.',
     },
     auth: {
-      continueWithApple: 'Continuer avec Apple',
       continueWithGoogle: 'Continuer avec Google',
       or: 'ou',
       emailLabel: 'Email',
