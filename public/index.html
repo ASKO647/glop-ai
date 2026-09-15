@@ -12,6 +12,14 @@
     />
     <meta name="theme-color" content="#0a0d0c" />
 
+    <!-- Browser tab favicon — generated from assets/icon.png (see the root README's
+         "Déploiement web (Vercel)" section for how). Without these, browsers fall back to
+         whatever favicon a host (e.g. Vercel) serves for unmatched paths. -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
     <!-- Open Graph — og:image is a relative path since the production domain isn't fixed yet; swap for an absolute URL once deployed, some crawlers require one. -->
     <meta property="og:title" content="GlowUp AI — Ton coach IA personnel" />
     <meta
@@ -23,7 +31,6 @@
 
     <!-- PWA manifest + iOS "add to home screen" -->
     <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="GlowUp" />
