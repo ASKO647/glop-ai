@@ -79,7 +79,6 @@ const de: TranslationSchema = {
       defaultDescription: 'Dieser Bildschirm wird demnächst verfügbar sein.',
     },
     auth: {
-      continueWithApple: 'Mit Apple fortfahren',
       continueWithGoogle: 'Mit Google fortfahren',
       or: 'oder',
       emailLabel: 'E-Mail',

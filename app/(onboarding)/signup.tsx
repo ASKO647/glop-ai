@@ -1,5 +1,4 @@
 import { Link } from 'expo-router';
-import { Apple } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,16 +6,16 @@ import GoogleIcon from '../../components/onboarding/GoogleIcon';
 import SocialButton from '../../components/onboarding/SocialButton';
 import Button from '../../components/ui/Button';
 import TextField from '../../components/ui/TextField';
-import { getOptionLabel } from '../../constants/onboardingFlow';
 import { ONBOARDING_MAX_WIDTH } from '../../constants/onboardingLayout';
 import type { Colors } from '../../constants/theme';
 import { spacing, typography } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
-import { asString, useOnboarding } from '../../context/OnboardingContext';
+import { useOnboarding } from '../../context/OnboardingContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { mapAuthError } from '../../lib/authErrors';
+import { buildOnboardingProfilePayload } from '../../lib/onboardingProfile';
 import { generateUniqueReferralCode } from '../../lib/referral';
 import { supabase } from '../../lib/supabase';
 import { generateUniqueUsername } from '../../lib/username';
@@ -24,7 +23,7 @@ import { generateUniqueUsername } from '../../lib/username';
 const MIN_PASSWORD_LENGTH = 6;
 
 export default function SignupScreen() {
-  const { signUp, signInWithApple, signInWithGoogle } = useAuth();
+  const { signUp, signInWithGoogle } = useAuth();
   const { answers } = useOnboarding();
   const { colors } = useTheme();
   const { t } = useLocale();
@@ -37,6 +36,7 @@ export default function SignupScreen() {
   const [passwordError, setPasswordError] = useState<string | undefined>();
   const [formError, setFormError] = useState<string | undefined>();
   const [submitting, setSubmitting] = useState(false);
+  const [googleSubmitting, setGoogleSubmitting] = useState(false);
 
   const isDisabled = !email.trim() || password.length < MIN_PASSWORD_LENGTH;
 
@@ -66,11 +66,6 @@ export default function SignupScreen() {
       return;
     }
 
-    const restrictionIds = Array.isArray(answers.dietary_restrictions) ? answers.dietary_restrictions : [];
-    const restrictions = restrictionIds
-      .map((id) => getOptionLabel('dietary_restrictions', id))
-      .filter((label): label is string => Boolean(label));
-
     const [codeParrainage, username] = await Promise.all([
       generateUniqueReferralCode(email.trim()),
       generateUniqueUsername(email.trim()),
@@ -81,21 +76,7 @@ export default function SignupScreen() {
       email: email.trim(),
       code_parrainage: codeParrainage,
       username,
-      objectif: getOptionLabel('goal', asString(answers.goal)) ?? null,
-      sexe: getOptionLabel('gender', asString(answers.gender)) ?? null,
-      age: typeof answers.age === 'number' ? answers.age : null,
-      taille: typeof answers.height === 'number' ? answers.height : null,
-      poids_actuel: typeof answers.current_weight === 'number' ? answers.current_weight : null,
-      poids_objectif: typeof answers.target_weight === 'number' ? answers.target_weight : null,
-      vitesse: getOptionLabel('pace', asString(answers.pace)) ?? null,
-      niveau_activite: getOptionLabel('activity_level', asString(answers.activity_level)) ?? null,
-      frequence_entrainement: getOptionLabel('workouts_per_week', asString(answers.workouts_per_week)) ?? null,
-      lieu_entrainement: getOptionLabel('training_location', asString(answers.training_location)) ?? null,
-      alimentation: getOptionLabel('diet_quality', asString(answers.diet_quality)) ?? null,
-      sommeil: getOptionLabel('sleep_hours', asString(answers.sleep_hours)) ?? null,
-      blocage: getOptionLabel('blocker', asString(answers.blocker)) ?? null,
-      restrictions,
-      engagement: getOptionLabel('commitment_level', asString(answers.commitment_level)) ?? null,
+      ...buildOnboardingProfilePayload(answers),
     });
 
     if (profileError) {
@@ -107,6 +88,15 @@ export default function SignupScreen() {
     setSubmitting(false);
     // No explicit navigation here: app/_layout.tsx reacts to the new session (and its
     // subscription status) and routes to (onboarding)/paywall on its own.
+  };
+
+  const handleGoogle = async () => {
+    setFormError(undefined);
+    setGoogleSubmitting(true);
+    const { error } = await signInWithGoogle();
+    setGoogleSubmitting(false);
+    if (error) setFormError(mapAuthError(t, error).message);
+    // No error, on web: the page is already navigating away to Google.
   };
 
   return (
@@ -123,22 +113,12 @@ export default function SignupScreen() {
         </View>
 
         <View style={styles.middle}>
-          <View style={styles.socialButtons}>
-            <SocialButton
-              label={t('onboarding.auth.continueWithApple')}
-              // The "white" SocialButton variant's background is a fixed white
-              // regardless of theme, so the Apple glyph must stay fixed dark too.
-              icon={<Apple color="#0a0d0c" size={18} fill="#0a0d0c" />}
-              variant="white"
-              onPress={signInWithApple}
-            />
-            <SocialButton
-              label={t('onboarding.auth.continueWithGoogle')}
-              icon={<GoogleIcon size={18} />}
-              variant="outline"
-              onPress={signInWithGoogle}
-            />
-          </View>
+          <SocialButton
+            label={t('onboarding.auth.continueWithGoogle')}
+            icon={<GoogleIcon size={18} />}
+            onPress={handleGoogle}
+            loading={googleSubmitting}
+          />
 
           <View style={styles.separatorRow}>
             <View style={styles.separatorLine} />
@@ -215,9 +195,6 @@ function makeStyles(colors: Colors) {
     },
     middle: {
       gap: spacing.lg,
-    },
-    socialButtons: {
-      gap: spacing.sm,
     },
     separatorRow: {
       flexDirection: 'row',

@@ -1,5 +1,7 @@
+import type { User } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useAuth } from './AuthContext';
+import { createProfileFromOAuthUser } from '../lib/oauthProfile';
 import { supabase } from '../lib/supabase';
 
 export type Profile = {
@@ -43,9 +45,22 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadProfile = async (userId: string) => {
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
-    setProfile(!error && data ? (data as Profile) : null);
+  const loadProfile = async (currentUser: User) => {
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
+    if (!error && data) {
+      setProfile(data as Profile);
+      return;
+    }
+
+    // No row yet. Classic email sign-up always inserts its own (fuller) row synchronously
+    // right after `supabase.auth.signUp()`, so this only happens for a first-time OAuth
+    // sign-in (Google) — create a minimal profile from whatever the provider handed back.
+    if (currentUser.app_metadata?.provider !== 'email') {
+      setProfile(await createProfileFromOAuthUser(currentUser));
+      return;
+    }
+
+    setProfile(null);
   };
 
   useEffect(() => {
@@ -57,7 +72,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
     let cancelled = false;
     setLoading(true);
-    loadProfile(user.id).finally(() => {
+    loadProfile(user).finally(() => {
       if (!cancelled) setLoading(false);
     });
 
@@ -68,7 +83,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = async () => {
     if (user) {
-      await loadProfile(user.id);
+      await loadProfile(user);
     }
   };
 

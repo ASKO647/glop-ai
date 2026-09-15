@@ -414,6 +414,8 @@ lib/
 
 Le bouton "J'ai déjà un compte" sur l'écran `welcome` va directement à `login`, en court-circuitant le flow de questions. Depuis `signup`, le lien "J'ai déjà un compte" mène aussi à `login`.
 
+**Variante Google** : `login`/`signup` n'ont plus qu'un seul bouton social (Google — Apple entièrement retiré, voir plus bas). Contrairement au flow classique, l'authentification Google précède le questionnaire au lieu de le suivre : un clic sur "Continuer avec Google" depuis `welcome`'s "J'ai déjà un compte" → `login` (ou directement depuis `signup`, avant même de renseigner un mot de passe) authentifie immédiatement, et c'est seulement après que `(onboarding)/_layout.tsx` décide où renvoyer ce compte — voir "Règle de redirection" plus bas.
+
 ### Écrans de questions (`q/[step]`)
 
 Chaque étape du questionnaire est un écran plein écran dédié, une question à la fois, plutôt qu'un formulaire unique — animations fluides, typographie imposante, thème sombre avec l'accent vert lime (`#c6ff3a`) comme seule couleur de mise en avant.
@@ -433,17 +435,32 @@ Toutes les animations utilisent l'API `Animated` de React Native (`useRef(new An
 
 Ni `signup.tsx` ni `login.tsx` ne naviguent explicitement après une authentification réussie — `app/_layout.tsx` réagit à la session (et à `isSubscribed` une fois chargé) et route lui-même vers `(tabs)` ou `(onboarding)`. Ça évite toute course entre une navigation manuelle et la redirection automatique.
 
-**Règle de redirection** (`app/_layout.tsx`), écran de chargement affiché tant que l'un de ces états n'est pas connu :
+**Règle de redirection** (`app/_layout.tsx` + `(onboarding)/_layout.tsx`), écran de chargement affiché tant que l'un de ces états n'est pas connu :
 
 - pas de session → `(onboarding)`, ouvert sur `welcome`
-- session mais pas abonné (`is_subscribed` faux) → `(onboarding)`, ouvert directement sur `paywall`
+- session, pas abonné (`is_subscribed` faux), questionnaire jamais complété → `(onboarding)`, ouvert directement sur `/q/0` (uniquement possible pour un compte Google, voir ci-dessous — le flow classique ne crée jamais de session avant `signup.tsx`, qui écrit toujours toutes les réponses dans le même insert)
+- session, pas abonné, questionnaire complété → `(onboarding)`, ouvert directement sur `paywall`
 - session et abonné → `(tabs)`
+
+"Questionnaire complété" (`hasCompletedOnboardingQuestionnaire`, `constants/profile.ts`) n'a pas de colonne dédiée en base — c'est `profiles.objectif` (la réponse à "goal", la toute première question, à choix unique et non-skippable) qui sert de signal : `null` tant que la ligne n'a jamais reçu de réponses, renseigné pour de bon dès que `plan.tsx` écrit dans la ligne (à l'inscription classique comme après un `/q/0` post-Google). `(onboarding)/_layout.tsx` attend que `useProfile()` ait fini de charger avant de choisir l'écran de départ (`initialRouteName` n'est lu qu'une fois, au montage) — sans cette attente, une toute nouvelle connexion Google flasherait le paywall avant de rediriger vers `/q/0`.
 
 Le paywall est donc infranchissable sans mettre `is_subscribed` à `true` : sa croix de fermeture déconnecte l'utilisateur au lieu de le laisser accéder à l'app. Le CTA du paywall pose actuellement `is_subscribed = true` directement en base (`// TODO: remplacer par RevenueCat` dans `paywall.tsx`) — à remplacer par un vrai flux d'achat.
 
 Au démarrage, `AuthContext` ne fait pas confiance à la session mise en cache localement (AsyncStorage) : elle est revalidée par un appel serveur (`supabase.auth.getUser()`). Si ce compte a été supprimé côté Supabase — ou si le jeton n'est plus valide pour toute autre raison — l'app déconnecte l'utilisateur et vide le cache local au lieu de le laisser passer. De même, `isSubscribed` n'est jamais laissé indéterminé : une ligne `profiles` manquante ou une erreur réseau sur cette requête donnent toutes les deux `false`, jamais `true` ni un état incertain.
 
-`signInWithApple` et `signInWithGoogle` (`AuthContext`) sont des stubs qui affichent juste une alerte "Bientôt disponible" — l'implémentation native (Sign in with Apple / Google Sign-In) nécessite un development build, pas Expo Go.
+### Connexion Google (Apple retiré)
+
+"Sign in with Apple" a été entièrement retiré (bouton, `signInWithApple` dans `AuthContext`, clé i18n `onboarding.auth.continueWithApple` dans les 6 langues) — `login.tsx`/`signup.tsx` n'affichent plus qu'un seul bouton social, Google, qui prend maintenant toute la largeur (`components/onboarding/SocialButton.tsx` a perdu sa prop `variant` — un seul style restait utilisé, l'autre était mort).
+
+**`AuthContext.signInWithGoogle`** : sur web, `supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })` — redirige la page entière vers l'écran de consentement Google, puis Google renvoie vers `redirectTo`. `lib/supabase.ts`'s `detectSessionInUrl` est maintenant `Platform.OS === 'web'` (c'était `false` pour les deux plateformes) : c'est ce qui fait que le client Supabase lit et applique tout seul la session présente dans l'URL de retour, sans route `/auth/callback` dédiée — l'app entière redémarre simplement sur `/`, et `onAuthStateChange` (déjà dans `AuthContext`) prend le relais comme pour n'importe quel autre changement de session. Sur natif, reste un stub "Bientôt disponible" (Google Sign-In natif demande un development build, pas Expo Go).
+
+**⚠️ Configuration Supabase requise (hors dépôt)** : le tableau de bord Supabase doit avoir le provider **Google** activé (Authentication → Providers) avec un Client ID/Secret OAuth Google valides, et `window.location.origin` (donc `http://localhost:8081` en dev et le domaine Vercel de prod) doit figurer dans **Authentication → URL Configuration → Redirect URLs** — sinon Google refuse la redirection ou Supabase rejette le retour. Aucun fichier de ce dépôt ne peut configurer ça, c'est un réglage du projet Supabase lui-même.
+
+**Compte déjà existant avec le même email (créé par mot de passe)** : géré par la liaison automatique d'identités de Supabase — quand l'email d'un nouveau sign-in OAuth correspond à un `auth.users` existant avec un email déjà vérifié, Supabase rattache l'identité Google à ce même compte plutôt que d'en créer un second (comportement par défaut du projet, configurable dans Authentication → Sign In / Providers). Côté app, ça veut dire que `user.id` reste identique quelle que soit la méthode utilisée pour se connecter — `ProfileContext` retrouve donc automatiquement la même ligne `profiles` (mêmes repas, séances, groupes, etc.), sans code supplémentaire : c'est exactement le même chemin que "compte déjà existant, pas besoin de créer de profil" ci-dessous.
+
+**Création automatique de `profiles`** (`lib/oauthProfile.ts`, appelé depuis `ProfileContext`) : la connexion classique par email insère toujours sa propre ligne `profiles` juste après `supabase.auth.signUp()` (voir `signup.tsx`) — donc si `ProfileContext` charge un utilisateur sans ligne `profiles` ET que `user.app_metadata.provider !== 'email'`, c'est forcément une première connexion Google, et il crée lui-même une ligne minimale : `prenom` (`user_metadata.given_name`, à défaut premier mot de `full_name`/`name`), `email`, `username`/`code_parrainage` générés exactement comme à l'inscription classique (`lib/username.ts`/`lib/referral.ts`, réutilisés tels quels). Les champs propres au questionnaire (`objectif`, `sexe`, `age`, ...) restent `null` — remplis ensuite via `/q/0`.
+
+**`lib/onboardingProfile.ts`** — `buildOnboardingProfilePayload(answers)` construit l'objet de champs `profiles` dérivés des réponses du questionnaire, extrait de l'ancien insert en dur de `signup.tsx` pour être réutilisé aussi par `plan.tsx` : la connexion classique fait toujours un `insert` (nouveau compte), tandis qu'un compte Google déjà authentifié qui vient de répondre au questionnaire (`plan.tsx`, CTA final — branché sur `useAuth().user`) fait un `update` sur sa ligne existante, puis `router.replace('/paywall')` directement plutôt que de repasser par `signup.tsx` (il n'a ni email ni mot de passe à saisir, il est déjà authentifié).
 
 Le bouton "Supprimer mon compte" (`profil.tsx`, zone de danger) appelle `deleteAccount()` (`AuthContext`), qui supprime les lignes de l'utilisateur dans toutes les tables applicatives puis le déconnecte, mais **ne supprime pas le compte Supabase Auth lui-même** — ça nécessite une Edge Function avec la clé `service_role`, qui n'existe pas encore. Le compte auth existera donc toujours après "suppression" (voir "Écran Profil" plus bas pour le détail des tables concernées).
 

@@ -79,7 +79,6 @@ const it: TranslationSchema = {
       defaultDescription: 'Questa schermata sarà disponibile a breve.',
     },
     auth: {
-      continueWithApple: 'Continua con Apple',
       continueWithGoogle: 'Continua con Google',
       or: 'oppure',
       emailLabel: 'Email',

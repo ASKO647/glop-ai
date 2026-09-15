@@ -1,5 +1,6 @@
 import type { Session, User } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { Platform } from 'react-native';
 import { showAlert } from '../lib/alert';
 import { supabase } from '../lib/supabase';
 
@@ -17,10 +18,12 @@ type AuthContextValue = {
   signIn: (email: string, password: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<AuthResult>;
-  /** Stubbed until the development build ships native Sign in with Apple support. */
-  signInWithApple: () => void;
-  /** Stubbed until the development build ships native Google Sign-In support. */
-  signInWithGoogle: () => void;
+  /**
+   * Web: redirects to Google via `signInWithOAuth`, so a resolved promise with no error just
+   * means the redirect started — the page navigates away before there's anything else to do.
+   * Native: stubbed until a development build ships a real deep-link flow.
+   */
+  signInWithGoogle: () => Promise<AuthResult>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -169,12 +172,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signInWithApple = () => {
-    showAlert('Bientôt disponible', "La connexion avec Apple arrivera avec le build de développement.");
-  };
+  const signInWithGoogle = async (): Promise<AuthResult> => {
+    if (Platform.OS !== 'web') {
+      showAlert('Bientôt disponible', 'La connexion avec Google arrivera avec le build de développement.');
+      return { error: null };
+    }
 
-  const signInWithGoogle = () => {
-    showAlert('Bientôt disponible', "La connexion avec Google arrivera avec le build de développement.");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    });
+    // On success this navigates the whole page away to Google's consent screen — there's
+    // nothing left to do here. `onAuthStateChange` (above) picks up the session once Google
+    // redirects back to `redirectTo` and the client parses it from the URL (see lib/supabase.ts).
+    return { error: error?.message ?? null };
   };
 
   // Once a session exists, keep loading until we know its subscription state too —
@@ -191,7 +202,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signIn,
     signOut,
     deleteAccount,
-    signInWithApple,
     signInWithGoogle,
   };
 

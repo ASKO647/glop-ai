@@ -79,7 +79,6 @@ const en: TranslationSchema = {
       defaultDescription: 'This screen will be implemented soon.',
     },
     auth: {
-      continueWithApple: 'Continue with Apple',
       continueWithGoogle: 'Continue with Google',
       or: 'or',
       emailLabel: 'Email',
